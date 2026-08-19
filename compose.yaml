@@ -14,6 +14,6 @@ services:
       - pgdata:/var/lib/postgresql
 
   backend:
-    build: ./backend/Dockerfile
+    build: ./backend
 volumes:
   pgdata:
