@@ -1,0 +1,10 @@
+services:
+  database:
+    image: postgres:18
+    env_file:
+      - .env
+    container_name: postgress_db
+    environment:
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASS}
+      POSTGRES_DB: ${DATABASE_NAME}
