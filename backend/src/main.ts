@@ -12,7 +12,7 @@ async function bootstrap() {
     maxAge: 86400, // Cache preflight for 24 hours})
   });
 
-  await app.listen(process.env.PORT ?? 3030);
+  await app.listen(process.env.PORT ?? 4000);
 }
 
 bootstrap().catch((err) => {
