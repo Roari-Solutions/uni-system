@@ -45,7 +45,6 @@ type NavItem = {
 type Language = {
   code: string;
   label: string;
-  dir: "ltr" | "rtl";
 };
 
 type NavBarProps = {
@@ -110,8 +109,8 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 const LANGUAGES: Language[] = [
-  { code: "en", label: "English", dir: "ltr" },
-  { code: "ar", label: "العربية", dir: "rtl" },
+  { code: "en", label: "English"},
+  { code: "ar", label: "العربية"},
 ];
 
 export default function NavBar({ theme = {} }: NavBarProps) {
@@ -242,10 +241,7 @@ export default function NavBar({ theme = {} }: NavBarProps) {
                     key={lang.code}
                     href="#"
                     lang={lang.code}
-                    dir={lang.dir}
-                    className={`block px-3 py-2 text-sm rounded bg-[var(--nav-bg)] text-[var(--nav-text)] transition-colors duration-300 hover:bg-[var(--nav-hover-bg)] hover:text-[var(--nav-hover-text)] ${
-                      lang.dir === "rtl" ? "text-right" : ""
-                    }`}
+                    className={`block px-3 py-2 text-sm rounded bg-[var(--nav-bg)] text-[var(--nav-text)] transition-colors duration-300 hover:bg-[var(--nav-hover-bg)] hover:text-[var(--nav-hover-text)] }`}
                   >
                     {lang.label}
                   </a>
@@ -319,7 +315,6 @@ export default function NavBar({ theme = {} }: NavBarProps) {
                     key={lang.code}
                     href="#"
                     lang={lang.code}
-                    dir={lang.dir}
                     className="px-3 py-2 text-sm rounded text-center bg-[var(--nav-bg)] text-[var(--nav-text)] transition-colors duration-300 hover:bg-[var(--nav-hover-bg)] hover:text-[var(--nav-hover-text)]"
                   >
                     {lang.label}
