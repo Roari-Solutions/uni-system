@@ -37,7 +37,7 @@ type Theme = {
 type NavItem = {
   id: string;
   label: string;
-  columns: 2 | 3;
+  columns: 1 | 2 | 3;
   width: string;
   links: string[];
 };
@@ -54,42 +54,58 @@ type NavBarProps = {
 
 const NAV_ITEMS: NavItem[] = [
   {
-    id: "products",
-    label: "Products",
+    id: "item-1",
+    label: "List",
     columns: 3,
     width: "w-[520px]",
     links: [
-      "Analytics",
-      "Automation",
-      "Dashboards",
-      "Integrations",
-      "API Access",
-      "Security",
-      "Reporting",
-      "Workflows",
-      "Notifications",
+      "Link",
+      "Link",
+      "Link",
+      "Link",
+      "Link",
+      "Link",
+      "Link",
+      "Link",
+      "Link",
     ],
   },
   {
-    id: "solutions",
-    label: "Solutions",
+    id: "item-2",
+    label: "List",
     columns: 2,
     width: "w-[380px]",
-    links: ["Enterprise", "Startups", "Agencies", "Nonprofits", "Education", "Healthcare"],
+    links: [
+      "Link",
+      "Link",
+      "Link",
+      "Link",
+      "Link",
+      "Link",
+    ],
   },
   {
-    id: "resources",
-    label: "Resources",
+    id: "item-3",
+    label: "List",
     columns: 2,
     width: "w-[320px]",
-    links: ["Blog", "Guides", "Webinars", "Help Center"],
+    links: [
+      "Link",
+      "Link",
+      "Link",
+      "Link",
+    ],
   },
   {
-    id: "company",
-    label: "Company",
-    columns: 2,
+    id: "item-4",
+    label: "List",
+    columns: 1,
     width: "w-[320px]",
-    links: ["About Us", "Careers", "Press", "Contact"],
+    links: [
+      "Link",
+      "Link",
+      "Link",
+    ],
   },
 ];
 
@@ -175,7 +191,7 @@ export default function NavBar({ theme = {} }: NavBarProps) {
                         : "opacity-0 invisible translate-y-1 pointer-events-none"
                     }`}
                   >
-                    <div className={`grid gap-2 ${item.columns === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
+                    <div className={`grid gap-2 ${item.columns === 3 ? "grid-cols-3" : item.columns === 2 ? "grid-cols-2" : "grid-cols-1"}`}>
                       {item.links.map((link) => (
                         <a
                           key={link}
