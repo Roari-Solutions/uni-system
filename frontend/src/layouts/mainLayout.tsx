@@ -5,7 +5,7 @@ import Footer from "../components/footer";
 const MainLayout = () => {
 
 	return (
-		<main className="">
+		<main className="h-svh flex flex-col justify-between">
 		  <NavBar />
 		  <Outlet />
 		  <Footer />
