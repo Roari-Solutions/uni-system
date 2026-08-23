@@ -113,20 +113,25 @@ export const news = pgTable('news', {
 // ==============================================relations=============================================================
 
 export const user_relations = relations(users, ({ one }) => ({
-  employee: one(employees, {
-    fields: [users.id],
-    references: [employees.userId],
-  }),
+  employee: one(employees),
 }));
 
 export const employee_relations = relations(employees, ({ one }) => ({
-  crew: one(crews, { fields: [employees.id], references: [crews.employeeId] }),
+  crew: one(crews),
   user: one(users, { fields: [employees.userId], references: [users.id] }),
   department: one(departments, {
     fields: [employees.departmentId],
     references: [departments.id],
   }),
   role: one(roles, { fields: [employees.roleId], references: [roles.id] }),
+  department: one(departments, {
+    fields: [employees.departmentId],
+    references: [departments.id],
+  }),
+  role: one(roles, {
+    fields: [employees.roleId],
+    references: [roles.id],
+  }),
 }));
 
 export const crew_relations = relations(crews, ({ one }) => ({
