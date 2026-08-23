@@ -9,7 +9,7 @@ export const POOL = 'POOL';
 export type Db = NodePgDatabase<typeof schema>;
 
 @Module({
-  imports: [ConfigModule.forRoot()],
+  imports: [ConfigModule],
   providers: [
     {
       provide: POOL,
