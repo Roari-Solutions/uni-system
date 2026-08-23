@@ -35,14 +35,14 @@ export class AuthService {
       columns: { id: true, password: true, suspended: true },
     });
 
-    if (!user) throw new NotFoundException();
+    if (!user) throw new UnauthorizedException();
 
-    if (user.suspended) throw new ForbiddenException();
+    if (user.suspended) throw new UnauthorizedException();
 
     if (!(await bcrypt.compare(body.password, user.password)))
-      throw new ForbiddenException();
+      throw new UnauthorizedException();
 
-    if (!user.employee?.role) throw new ForbiddenException();
+    if (!user.employee?.role) throw new UnauthorizedException();
 
     const { access_token, refresh_token } = await this.issue_tokens({
       sub: user.id,
@@ -85,11 +85,11 @@ export class AuthService {
         employee: { columns: {}, with: { role: { columns: { name: true } } } },
       },
     });
-    if (!user) throw new NotFoundException();
+    if (!user) throw new UnauthorizedException();
 
-    if (user.suspended) throw new ForbiddenException();
+    if (user.suspended) throw new UnauthorizedException();
 
-    if (!user.employee?.role) throw new ForbiddenException();
+    if (!user.employee?.role) throw new UnauthorizedException();
 
     return this.issue_tokens({ sub: user.id, role: user.employee.role.name });
   }
