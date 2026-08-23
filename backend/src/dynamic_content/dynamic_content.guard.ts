@@ -1,7 +1,7 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { config } from '../../config';
-import { AuthedRequest, JwtPayload } from 'src/auth/auth.guard';
+import { AuthedRequest, JwtPayload } from '../auth/auth.guard';
 @Injectable()
 export class DynamicContentGuard implements CanActivate {
   constructor(private readonly jwt: JwtService) {}

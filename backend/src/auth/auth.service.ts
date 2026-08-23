@@ -6,7 +6,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { CreateAuthDto } from './dto/create-auth.dto';
-import { DATABASE, type Db } from 'src/database/database.module';
+import { DATABASE, type Db } from '../database/database.module';
 import * as schema from '../../schema';
 import { eq } from 'drizzle-orm';
 
