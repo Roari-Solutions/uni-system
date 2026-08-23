@@ -13,7 +13,7 @@ import { eq } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { config } from '../../config';
-import { StringValue } from 'ms';
+import ms, { StringValue } from 'ms';
 import { Response } from 'express';
 import { JwtPayload } from './auth.guard';
 
@@ -101,8 +101,7 @@ export class AuthService {
     if (!user) throw new NotFoundException();
     if (user.suspended) throw new ForbiddenException();
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, ...safe } = user;
+    const { password: _password, ...safe } = user;
     return safe;
   }
 
@@ -112,13 +111,14 @@ export class AuthService {
       httpOnly: true,
       secure,
       sameSite: 'strict',
-      maxAge: 30 * 60 * 1000,
+      maxAge: ms(config.jwtAccessTtl as StringValue) ?? 30 * 60 * 1000,
     });
     res.cookie('refresh_token', refresh_token, {
       httpOnly: true,
       secure,
       sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge:
+        ms(config.jwtRefreshTtl as StringValue) ?? 7 * 24 * 60 * 60 * 1000,
     });
   }
 }

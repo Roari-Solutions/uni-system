@@ -8,14 +8,13 @@ import { ContentModule } from './content/content.module';
 
 @Module({
   imports: [
-    AuthModule,
-    DatabaseModule,
-
     ConfigModule.forRoot({
       isGlobal: true,
     }),
 
     ContentModule,
+    AuthModule,
+    DatabaseModule,
   ],
   controllers: [AppController],
   providers: [AppService],

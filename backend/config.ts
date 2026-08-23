@@ -7,9 +7,19 @@ function required(name: string): string {
 }
 
 export const config = {
-  databaseUrl: required('DATABASE_URL'),
-  jwtAccessSecret: required('JWT_ACCESS_SECRET'),
-  jwtRefreshSecret: required('JWT_REFRESH_SECRET'),
-  jwtAccessTtl: process.env.JWT_ACCESS_TTL ?? '15m',
-  jwtRefreshTtl: process.env.JWT_REFRESH_TTL ?? '7d',
+  get databaseUrl() {
+    return required('DATABASE_URL');
+  },
+  get jwtAccessSecret() {
+    return required('JWT_ACCESS_SECRET');
+  },
+  get jwtRefreshSecret() {
+    return required('JWT_REFRESH_SECRET');
+  },
+  get jwtAccessTtl() {
+    return process.env.JWT_ACCESS_TTL ?? '15m';
+  },
+  get jwtRefreshTtl() {
+    return process.env.JWT_REFRESH_TTL ?? '7d';
+  },
 };
