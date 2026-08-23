@@ -9,7 +9,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { CreateAuthDto } from './dto/create-auth.dto';
+import { LoginDto } from './dto/login.dto';
 import { type Request, type Response } from 'express';
 import { AuthGuard, CurrentUser } from './auth.guard';
 import type { JwtPayload } from './auth.guard';
@@ -20,7 +20,7 @@ export class AuthController {
 
   @Post('login')
   async login(
-    @Body() body: CreateAuthDto,
+    @Body() body: LoginDto,
     @Res({ passthrough: true }) res: Response,
   ) {
     const tokens = await this.authService.login(body);
