@@ -6,6 +6,7 @@ import * as schema from '../../schema';
 
 export const DATABASE = 'DATABASE';
 export const POOL = 'POOL';
+export type Db = NodePgDatabase<typeof schema>;
 
 @Module({
   imports: [ConfigModule.forRoot()],
