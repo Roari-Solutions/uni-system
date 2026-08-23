@@ -124,14 +124,6 @@ export const employee_relations = relations(employees, ({ one }) => ({
     references: [departments.id],
   }),
   role: one(roles, { fields: [employees.roleId], references: [roles.id] }),
-  department: one(departments, {
-    fields: [employees.departmentId],
-    references: [departments.id],
-  }),
-  role: one(roles, {
-    fields: [employees.roleId],
-    references: [roles.id],
-  }),
 }));
 
 export const crew_relations = relations(crews, ({ one }) => ({
