@@ -5,7 +5,7 @@ FROM base AS builder
 WORKDIR /usr/src/app
 
 COPY package*.json ./
-RUN npm i
+RUN NODE_OPTIONS="--max-old-space-size=512" npm ci --no-audit --no-fund 
 
 COPY . .
 RUN npm run build
