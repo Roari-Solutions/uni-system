@@ -2,7 +2,7 @@ services:
   database:
     image: postgres:18
     env_file:
-      - .env
+      - ./backend/.env
     container_name: postgress_db
     environment:
       POSTGRES_USER: ${DATABASE_USER}
@@ -15,5 +15,13 @@ services:
 
   backend:
     build: ./backend
+    env_file:
+      - ./backend/.env
+    ports:
+      - "4000:4000"
+    depends_on:
+      - database
+
 volumes:
   pgdata:
+
