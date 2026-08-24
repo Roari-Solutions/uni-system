@@ -2,7 +2,8 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
 import cookieParser from 'cookie-parser';
-import { ValidationPipe } from '@nestjs/common';
+import { BadRequestException, ValidationPipe } from '@nestjs/common';
+import { ValidationError } from 'class-validator';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -10,7 +11,31 @@ async function bootstrap() {
   const port = config.get<number>('PORT') ?? 4000;
 
   app.use(cookieParser());
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+      forbidNonWhitelisted: true,
+      forbidUnknownValues: true,
+      exceptionFactory: (errors: ValidationError[]) => {
+        const details = errors.map((e) => ({
+          field: e.property,
+          constraints: e.constraints,
+        }));
+        console.log(details);
+
+        const isMissing = errors.some(
+          (e) => e.constraints?.isNotEmpty || e.constraints?.isDefined,
+        );
+        console.log(isMissing);
+
+        const code = isMissing ? 'MA' : 'PI'; // matches existing service codes
+        console.log(code);
+
+        return new BadRequestException({ code, errors: details });
+      },
+    }),
+  );
   app.setGlobalPrefix('/api/v1');
   app.enableCors({
     origin: ['http://localhost:3000', 'http://localhost:4000'],
