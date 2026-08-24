@@ -47,8 +47,8 @@ export class ContentService {
       throw new InternalServerErrorException();
     }
   }
-  async update_news_by_id(
-    id: string,
+  async update_news_by_title(
+    title: string,
     dto: UpdateNewsDto,
   ): Promise<{ status: string }> {
     if (!dto || !Object.keys(dto).length) throw new BadRequestException();
@@ -56,7 +56,7 @@ export class ContentService {
       const [updated] = await this.db
         .update(news)
         .set(dto)
-        .where(eq(news.id, id))
+        .where(eq(news.title, title))
         .returning();
       if (!updated) throw new NotFoundException();
 
@@ -67,12 +67,12 @@ export class ContentService {
       throw new InternalServerErrorException();
     }
   }
-  async delete_news_by_id(id: string): Promise<{ status: string }> {
+  async delete_news_by_title(title: string): Promise<{ status: string }> {
     try {
       const [deleted] = await this.db
         .delete(news)
-        .where(eq(news.id, id))
-        .returning({ id: news.id });
+        .where(eq(news.title, title))
+        .returning({ title: news.title });
       if (!deleted) throw new NotFoundException();
 
       return { status: 'Ok' };
@@ -107,16 +107,16 @@ export class ContentService {
     }
   }
 
-  async update_contact_by_id(
-    id: string,
+  async update_contact_by_name(
+    name: string,
     dto: CreateContactDto,
   ): Promise<{ status: string }> {
     try {
       const updated = await this.db
         .update(contacts)
         .set(dto)
-        .where(eq(contacts.id, id))
-        .returning({ id: contacts.id });
+        .where(eq(contacts.name, name))
+        .returning({ name: contacts.name });
       if (!updated.length) throw new NotFoundException();
       return { status: 'Ok' };
     } catch (error) {
@@ -126,12 +126,12 @@ export class ContentService {
     }
   }
 
-  async delete_contact_by_id(id: string): Promise<{ status: string }> {
+  async delete_contact_by_name(name: string): Promise<{ status: string }> {
     try {
       const deleted = await this.db
         .delete(contacts)
-        .where(eq(contacts.id, id))
-        .returning({ id: contacts.id });
+        .where(eq(contacts.name, name))
+        .returning({ name: contacts.name });
       if (!deleted.length) throw new NotFoundException();
       return { status: 'Ok' };
     } catch (error) {

@@ -9,7 +9,6 @@ import {
   UseGuards,
   HttpStatus,
   HttpCode,
-  ParseUUIDPipe,
 } from '@nestjs/common';
 import { ContentService } from './content.service';
 import {
@@ -25,7 +24,7 @@ type News = typeof news.$inferSelect;
 type Contact = typeof contacts.$inferSelect;
 
 @Controller('content')
-// @UseGuards(AuthGuard, DynamicContentGuard)
+@UseGuards(AuthGuard, DynamicContentGuard)
 export class ContentController {
   constructor(private readonly contentService: ContentService) {}
   @Get('news')
@@ -43,20 +42,18 @@ export class ContentController {
     return await this.contentService.create_news(dto);
   }
 
-  @Patch('/news/:id')
+  @Patch('/news/:title')
   @HttpCode(HttpStatus.OK)
   update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('title') title: string,
     @Body() dto: UpdateNewsDto,
   ): Promise<{ status: string }> {
-    return this.contentService.update_news_by_id(id, dto);
+    return this.contentService.update_news_by_title(title, dto);
   }
-  @Delete('/news/:id')
+  @Delete('/news/:title')
   @HttpCode(HttpStatus.NO_CONTENT)
-  deltete_news(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<{ status: string }> {
-    return this.contentService.delete_news_by_id(id);
+  deltete_news(@Param('title') title: string): Promise<{ status: string }> {
+    return this.contentService.delete_news_by_title(title);
   }
 
   @Get('contact')
@@ -70,20 +67,18 @@ export class ContentController {
     return this.contentService.create_contact(dto);
   }
 
-  @Patch('/contact/:id')
+  @Patch('/contact/:name')
   @HttpCode(HttpStatus.OK)
   update_contact(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('name') name: string,
     @Body() dto: CreateContactDto,
   ): Promise<{ status: string }> {
-    return this.contentService.update_contact_by_id(id, dto);
+    return this.contentService.update_contact_by_name(name, dto);
   }
 
-  @Delete('/contact/:id')
+  @Delete('/contact/:name')
   @HttpCode(HttpStatus.NO_CONTENT)
-  delete_contact(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<{ status: string }> {
-    return this.contentService.delete_contact_by_id(id);
+  delete_contact(@Param('name') name: string): Promise<{ status: string }> {
+    return this.contentService.delete_contact_by_name(name);
   }
 }
