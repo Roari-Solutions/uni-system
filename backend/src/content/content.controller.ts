@@ -12,9 +12,10 @@ import { ContentService } from './content.service';
 import { CreateContentDto } from './dto/create-content.dto';
 import { UpdateContentDto } from './dto/update-content.dto';
 import { DynamicContentGuard } from 'src/dynamic_content/dynamic_content.guard';
+import { AuthGuard } from 'src/auth/auth.guard';
 
 @Controller('content')
-@UseGuards(DynamicContentGuard)
+@UseGuards(AuthGuard, DynamicContentGuard)
 export class ContentController {
   constructor(private readonly contentService: ContentService) {}
 
