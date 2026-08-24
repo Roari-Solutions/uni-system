@@ -1,5 +1,5 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
-import { AuthedRequest } from 'src/auth/auth.guard';
+import { AuthedRequest } from '../auth/auth.guard';
 @Injectable()
 export class DynamicContentGuard implements CanActivate {
   constructor() {}

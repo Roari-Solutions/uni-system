@@ -5,8 +5,8 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { CreateAuthDto } from './dto/create-auth.dto';
-import { DATABASE, type Db } from 'src/database/database.module';
+import { LoginDto } from './dto/login.dto';
+import { DATABASE, type Db } from '../database/database.module';
 import * as schema from '../../schema';
 import { eq } from 'drizzle-orm';
 
@@ -26,23 +26,23 @@ export class AuthService {
     private readonly jwt: JwtService,
   ) {}
 
-  async login(body: CreateAuthDto) {
+  async login(body: LoginDto) {
     const user = await this.db.query.users.findFirst({
-      where: eq(schema.users.name, body.name),
+      where: eq(schema.users.email, body.email),
       with: {
         employee: { with: { role: { columns: { name: true } } }, columns: {} },
       },
       columns: { id: true, password: true, suspended: true },
     });
 
-    if (!user) throw new NotFoundException();
+    if (!user) throw new UnauthorizedException();
 
-    if (user.suspended) throw new ForbiddenException();
+    if (user.suspended) throw new UnauthorizedException();
 
     if (!(await bcrypt.compare(body.password, user.password)))
-      throw new ForbiddenException();
+      throw new UnauthorizedException();
 
-    if (!user.employee?.role) throw new ForbiddenException();
+    if (!user.employee?.role) throw new UnauthorizedException();
 
     const { access_token, refresh_token } = await this.issue_tokens({
       sub: user.id,
@@ -85,11 +85,11 @@ export class AuthService {
         employee: { columns: {}, with: { role: { columns: { name: true } } } },
       },
     });
-    if (!user) throw new NotFoundException();
+    if (!user) throw new UnauthorizedException();
 
-    if (user.suspended) throw new ForbiddenException();
+    if (user.suspended) throw new UnauthorizedException();
 
-    if (!user.employee?.role) throw new ForbiddenException();
+    if (!user.employee?.role) throw new UnauthorizedException();
 
     return this.issue_tokens({ sub: user.id, role: user.employee.role.name });
   }
