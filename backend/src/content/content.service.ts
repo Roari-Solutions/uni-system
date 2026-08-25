@@ -31,11 +31,12 @@ export class ContentService {
   }
   async get_news_by_title(
     title: string,
-  ): Promise<(typeof news.$inferSelect)[]> {
+  ): Promise<typeof news.$inferSelect | null> {
     try {
-      return await this.db.query.news.findMany({
+      const result = await this.db.query.news.findFirst({
         where: eq(news.title, title),
       });
+      return result ?? null;
     } catch (error) {
       this.logger.error(`Failed to fetch news by title: ${title}`, error);
       throw new InternalServerErrorException();
@@ -43,10 +44,18 @@ export class ContentService {
   }
   async create_news(dto: CreateNewsDto): Promise<{ status: string }> {
     try {
+      const existing = await this.db.query.news.findFirst({
+        where: eq(news.title, dto.title),
+      });
+      if (existing) {
+        this.logger.warn(`News already exists: ${dto.title}`);
+        throw new ConflictException();
+      }
       await this.db.insert(news).values(dto);
       this.logger.log(`Created news: ${dto.title}`);
       return { status: 'Ok' };
     } catch (error) {
+      if (error instanceof ConflictException) throw error;
       this.logger.error('Failed to create news', error);
       throw new InternalServerErrorException();
     }

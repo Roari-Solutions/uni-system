@@ -32,7 +32,7 @@ export class ContentController {
     return await this.contentService.news();
   }
   @Get('news/:title')
-  async news_by_title(@Param('title') title: string): Promise<News[]> {
+  async news_by_title(@Param('title') title: string): Promise<News | null> {
     return await this.contentService.get_news_by_title(title);
   }
 
