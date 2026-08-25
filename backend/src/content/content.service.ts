@@ -4,6 +4,7 @@ import {
   Inject,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
@@ -17,12 +18,14 @@ import {
 
 @Injectable()
 export class ContentService {
+  private readonly logger = new Logger(ContentService.name);
+
   constructor(@Inject(DATABASE) private readonly db: Db) {}
   async news() {
     try {
       return await this.db.query.news.findMany();
     } catch (error) {
-      console.log(error);
+      this.logger.error('Failed to fetch news', error);
       throw new InternalServerErrorException();
     }
   }
@@ -34,16 +37,17 @@ export class ContentService {
         where: eq(news.title, title),
       });
     } catch (error) {
-      console.log(error);
+      this.logger.error(`Failed to fetch news by title: ${title}`, error);
       throw new InternalServerErrorException();
     }
   }
   async create_news(dto: CreateNewsDto): Promise<{ status: string }> {
     try {
       await this.db.insert(news).values(dto);
+      this.logger.log(`Created news: ${dto.title}`);
       return { status: 'Ok' };
     } catch (error) {
-      console.log(error);
+      this.logger.error('Failed to create news', error);
       throw new InternalServerErrorException();
     }
   }
@@ -60,10 +64,11 @@ export class ContentService {
         .returning();
       if (!updated) throw new NotFoundException();
 
+      this.logger.log(`Updated news: ${title}`);
       return { status: 'Ok' };
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
-      console.log(error);
+      this.logger.error(`Failed to update news: ${title}`, error);
       throw new InternalServerErrorException();
     }
   }
@@ -75,10 +80,11 @@ export class ContentService {
         .returning({ title: news.title });
       if (!deleted) throw new NotFoundException();
 
+      this.logger.log(`Deleted news: ${title}`);
       return { status: 'Ok' };
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
-      console.log(error);
+      this.logger.error(`Failed to delete news: ${title}`, error);
       throw new InternalServerErrorException();
     }
   }
@@ -87,7 +93,7 @@ export class ContentService {
     try {
       return await this.db.query.contacts.findMany();
     } catch (error) {
-      console.log(error);
+      this.logger.error('Failed to fetch contacts', error);
       throw new InternalServerErrorException();
     }
   }
@@ -97,12 +103,16 @@ export class ContentService {
       const existing = await this.db.query.contacts.findFirst({
         where: eq(contacts.name, dto.name),
       });
-      if (existing) throw new ConflictException();
+      if (existing) {
+        this.logger.warn(`Contact already exists: ${dto.name}`);
+        throw new ConflictException();
+      }
       await this.db.insert(contacts).values(dto);
+      this.logger.log(`Created contact: ${dto.name}`);
       return { status: 'Ok' };
     } catch (error) {
       if (error instanceof ConflictException) throw error;
-      console.log(error);
+      this.logger.error('Failed to create contact', error);
       throw new InternalServerErrorException();
     }
   }
@@ -118,10 +128,12 @@ export class ContentService {
         .where(eq(contacts.name, name))
         .returning({ name: contacts.name });
       if (!updated.length) throw new NotFoundException();
+
+      this.logger.log(`Updated contact: ${name}`);
       return { status: 'Ok' };
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
-      console.log(error);
+      this.logger.error(`Failed to update contact: ${name}`, error);
       throw new InternalServerErrorException();
     }
   }
@@ -133,10 +145,12 @@ export class ContentService {
         .where(eq(contacts.name, name))
         .returning({ name: contacts.name });
       if (!deleted.length) throw new NotFoundException();
+
+      this.logger.log(`Deleted contact: ${name}`);
       return { status: 'Ok' };
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
-      console.log(error);
+      this.logger.error(`Failed to delete contact: ${name}`, error);
       throw new InternalServerErrorException();
     }
   }

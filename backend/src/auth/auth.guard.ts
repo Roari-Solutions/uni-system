@@ -2,6 +2,7 @@ import {
   CanActivate,
   ExecutionContext,
   Injectable,
+  Logger,
   UnauthorizedException,
   createParamDecorator,
 } from '@nestjs/common';
@@ -20,6 +21,8 @@ export interface AuthedRequest extends Request {
 
 @Injectable()
 export class AuthGuard implements CanActivate {
+  private readonly logger = new Logger(AuthGuard.name);
+
   constructor(private readonly jwt: JwtService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -32,10 +35,12 @@ export class AuthGuard implements CanActivate {
         { secret: config.jwtAccessSecret },
       );
     } catch {
+      this.logger.warn('Access denied: expired, tampered, or missing token');
       throw new UnauthorizedException(); // expired, tampered, or missing token
     }
 
     req.user = payload;
+    this.logger.debug(`Authenticated user ${payload.sub} (role: ${payload.role})`);
     return true;
   }
 }

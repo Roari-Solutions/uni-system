@@ -2,10 +2,11 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
 import cookieParser from 'cookie-parser';
-import { BadRequestException, ValidationPipe } from '@nestjs/common';
+import { BadRequestException, Logger, ValidationPipe } from '@nestjs/common';
 import { ValidationError } from 'class-validator';
 
 async function bootstrap() {
+  const logger = new Logger('Bootstrap');
   const app = await NestFactory.create(AppModule);
   const config = app.get(ConfigService);
   const port = config.get<number>('PORT') ?? 4000;
@@ -22,7 +23,10 @@ async function bootstrap() {
           field: e.property,
           constraints: e.constraints,
         }));
-        console.log(details);
+        logger.warn(
+          `Validation failed: ${JSON.stringify(details)}`,
+          'ValidationPipe',
+        );
 
         const isMissing = errors.some(
           (e) => e.constraints?.isNotEmpty || e.constraints?.isDefined,
@@ -30,7 +34,6 @@ async function bootstrap() {
         console.log(isMissing);
 
         const code = isMissing ? 'MA' : 'PI'; // matches existing service codes
-        console.log(code);
 
         return new BadRequestException({ code, errors: details });
       },
@@ -46,11 +49,11 @@ async function bootstrap() {
   });
 
   await app.listen(port, () => {
-    console.log(`app on port ${port}`);
+    logger.log(`app on port ${port}`);
   });
 }
 
 bootstrap().catch((err) => {
-  console.error(err);
+  new Logger('Bootstrap').error('Fatal startup error', err);
   process.exit(1);
 });
