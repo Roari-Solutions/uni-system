@@ -40,7 +40,9 @@ export class AuthGuard implements CanActivate {
     }
 
     req.user = payload;
-    this.logger.debug(`Authenticated user ${payload.sub} (role: ${payload.role})`);
+    this.logger.debug(
+      `Authenticated user ${payload.sub} (role: ${payload.role})`,
+    );
     return true;
   }
 }
