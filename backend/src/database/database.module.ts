@@ -1,4 +1,4 @@
-import { Inject, Module } from '@nestjs/common';
+import { Inject, Module, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { drizzle, NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
@@ -24,7 +24,10 @@ export type Db = NodePgDatabase<typeof schema>;
       provide: DATABASE,
       inject: [POOL],
       useFactory: (pool: Pool) => {
-        return drizzle(pool, { schema });
+        const logger = new Logger('Database');
+        const db = drizzle(pool, { schema });
+        logger.log('Drizzle ORM initialized');
+        return db;
       },
     },
   ],
@@ -32,12 +35,19 @@ export type Db = NodePgDatabase<typeof schema>;
   exports: [DATABASE, POOL],
 })
 export class DatabaseModule {
+  private readonly logger = new Logger(DatabaseModule.name);
+
   constructor(
     @Inject(POOL) private readonly pool: Pool,
     @Inject(DATABASE) public readonly db: NodePgDatabase<typeof schema>,
   ) {}
 
+  async onModuleInit(): Promise<void> {
+    this.logger.log('PostgreSQL pool connected');
+  }
+
   async onModuleDestroy(): Promise<void> {
+    this.logger.log('Closing PostgreSQL pool');
     await this.pool.end();
   }
 }

@@ -105,7 +105,7 @@ export const contacts = pgTable('contacts', {
 
 export const news = pgTable('news', {
   id: uuid('id').primaryKey().defaultRandom(),
-  title: text('title').notNull(),
+  title: text('title').notNull().unique(),
   content: text('content').notNull(),
   ...timestamps,
 });

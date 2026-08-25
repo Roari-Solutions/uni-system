@@ -2,6 +2,7 @@ import {
   ForbiddenException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -21,6 +22,8 @@ type AuthTokens = { access_token: string; refresh_token: string };
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     @Inject(DATABASE) private readonly db: Db,
     private readonly jwt: JwtService,
@@ -35,14 +38,27 @@ export class AuthService {
       columns: { id: true, password: true, suspended: true },
     });
 
-    if (!user) throw new UnauthorizedException();
-
-    if (user.suspended) throw new UnauthorizedException();
-
-    if (!(await bcrypt.compare(body.password, user.password)))
+    if (!user) {
+      this.logger.warn(`Login failed: unknown email ${body.email}`);
       throw new UnauthorizedException();
+    }
 
-    if (!user.employee?.role) throw new UnauthorizedException();
+    if (user.suspended) {
+      this.logger.warn(`Login blocked: suspended user ${user.id}`);
+      throw new UnauthorizedException();
+    }
+
+    if (!(await bcrypt.compare(body.password, user.password))) {
+      this.logger.warn(`Login failed: bad password for ${body.email}`);
+      throw new UnauthorizedException();
+    }
+
+    if (!user.employee?.role) {
+      this.logger.warn(`Login blocked: user ${user.id} has no employee role`);
+      throw new UnauthorizedException();
+    }
+
+    this.logger.log(`Login success: user ${user.id}`);
 
     const { access_token, refresh_token } = await this.issue_tokens({
       sub: user.id,
@@ -76,6 +92,7 @@ export class AuthService {
         secret: config.jwtRefreshSecret,
       });
     } catch {
+      this.logger.warn('Refresh failed: invalid or expired refresh token');
       throw new UnauthorizedException();
     }
 
@@ -85,11 +102,20 @@ export class AuthService {
         employee: { columns: {}, with: { role: { columns: { name: true } } } },
       },
     });
-    if (!user) throw new UnauthorizedException();
+    if (!user) {
+      this.logger.warn(`Refresh failed: user ${payload.sub} not found`);
+      throw new UnauthorizedException();
+    }
 
-    if (user.suspended) throw new UnauthorizedException();
+    if (user.suspended) {
+      this.logger.warn(`Refresh blocked: suspended user ${user.id}`);
+      throw new UnauthorizedException();
+    }
 
-    if (!user.employee?.role) throw new UnauthorizedException();
+    if (!user.employee?.role) {
+      this.logger.warn(`Refresh blocked: user ${user.id} has no employee role`);
+      throw new UnauthorizedException();
+    }
 
     return this.issue_tokens({ sub: user.id, role: user.employee.role.name });
   }
@@ -98,8 +124,14 @@ export class AuthService {
     const user = await this.db.query.users.findFirst({
       where: eq(schema.users.id, userId),
     });
-    if (!user) throw new NotFoundException();
-    if (user.suspended) throw new ForbiddenException();
+    if (!user) {
+      this.logger.warn(`me: user ${userId} not found`);
+      throw new NotFoundException();
+    }
+    if (user.suspended) {
+      this.logger.warn(`me: forbidden for suspended user ${userId}`);
+      throw new ForbiddenException();
+    }
 
     const { password: _password, ...safe } = user;
     return safe;
