@@ -31,11 +31,10 @@ async function bootstrap() {
         const isMissing = errors.some(
           (e) => e.constraints?.isNotEmpty || e.constraints?.isDefined,
         );
-        console.log(isMissing);
 
         const code = isMissing ? 'MA' : 'PI'; // matches existing service codes
 
-        return new BadRequestException({ code, errors: details });
+        return new BadRequestException({ code });
       },
     }),
   );

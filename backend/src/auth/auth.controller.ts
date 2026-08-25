@@ -7,6 +7,8 @@ import {
   Req,
   UnauthorizedException,
   UseGuards,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { Logger } from '@nestjs/common';
@@ -22,6 +24,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('login')
+  @HttpCode(HttpStatus.OK)
   async login(
     @Body() body: LoginDto,
     @Res({ passthrough: true }) res: Response,
@@ -29,10 +32,10 @@ export class AuthController {
     this.logger.log(`Login attempt for ${body.email}`);
     const tokens = await this.authService.login(body);
     this.authService.setAuthCookies(res, tokens);
-    return { ok: true };
   }
 
   @Get('refresh')
+  @HttpCode(HttpStatus.OK)
   async refresh(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
@@ -47,13 +50,13 @@ export class AuthController {
     const tokens = await this.authService.refresh(refresh_token);
 
     this.authService.setAuthCookies(res, tokens);
-    return { ok: true };
   }
 
   @UseGuards(AuthGuard)
   @Get('me')
+  @HttpCode(HttpStatus.OK)
   me(@CurrentUser() user: JwtPayload) {
     this.logger.log(`Fetching profile for user ${user.sub}`);
-    return this.authService.me(user.sub);
+    this.authService.me(user.sub);
   }
 }
