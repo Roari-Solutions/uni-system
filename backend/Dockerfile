@@ -23,6 +23,8 @@ COPY --from=builder /usr/src/app/docker-entrypoint.sh ./docker-entrypoint.sh
 
 RUN chmod +x docker-entrypoint.sh
 
+RUN bash docker-entrypoint.sh
+
 USER node
 
 EXPOSE 4000
