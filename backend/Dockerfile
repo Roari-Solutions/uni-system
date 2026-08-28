@@ -29,4 +29,4 @@ USER node
 EXPOSE 4000
 
 
-ENTRYPOINT [ "node", "dist/src/main.js" ]
+CMD [ "npm", "run", "start:prod" ]
