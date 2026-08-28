@@ -28,5 +28,6 @@ USER node
 
 EXPOSE 4000
 
+ENTRYPOINT ["./docker-entrypoint.sh"]
 
 CMD [ "npm", "run", "start:prod" ]
