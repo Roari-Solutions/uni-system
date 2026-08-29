@@ -1,35 +1,35 @@
 # Base image
-FROM node:lts-alpine AS base
-
-FROM base AS builder
+FROM oven/bun:alpine AS base
 WORKDIR /usr/src/app
 
-COPY package*.json ./
-RUN npm install 
 
-COPY . .
-RUN npm run build
+FROM base as deps
+COPY package.json bun.lock ./
+RUN bun install --forzen-lockfile
 
-FROM base AS runner
+FROM base as builder
+COPY --from=deps /usr/src/app/node_modules ./node_modules
+COPY package.json bun.lock tsconfig.json tsconfig.build.json nest-cli.json drizzle.config.ts schema.ts ./
+COPY src ./src
+RUN bun run build
+
+
+FROM base as runner 
 WORKDIR /usr/src/app
 
 ENV NODE_ENV=production
+COPY package.json bun.lock ./
+RUN  bun install --frozen-lockfile --production
 
-COPY package*.json ./
-COPY --from=builder /usr/src/app/node_modules ./node_modules
 COPY --from=builder /usr/src/app/dist ./dist
-COPY --from=builder /usr/src/app/drizzle.config.ts ./drizzle.config.ts
-COPY --from=builder /usr/src/app/docker-entrypoint.sh ./docker-entrypoint.sh
 COPY --from=builder /usr/src/app/schema.ts ./schema.ts
-
+COPY --from=builder /usr/src/app/drizzle.config.ts ./drizzle.config.ts
+COPY docker-entrypoint.sh ./
 
 RUN chmod +x docker-entrypoint.sh
 
-
-USER node
-
+USER bun
 EXPOSE 4000
-
 ENTRYPOINT ["./docker-entrypoint.sh"]
+CMD ["bun", "dist/src/main.js"]
 
-CMD [ "npm", "run", "start:prod" ]
