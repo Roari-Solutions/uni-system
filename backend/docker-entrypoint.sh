@@ -4,5 +4,5 @@ set -e
 echo "Running database migrations..."
 npx drizzle-kit push --force
 
-exec "@"
+exec "$@"
 
