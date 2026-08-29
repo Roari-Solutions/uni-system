@@ -2,5 +2,7 @@
 set -e
 
 echo "Running database migrations..."
-npx drizzle-kit push
+npx drizzle-kit push --force
+
+exec "@"
 

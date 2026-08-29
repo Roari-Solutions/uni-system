@@ -20,6 +20,8 @@ COPY --from=builder /usr/src/app/node_modules ./node_modules
 COPY --from=builder /usr/src/app/dist ./dist
 COPY --from=builder /usr/src/app/drizzle.config.ts ./drizzle.config.ts
 COPY --from=builder /usr/src/app/docker-entrypoint.sh ./docker-entrypoint.sh
+COPY --from=builder /usr/src/app/schema.ts ./schema.ts
+
 
 RUN chmod +x docker-entrypoint.sh
 
