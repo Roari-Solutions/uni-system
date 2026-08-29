@@ -1,4 +1,3 @@
-# Base image
 FROM oven/bun:alpine AS base
 WORKDIR /usr/src/app
 
@@ -6,8 +5,7 @@ WORKDIR /usr/src/app
 FROM base AS deps
 WORKDIR /usr/src/app
 COPY package.json bun.lock ./
-RUN --mount=type=cache,target=/root/.bun \
-    bun install --frozen-lockfile
+RUN bun install --frozen-lockfile
 
 FROM base AS builder
 WORKDIR /usr/src/app
@@ -27,8 +25,7 @@ WORKDIR /usr/src/app
 
 ENV NODE_ENV=production
 COPY package.json bun.lock ./
-RUN --mount=type=cache,target=/root/.bun \
-    bun install --frozen-lockfile --production
+RUN bun install --frozen-lockfile --production
 
 COPY --from=builder /usr/src/app/dist ./dist
 RUN apk add --no-cache wget
