@@ -13,6 +13,12 @@ COPY package.json bun.lock tsconfig.json tsconfig.build.json nest-cli.json drizz
 COPY src ./src
 RUN bun run build
 
+FROM base AS migrate
+WORKDIR /usr/src/app
+COPY --from=deps /usr/src/app/node_modules ./node_modules
+COPY drizzle.config.ts schema.ts package.json bun.lock ./
+ENTRYPOINT ["bunx", "drizzle-kit", "push", "--force"]
+
 
 FROM base AS runner 
 WORKDIR /usr/src/app
@@ -22,14 +28,12 @@ COPY package.json bun.lock ./
 RUN  bun install --frozen-lockfile --production
 
 COPY --from=builder /usr/src/app/dist ./dist
-COPY --from=builder /usr/src/app/schema.ts ./schema.ts
-COPY --from=builder /usr/src/app/drizzle.config.ts ./drizzle.config.ts
 COPY docker-entrypoint.sh ./
 
 RUN chmod +x docker-entrypoint.sh
 
 USER bun
 EXPOSE 4000
-ENTRYPOINT ["./docker-entrypoint.sh"]
+
 CMD ["bun", "dist/src/main.js"]
 
