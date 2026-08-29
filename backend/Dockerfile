@@ -28,6 +28,7 @@ COPY package.json bun.lock ./
 RUN  bun install --frozen-lockfile --production
 
 COPY --from=builder /usr/src/app/dist ./dist
+COPY --from=builder /usr/src/app/schema.ts ./schema.ts
 COPY docker-entrypoint.sh ./
 
 RUN chmod +x docker-entrypoint.sh
