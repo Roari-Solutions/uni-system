@@ -25,7 +25,7 @@ WORKDIR /usr/src/app
 
 ENV NODE_ENV=production
 COPY package.json bun.lock ./
-RUN bun install --frozen-lockfile --production
+RUN bun install  --production
 
 COPY --from=builder /usr/src/app/dist ./dist
 RUN apk add --no-cache wget
