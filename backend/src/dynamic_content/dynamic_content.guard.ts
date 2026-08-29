@@ -4,7 +4,7 @@ import {
   Injectable,
   Logger,
 } from '@nestjs/common';
-import { AuthedRequest } from '../auth/auth.guard';
+import { AuthedRequest } from 'src/auth/auth.guard';
 @Injectable()
 export class DynamicContentGuard implements CanActivate {
   private readonly logger = new Logger(DynamicContentGuard.name);

@@ -16,7 +16,7 @@ import {
   CreateNewsDto,
   UpdateNewsDto,
 } from './dto/content.dto';
-import type { contacts, news } from '../../schema';
+import type { contacts, news } from 'schema';
 import { DynamicContentGuard } from 'src/dynamic_content/dynamic_content.guard';
 import { AuthGuard } from 'src/auth/auth.guard';
 

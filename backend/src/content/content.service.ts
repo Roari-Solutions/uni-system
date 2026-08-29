@@ -8,7 +8,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
-import { contacts, news } from '../../schema';
+import { contacts, news } from 'schema';
 import { DATABASE, type Db } from 'src/database/database.module';
 import {
   CreateContactDto,
