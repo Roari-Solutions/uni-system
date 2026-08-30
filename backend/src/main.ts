@@ -4,6 +4,8 @@ import { ConfigService } from '@nestjs/config';
 import cookieParser from 'cookie-parser';
 import { BadRequestException, Logger, ValidationPipe } from '@nestjs/common';
 import { ValidationError } from 'class-validator';
+import compression from 'compression';
+import helmet from 'helmet';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -12,6 +14,9 @@ async function bootstrap() {
   const port = config.get<number>('PORT') ?? 4000;
 
   app.use(cookieParser());
+  app.use(helmet);
+  app.use(compression());
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
