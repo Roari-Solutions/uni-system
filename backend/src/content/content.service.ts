@@ -29,7 +29,7 @@ export class ContentService {
       throw new InternalServerErrorException();
     }
   }
-  async get_news_by_title(
+  async getNewsByTitle(
     title: string,
   ): Promise<typeof news.$inferSelect | null> {
     try {
@@ -42,7 +42,7 @@ export class ContentService {
       throw new InternalServerErrorException();
     }
   }
-  async create_news(dto: CreateNewsDto): Promise<{ status: string }> {
+  async createNews(dto: CreateNewsDto): Promise<{ status: string }> {
     try {
       const existing = await this.db.query.news.findFirst({
         where: eq(news.title, dto.title),
@@ -60,7 +60,7 @@ export class ContentService {
       throw new InternalServerErrorException();
     }
   }
-  async update_news_by_title(
+  async updateNewsByTitle(
     title: string,
     dto: UpdateNewsDto,
   ): Promise<{ status: string }> {
@@ -81,7 +81,7 @@ export class ContentService {
       throw new InternalServerErrorException();
     }
   }
-  async delete_news_by_title(title: string): Promise<{ status: string }> {
+  async deleteNewsByTitle(title: string): Promise<{ status: string }> {
     try {
       const [deleted] = await this.db
         .delete(news)
@@ -107,7 +107,7 @@ export class ContentService {
     }
   }
 
-  async create_contact(dto: CreateContactDto): Promise<{ status: string }> {
+  async createContact(dto: CreateContactDto): Promise<{ status: string }> {
     try {
       const existing = await this.db.query.contacts.findFirst({
         where: eq(contacts.name, dto.name),
@@ -116,9 +116,7 @@ export class ContentService {
         this.logger.warn(`Contact already exists: ${dto.name}`);
         throw new ConflictException();
       }
-      await this.db
-        .insert(contacts)
-        .values({ name: dto.name, value: dto.value, icon_name: dto.iconName });
+      await this.db.insert(contacts).values(dto);
       this.logger.log(`Created contact: ${dto.name}`);
       return { status: 'Ok' };
     } catch (error) {
@@ -128,15 +126,14 @@ export class ContentService {
     }
   }
 
-  async update_contact_by_name(
+  async updateContactByName(
     name: string,
     dto: CreateContactDto,
   ): Promise<{ status: string }> {
     try {
-      const { iconName, ...rest } = dto;
       const updated = await this.db
         .update(contacts)
-        .set({ ...rest, ...(iconName !== undefined ? { icon_name: iconName } : {}) })
+        .set(dto)
         .where(eq(contacts.name, name))
         .returning({ name: contacts.name });
       if (!updated.length) throw new NotFoundException();
@@ -150,7 +147,7 @@ export class ContentService {
     }
   }
 
-  async delete_contact_by_name(name: string): Promise<{ status: string }> {
+  async deleteContactByName(name: string): Promise<{ status: string }> {
     try {
       const deleted = await this.db
         .delete(contacts)

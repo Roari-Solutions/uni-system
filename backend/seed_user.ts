@@ -59,7 +59,7 @@ export async function seedEmployee(
 ) {
   const [emp] = await db
     .insert(schema.employees)
-    .values({ user_id: userId, department_id: departmentId, role_id: roleId })
+    .values({ userId, departmentId, roleId })
     .returning();
   return emp;
 }
@@ -71,12 +71,12 @@ export async function verifySeed(db: Db, id: string) {
   if (!user) return { user: null, employee: null, role: null, final: null };
 
   const employee = await db.query.employees.findFirst({
-    where: eq(schema.employees.user_id, user.id),
+    where: eq(schema.employees.userId, user.id),
   });
   if (!employee) return { user, employee: null, role: null, final: null };
 
   const role = await db.query.roles.findFirst({
-    where: eq(schema.roles.id, employee.role_id),
+    where: eq(schema.roles.id, employee.roleId),
   });
 
   const final = await db.query.users.findFirst({

@@ -40,14 +40,14 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const refresh_token = req.cookies['refresh_token'] as string;
-    if (!refresh_token) {
+    const refreshToken = req.cookies['refresh_token'] as string;
+    if (!refreshToken) {
       this.logger.warn('Refresh attempt with no refresh_token cookie');
       throw new UnauthorizedException();
     }
     this.logger.log('Refreshing tokens');
 
-    const tokens = await this.authService.refresh(refresh_token);
+    const tokens = await this.authService.refresh(refreshToken);
 
     this.authService.setAuthCookies(res, tokens);
   }

@@ -18,7 +18,7 @@ import ms, { StringValue } from 'ms';
 import { Response } from 'express';
 import { JwtPayload } from './auth.guard';
 
-type AuthTokens = { access_token: string; refresh_token: string };
+type AuthTokens = { accessToken: string; refreshToken: string };
 
 @Injectable()
 export class AuthService {
@@ -60,19 +60,19 @@ export class AuthService {
 
     this.logger.log(`Login success: user ${user.id}`);
 
-    const { access_token, refresh_token } = await this.issue_tokens({
+    const { accessToken, refreshToken } = await this.issueTokens({
       sub: user.id,
       role: user.employee.role.name,
     });
-    return { access_token, refresh_token };
+    return { accessToken, refreshToken };
   }
 
-  async issue_tokens(user: JwtPayload): Promise<AuthTokens> {
+  async issueTokens(user: JwtPayload): Promise<AuthTokens> {
     const payload = {
       sub: user.sub,
       role: user.role,
     };
-    const [access_token, refresh_token] = await Promise.all([
+    const [accessToken, refreshToken] = await Promise.all([
       this.jwt.signAsync(payload, {
         secret: config.jwtAccessSecret,
         expiresIn: config.jwtAccessTtl as StringValue,
@@ -82,7 +82,7 @@ export class AuthService {
         expiresIn: config.jwtRefreshTtl as StringValue,
       }),
     ]);
-    return { access_token, refresh_token };
+    return { accessToken, refreshToken };
   }
 
   async refresh(token: string) {
@@ -117,7 +117,7 @@ export class AuthService {
       throw new UnauthorizedException();
     }
 
-    return this.issue_tokens({ sub: user.id, role: user.employee.role.name });
+    return this.issueTokens({ sub: user.id, role: user.employee.role.name });
   }
 
   async me(userId: string) {
@@ -137,17 +137,17 @@ export class AuthService {
     return safe;
   }
 
-  setAuthCookies(res: Response, { access_token, refresh_token }: AuthTokens) {
-    const secure = process.env.NODE_ENV === 'production';
-    res.cookie('access_token', access_token, {
+  setAuthCookies(res: Response, { accessToken, refreshToken }: AuthTokens) {
+    const isSecure = process.env.NODE_ENV === 'production';
+    res.cookie('access_token', accessToken, {
       httpOnly: true,
-      secure,
+      secure: isSecure,
       sameSite: 'strict',
       maxAge: ms(config.jwtAccessTtl as StringValue) ?? 30 * 60 * 1000,
     });
-    res.cookie('refresh_token', refresh_token, {
+    res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
-      secure,
+      secure: isSecure,
       sameSite: 'strict',
       maxAge:
         ms(config.jwtRefreshTtl as StringValue) ?? 7 * 24 * 60 * 60 * 1000,
