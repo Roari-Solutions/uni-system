@@ -5,6 +5,7 @@ import {
   Logger,
   UnauthorizedException,
   createParamDecorator,
+  Inject,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { type Request } from 'express';
@@ -26,7 +27,7 @@ export interface AuthedRequest extends Request {
 export class AuthGuard implements CanActivate {
   private readonly logger = new Logger(AuthGuard.name);
 
-  constructor(private readonly jwt: JwtService) {}
+  constructor(@Inject(JwtService) private readonly jwt: JwtService) {}
 
   /** Returns true when the request carries a valid access token. */
   async canActivate(context: ExecutionContext): Promise<boolean> {

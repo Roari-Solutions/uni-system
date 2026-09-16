@@ -9,6 +9,7 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  Inject,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { Logger } from '@nestjs/common';
@@ -22,7 +23,7 @@ import type { JwtPayload } from './auth.guard';
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
 
-  constructor(private readonly authService: AuthService) {}
+  constructor(@Inject(AuthService) private readonly authService: AuthService) {}
 
   /** POST /auth/login — validates credentials, sets auth cookies. */
   @Post('login')

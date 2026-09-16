@@ -9,6 +9,7 @@ import {
   UseGuards,
   HttpStatus,
   HttpCode,
+  Inject,
 } from '@nestjs/common';
 import { ContentService } from './content.service';
 import {
@@ -27,7 +28,9 @@ type Contact = typeof contacts.$inferSelect;
 @Controller('content')
 @UseGuards(AuthGuard, DynamicContentGuard)
 export class ContentController {
-  constructor(private readonly contentService: ContentService) {}
+  constructor(
+    @Inject(ContentService) private readonly contentService: ContentService,
+  ) {}
   /** GET /content/news */
   @Get('news')
   async news(): Promise<News[]> {

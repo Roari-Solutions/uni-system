@@ -27,7 +27,7 @@ export class AuthService {
 
   constructor(
     @Inject(DATABASE) private readonly db: Db,
-    private readonly jwt: JwtService,
+    @Inject(JwtService) private readonly jwt: JwtService,
   ) {}
 
   /** Validates credentials; throws UnauthorizedException on failure. */
