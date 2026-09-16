@@ -6,6 +6,7 @@ import './index.css'
 import GradesLayout from './layouts/grades/gradesLayout';
 import CurriculumEntry from './pages/grades/curriculum/curriculumEntry';
 import CurriculumList from './pages/grades/curriculum/curriculumList';
+import StudentList from './pages/grades/students/studentList';
 
 const router = createBrowserRouter([
 	{
@@ -25,7 +26,7 @@ const router = createBrowserRouter([
 					{
 						path: "students",
 						children: [
-							{ path: "list" },
+							{ path: "list", element: <StudentList /> },
 							{ path: "entry" },
 						],
 					},

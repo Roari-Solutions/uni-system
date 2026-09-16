@@ -35,5 +35,45 @@
       "abbreviation": "Abbreviation",
       "academicYear": "Academic year"
     }
+  },
+  "studentList": {
+    "title": "Students",
+    "columnsToggle": "Columns",
+    "empty": "No students match the selected filters",
+    "columns": {
+      "name": "Name",
+      "uniNumber": "University number",
+      "acceptanceYear": "Acceptance year",
+      "acceptanceType": "Acceptance type",
+      "level": "Current academic year",
+      "faculty": "Faculty",
+      "status": "Status"
+    },
+    "filters": {
+      "level": "Academic year",
+      "allLevels": "All academic years",
+      "faculty": "Faculty",
+      "allFaculties": "All faculties",
+      "acceptanceYear": "Acceptance year",
+      "allAcceptanceYears": "All acceptance years"
+    },
+    "acceptanceTypes": {
+      "general": "General admission",
+      "special": "Special admission",
+      "vacancies": "Vacancy admission",
+      "teachersChildren": "Teachers' children admission"
+    },
+    "levels": {
+      "1": "First year",
+      "2": "Second year",
+      "3": "Third year",
+      "4": "Fourth year",
+      "5": "Fifth year",
+      "6": "Sixth year"
+    },
+    "statuses": {
+      "pass": "Pass",
+      "fail": "Fail"
+    }
   }
 }

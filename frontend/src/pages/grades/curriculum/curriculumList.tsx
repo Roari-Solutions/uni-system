@@ -1,13 +1,9 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import DataTable, { type Column } from "../../../components/dataTable";
+import FilterSelect from "../../../components/filterSelect";
+import { FACULTIES, type Localized } from "../../../mocks/faculties";
 import { ACADEMIC_YEARS } from "../../../utils/academicYears";
-
-type Localized = { en: string; ar: string };
-
-type Faculty = {
-	id: string;
-	name: Localized;
-};
 
 type Curriculum = {
 	id: string;
@@ -17,13 +13,7 @@ type Curriculum = {
 	academicYear: string;
 };
 
-// TODO: replace mock data with the faculties and curriculums APIs
-const FACULTIES: Faculty[] = [
-	{ id: "eng", name: { en: "Faculty of Engineering", ar: "كلية الهندسة" } },
-	{ id: "sci", name: { en: "Faculty of Science", ar: "كلية العلوم" } },
-	{ id: "med", name: { en: "Faculty of Medicine", ar: "كلية الطب" } },
-];
-
+// TODO: replace mock data with the curriculums API
 const CURRICULUMS: Curriculum[] = [
 	{ id: "1", name: { en: "Computer Engineering", ar: "هندسة الحاسوب" }, facultyId: "eng", abbreviation: "CE", academicYear: ACADEMIC_YEARS[2] },
 	{ id: "2", name: { en: "Civil Engineering", ar: "الهندسة المدنية" }, facultyId: "eng", abbreviation: "CIV", academicYear: ACADEMIC_YEARS[1] },
@@ -31,9 +21,6 @@ const CURRICULUMS: Curriculum[] = [
 	{ id: "4", name: { en: "Physics", ar: "الفيزياء" }, facultyId: "sci", abbreviation: "PHYS", academicYear: ACADEMIC_YEARS[3] },
 	{ id: "5", name: { en: "General Medicine", ar: "الطب العام" }, facultyId: "med", abbreviation: "MED", academicYear: ACADEMIC_YEARS[2] },
 ];
-
-const selectClass =
-	"w-full rounded-md border border-palette-2 bg-white px-3 py-2 text-palette-6 outline-none focus:ring-2 focus:ring-palette-4";
 
 const CurriculumList = () => {
 	const { t, i18n } = useTranslation();
@@ -51,7 +38,12 @@ const CurriculumList = () => {
 			(!academicYear || c.academicYear === academicYear),
 	);
 
-	const columns = ["name", "faculty", "abbreviation", "academicYear"] as const;
+	const columns: Column<Curriculum>[] = [
+		{ key: "name", header: t("curriculumList.columns.name"), render: (c) => c.name[lang] },
+		{ key: "faculty", header: t("curriculumList.columns.faculty"), render: (c) => facultyName(c.facultyId) },
+		{ key: "abbreviation", header: t("curriculumList.columns.abbreviation"), render: (c) => c.abbreviation },
+		{ key: "academicYear", header: t("curriculumList.columns.academicYear"), render: (c) => c.academicYear },
+	];
 
 	return (
 		<div>
@@ -60,76 +52,30 @@ const CurriculumList = () => {
 			</h1>
 
 			<div className="mb-4 flex flex-wrap gap-4">
-				<div className="flex w-full flex-col gap-1.5 sm:w-64">
-					<label htmlFor="facultyFilter" className="font-medium text-palette-6">
-						{t("curriculumList.faculty")}
-					</label>
-					<select
-						id="facultyFilter"
-						value={facultyId}
-						onChange={(e) => setFacultyId(e.target.value)}
-						className={selectClass}
-					>
-						<option value="">{t("curriculumList.allFaculties")}</option>
-						{FACULTIES.map((f) => (
-							<option key={f.id} value={f.id}>
-								{f.name[lang]}
-							</option>
-						))}
-					</select>
-				</div>
-
-				<div className="flex w-full flex-col gap-1.5 sm:w-64">
-					<label htmlFor="yearFilter" className="font-medium text-palette-6">
-						{t("curriculumList.academicYear")}
-					</label>
-					<select
-						id="yearFilter"
-						value={academicYear}
-						onChange={(e) => setAcademicYear(e.target.value)}
-						className={selectClass}
-					>
-						<option value="">{t("curriculumList.allYears")}</option>
-						{ACADEMIC_YEARS.map((year) => (
-							<option key={year} value={year}>
-								{year}
-							</option>
-						))}
-					</select>
-				</div>
+				<FilterSelect
+					id="facultyFilter"
+					label={t("curriculumList.faculty")}
+					value={facultyId}
+					onChange={setFacultyId}
+					allLabel={t("curriculumList.allFaculties")}
+					options={FACULTIES.map((f) => ({ value: f.id, label: f.name[lang] }))}
+				/>
+				<FilterSelect
+					id="yearFilter"
+					label={t("curriculumList.academicYear")}
+					value={academicYear}
+					onChange={setAcademicYear}
+					allLabel={t("curriculumList.allYears")}
+					options={ACADEMIC_YEARS.map((year) => ({ value: year, label: year }))}
+				/>
 			</div>
 
-			<div className="overflow-x-auto rounded-lg border border-palette-2 bg-white">
-				<table className="w-full text-start text-palette-6">
-					<thead className="bg-palette-6 text-palette-1">
-						<tr>
-							{columns.map((col) => (
-								<th key={col} scope="col" className="px-4 py-3 text-start font-semibold">
-									{t(`curriculumList.columns.${col}`)}
-								</th>
-							))}
-						</tr>
-					</thead>
-					<tbody className="divide-y divide-palette-2">
-						{rows.length === 0 ? (
-							<tr>
-								<td colSpan={columns.length} className="px-4 py-6 text-center">
-									{t("curriculumList.empty")}
-								</td>
-							</tr>
-						) : (
-							rows.map((c) => (
-								<tr key={c.id} className="hover:bg-palette-1">
-									<td className="px-4 py-3">{c.name[lang]}</td>
-									<td className="px-4 py-3">{facultyName(c.facultyId)}</td>
-									<td className="px-4 py-3">{c.abbreviation}</td>
-									<td className="px-4 py-3">{c.academicYear}</td>
-								</tr>
-							))
-						)}
-					</tbody>
-				</table>
-			</div>
+			<DataTable
+				columns={columns}
+				rows={rows}
+				getRowId={(c) => c.id}
+				emptyText={t("curriculumList.empty")}
+			/>
 		</div>
 	);
 };

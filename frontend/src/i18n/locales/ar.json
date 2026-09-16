@@ -35,5 +35,45 @@
       "abbreviation": "الاختصار",
       "academicYear": "العام الدراسي"
     }
+  },
+  "studentList": {
+    "title": "الطلاب",
+    "columnsToggle": "الأعمدة",
+    "empty": "لا يوجد طلاب يطابقون عوامل التصفية المحددة",
+    "columns": {
+      "name": "الاسم",
+      "uniNumber": "الرقم الجامعي",
+      "acceptanceYear": "سنة القبول",
+      "acceptanceType": "نوع القبول",
+      "level": "السنة الدراسية الحالية",
+      "faculty": "الكلية",
+      "status": "الحالة"
+    },
+    "filters": {
+      "level": "السنة الدراسية",
+      "allLevels": "جميع السنوات الدراسية",
+      "faculty": "الكلية",
+      "allFaculties": "جميع الكليات",
+      "acceptanceYear": "سنة القبول",
+      "allAcceptanceYears": "جميع سنوات القبول"
+    },
+    "acceptanceTypes": {
+      "general": "قبول عام",
+      "special": "قبول خاص",
+      "vacancies": "قبول شواغر",
+      "teachersChildren": "قبول أبناء معلمين"
+    },
+    "levels": {
+      "1": "السنة الأولى",
+      "2": "السنة الثانية",
+      "3": "السنة الثالثة",
+      "4": "السنة الرابعة",
+      "5": "السنة الخامسة",
+      "6": "السنة السادسة"
+    },
+    "statuses": {
+      "pass": "ناجح",
+      "fail": "راسب"
+    }
   }
 }
