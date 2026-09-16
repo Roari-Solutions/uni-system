@@ -4,25 +4,10 @@ import ConfirmDialog from "../../../components/confirmDialog";
 import DataTable, { type Column } from "../../../components/dataTable";
 import DeleteButton from "../../../components/deleteButton";
 import FilterSelect from "../../../components/filterSelect";
-import { FACULTIES, type Localized } from "../../../mocks/faculties";
+import { CURRICULUMS } from "../../../mocks/curriculums";
+import { FACULTIES } from "../../../mocks/faculties";
+import type { Curriculum } from "../../../types/curriculum";
 import { ACADEMIC_YEARS } from "../../../utils/academicYears";
-
-type Curriculum = {
-	id: string;
-	name: Localized;
-	facultyId: string;
-	abbreviation: string;
-	academicYear: string;
-};
-
-// TODO: replace mock data with the curriculums API
-const CURRICULUMS: Curriculum[] = [
-	{ id: "1", name: { en: "Computer Engineering", ar: "هندسة الحاسوب" }, facultyId: "eng", abbreviation: "CE", academicYear: ACADEMIC_YEARS[2] },
-	{ id: "2", name: { en: "Civil Engineering", ar: "الهندسة المدنية" }, facultyId: "eng", abbreviation: "CIV", academicYear: ACADEMIC_YEARS[1] },
-	{ id: "3", name: { en: "Mathematics", ar: "الرياضيات" }, facultyId: "sci", abbreviation: "MATH", academicYear: ACADEMIC_YEARS[2] },
-	{ id: "4", name: { en: "Physics", ar: "الفيزياء" }, facultyId: "sci", abbreviation: "PHYS", academicYear: ACADEMIC_YEARS[3] },
-	{ id: "5", name: { en: "General Medicine", ar: "الطب العام" }, facultyId: "med", abbreviation: "MED", academicYear: ACADEMIC_YEARS[2] },
-];
 
 const CurriculumList = () => {
 	const { t, i18n } = useTranslation();
