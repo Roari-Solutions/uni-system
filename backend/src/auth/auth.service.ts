@@ -140,7 +140,7 @@ export class AuthService {
   }
 
   setAuthCookies(res: Response, { accessToken, refreshToken }: AuthTokens) {
-    const isSecure = process.env.NODE_ENV === 'production';
+    const isSecure = config.nodeEnv === 'production';
     res.cookie('access_token', accessToken, {
       httpOnly: true,
       secure: isSecure,

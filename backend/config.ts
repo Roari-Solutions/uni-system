@@ -7,6 +7,9 @@ function required(name: string): string {
 }
 
 export const config = {
+  get nodeEnv() {
+    return process.env.NODE_ENV ?? 'development';
+  },
   get databaseUrl() {
     return required('DATABASE_URL');
   },
