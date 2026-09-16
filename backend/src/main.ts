@@ -14,7 +14,7 @@ async function bootstrap() {
   const port = config.get<number>('PORT') ?? 4000;
 
   app.use(cookieParser());
-  app.use(helmet);
+  app.use(helmet());
   app.use(compression());
 
   app.useGlobalPipes(
@@ -28,14 +28,9 @@ async function bootstrap() {
           field: e.property,
           constraints: e.constraints,
         }));
-        logger.warn(
-          `Validation failed: ${JSON.stringify(details)}`,
-          'ValidationPipe',
-        );
+        logger.warn(`Validation failed: ${JSON.stringify(details)}`, 'ValidationPipe');
 
-        const isMissing = errors.some(
-          (e) => e.constraints?.isNotEmpty || e.constraints?.isDefined,
-        );
+        const isMissing = errors.some((e) => e.constraints?.isNotEmpty || e.constraints?.isDefined);
 
         const code = isMissing ? 'MA' : 'PI'; // matches existing service codes
 
