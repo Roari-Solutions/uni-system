@@ -2,14 +2,13 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, RouterProvider } from 'react-router'
 import "./i18n";
-import MainLayout from './layouts/mainLayout'
 import './index.css'
 import MainPage from './pages/mainPage'
 
 const router = createBrowserRouter([
 	{
 		path: "/",
-		element: <MainLayout />,
+		element: <>Hi</>,
 		children: [
 			{ index: true, element: <MainPage />},
 		],
