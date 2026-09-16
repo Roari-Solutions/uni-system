@@ -33,6 +33,7 @@ export async function seedDepartment(db: Db, deptName = 'IT') {
   const [dept] = await db
     .insert(schema.departments)
     .values({ name: deptName })
+    .onConflictDoNothing({ target: schema.departments.name })
     .returning();
   return dept;
 }
@@ -45,6 +46,7 @@ export async function seedRole(
   const [role] = await db
     .insert(schema.roles)
     .values({ name: roleName, level })
+    .onConflictDoNothing({ target: schema.roles.name })
     .returning();
   return role;
 }
@@ -57,7 +59,7 @@ export async function seedEmployee(
 ) {
   const [emp] = await db
     .insert(schema.employees)
-    .values({ userId, departmentId, roleId })
+    .values({ user_id: userId, department_id: departmentId, role_id: roleId })
     .returning();
   return emp;
 }
@@ -69,12 +71,12 @@ export async function verifySeed(db: Db, id: string) {
   if (!user) return { user: null, employee: null, role: null, final: null };
 
   const employee = await db.query.employees.findFirst({
-    where: eq(schema.employees.userId, user.id),
+    where: eq(schema.employees.user_id, user.id),
   });
   if (!employee) return { user, employee: null, role: null, final: null };
 
   const role = await db.query.roles.findFirst({
-    where: eq(schema.roles.id, employee.roleId),
+    where: eq(schema.roles.id, employee.role_id),
   });
 
   const final = await db.query.users.findFirst({

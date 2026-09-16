@@ -116,7 +116,9 @@ export class ContentService {
         this.logger.warn(`Contact already exists: ${dto.name}`);
         throw new ConflictException();
       }
-      await this.db.insert(contacts).values(dto);
+      await this.db
+        .insert(contacts)
+        .values({ name: dto.name, value: dto.value, icon_name: dto.iconName });
       this.logger.log(`Created contact: ${dto.name}`);
       return { status: 'Ok' };
     } catch (error) {
@@ -131,9 +133,10 @@ export class ContentService {
     dto: CreateContactDto,
   ): Promise<{ status: string }> {
     try {
+      const { iconName, ...rest } = dto;
       const updated = await this.db
         .update(contacts)
-        .set(dto)
+        .set({ ...rest, ...(iconName !== undefined ? { icon_name: iconName } : {}) })
         .where(eq(contacts.name, name))
         .returning({ name: contacts.name });
       if (!updated.length) throw new NotFoundException();
