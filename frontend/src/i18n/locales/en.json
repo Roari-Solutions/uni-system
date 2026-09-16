@@ -78,8 +78,8 @@
       "6": "Sixth year"
     },
     "statuses": {
-      "pass": "Pass",
-      "fail": "Fail"
+      "success": "Success",
+      "repeat": "Repeat"
     }
   },
   "common": {
@@ -107,6 +107,49 @@
     "errors": {
       "required": "This field is required",
       "uniNumberDigits": "University number must contain digits only"
+    }
+  },
+  "grade": {
+    "statuses": {
+      "pass": "Pass",
+      "fail": "Fail"
+    }
+  },
+  "gradeList": {
+    "title": "Grades",
+    "empty": "No grades match the selected filters",
+    "columns": {
+      "name": "Name",
+      "uniNumber": "University number",
+      "faculty": "Faculty",
+      "curriculum": "Curriculum",
+      "grade": "Grade",
+      "status": "Status"
+    },
+    "filters": {
+      "faculty": "Faculty",
+      "allFaculties": "All faculties",
+      "curriculum": "Curriculum",
+      "allCurriculums": "All curriculums",
+      "status": "Status",
+      "allStatuses": "All statuses"
+    }
+  },
+  "gradeEntry": {
+    "title": "Add grade",
+    "student": "Student",
+    "studentPlaceholder": "Search by name or university number...",
+    "curriculum": "Curriculum",
+    "curriculumPlaceholder": "Search curriculums...",
+    "noResults": "No results",
+    "grade": "Grade",
+    "status": "Status",
+    "selectStatus": "Select status",
+    "submit": "Save",
+    "errors": {
+      "required": "This field is required",
+      "gradeNumber": "Grade must be a number",
+      "gradeRange": "Grade must be between 0 and 100"
     }
   }
 }
