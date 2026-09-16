@@ -10,21 +10,25 @@ import { JwtService } from '@nestjs/jwt';
 import { type Request } from 'express';
 import { config } from '../../config';
 
+/** JWT payload carried on authenticated requests. */
 export interface JwtPayload {
   sub: string;
   role: string;
 }
 
+/** Express request with the verified JWT payload attached. */
 export interface AuthedRequest extends Request {
   user?: JwtPayload;
 }
 
+/** Verifies the access_token cookie and attaches the payload. */
 @Injectable()
 export class AuthGuard implements CanActivate {
   private readonly logger = new Logger(AuthGuard.name);
 
   constructor(private readonly jwt: JwtService) {}
 
+  /** Returns true when the request carries a valid access token. */
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest<AuthedRequest>();
 
@@ -49,6 +53,7 @@ export class AuthGuard implements CanActivate {
   }
 }
 
+/** Extracts the verified JWT payload inside guarded handlers. */
 export const CurrentUser = createParamDecorator(
   (_data: unknown, ctx: ExecutionContext): JwtPayload => {
     const user = ctx.switchToHttp().getRequest<AuthedRequest>().user;

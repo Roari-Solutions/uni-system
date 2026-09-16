@@ -17,12 +17,14 @@ import { type Request, type Response } from 'express';
 import { AuthGuard, CurrentUser } from './auth.guard';
 import type { JwtPayload } from './auth.guard';
 
+/** Login/refresh/profile endpoints. */
 @Controller('auth')
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
 
   constructor(private readonly authService: AuthService) {}
 
+  /** POST /auth/login — validates credentials, sets auth cookies. */
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(
@@ -34,6 +36,7 @@ export class AuthController {
     this.authService.setAuthCookies(res, tokens);
   }
 
+  /** GET /auth/refresh — rotates tokens from the refresh cookie. */
   @Get('refresh')
   @HttpCode(HttpStatus.OK)
   async refresh(
@@ -52,6 +55,7 @@ export class AuthController {
     this.authService.setAuthCookies(res, tokens);
   }
 
+  /** GET /auth/me — returns the current user's safe profile. */
   @UseGuards(AuthGuard)
   @Get('me')
   @HttpCode(HttpStatus.OK)

@@ -16,11 +16,13 @@ import {
   UpdateNewsDto,
 } from './dto/content.dto';
 
+/** CRUD for news items and contact entries. */
 @Injectable()
 export class ContentService {
   private readonly logger = new Logger(ContentService.name);
 
   constructor(@Inject(DATABASE) private readonly db: Db) {}
+  /** Lists all news items. */
   async news() {
     try {
       return await this.db.query.news.findMany();
@@ -31,6 +33,7 @@ export class ContentService {
       });
     }
   }
+  /** Finds one news item by title, or null. */
   async getNewsByTitle(
     title: string,
   ): Promise<typeof news.$inferSelect | null> {
@@ -46,6 +49,7 @@ export class ContentService {
       });
     }
   }
+  /** Creates a news item; throws ConflictException on duplicate title. */
   async createNews(dto: CreateNewsDto): Promise<{ status: string }> {
     try {
       const existing = await this.db.query.news.findFirst({
@@ -66,6 +70,7 @@ export class ContentService {
       });
     }
   }
+  /** Updates a news item; throws NotFoundException when missing. */
   async updateNewsByTitle(
     title: string,
     dto: UpdateNewsDto,
@@ -89,6 +94,7 @@ export class ContentService {
       });
     }
   }
+  /** Deletes a news item; throws NotFoundException when missing. */
   async deleteNewsByTitle(title: string): Promise<{ status: string }> {
     try {
       const [deleted] = await this.db
@@ -108,6 +114,7 @@ export class ContentService {
     }
   }
 
+  /** Lists all contact entries. */
   async contacts(): Promise<(typeof contacts.$inferSelect)[]> {
     try {
       return await this.db.query.contacts.findMany();
@@ -119,6 +126,7 @@ export class ContentService {
     }
   }
 
+  /** Creates a contact; throws ConflictException on duplicate name. */
   async createContact(dto: CreateContactDto): Promise<{ status: string }> {
     try {
       const existing = await this.db.query.contacts.findFirst({
@@ -140,6 +148,7 @@ export class ContentService {
     }
   }
 
+  /** Updates a contact; throws NotFoundException when missing. */
   async updateContactByName(
     name: string,
     dto: CreateContactDto,
@@ -163,6 +172,7 @@ export class ContentService {
     }
   }
 
+  /** Deletes a contact; throws NotFoundException when missing. */
   async deleteContactByName(name: string): Promise<{ status: string }> {
     try {
       const deleted = await this.db

@@ -20,6 +20,7 @@ import { JwtPayload } from './auth.guard';
 
 type AuthTokens = { accessToken: string; refreshToken: string };
 
+/** Login/refresh/profile plus JWT cookie handling. */
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -29,6 +30,7 @@ export class AuthService {
     private readonly jwt: JwtService,
   ) {}
 
+  /** Validates credentials; throws UnauthorizedException on failure. */
   async login(body: LoginDto) {
     const user = await this.db.query.users.findFirst({
       where: eq(schema.users.email, body.email),
@@ -67,6 +69,7 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
+  /** Signs a fresh access/refresh token pair for the payload. */
   async issueTokens(user: JwtPayload): Promise<AuthTokens> {
     const payload = {
       sub: user.sub,
@@ -85,6 +88,7 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
+  /** Rotates tokens from a refresh token; throws UnauthorizedException. */
   async refresh(token: string) {
     let payload: JwtPayload;
     try {
@@ -122,6 +126,7 @@ export class AuthService {
     return this.issueTokens({ sub: user.id, role: user.employee.role.name });
   }
 
+  /** Returns the safe profile (no password hash) for a user id. */
   async me(userId: string) {
     const user = await this.db.query.users.findFirst({
       where: eq(schema.users.id, userId),
@@ -139,6 +144,7 @@ export class AuthService {
     return safe;
   }
 
+  /** Writes access/refresh tokens as HttpOnly cookies. */
   setAuthCookies(res: Response, { accessToken, refreshToken }: AuthTokens) {
     const isSecure = config.nodeEnv === 'production';
     res.cookie('access_token', accessToken, {

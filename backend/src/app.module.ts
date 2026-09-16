@@ -19,4 +19,5 @@ import { ContentModule } from './content/content.module';
   controllers: [AppController],
   providers: [AppService],
 })
+/** Root module: global config plus auth/content/database. */
 export class AppModule {}

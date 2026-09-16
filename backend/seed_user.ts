@@ -10,6 +10,7 @@ import type { JwtPayload } from './src/auth/auth.guard';
 import { config } from './config';
 
 // ---------- db ----------
+/** Opens a Drizzle handle using the central database URL. */
 export function getDb() {
   return drizzle(new Pool({ connectionString: config.databaseUrl }), {
     schema,
@@ -17,10 +18,12 @@ export function getDb() {
 }
 
 // ---------- helpers ----------
+/** Hashes a plaintext password with bcrypt. */
 export async function hashPassword(pass: string) {
   return bcrypt.hash(pass, 10);
 }
 
+/** Inserts the seed user (idempotent on email). */
 export async function seedUser(db: Db, name: string, hashed: string) {
   const [user] = await db
     .insert(schema.users)
@@ -30,6 +33,7 @@ export async function seedUser(db: Db, name: string, hashed: string) {
   return user;
 }
 
+/** Inserts the seed department (idempotent on name). */
 export async function seedDepartment(db: Db, deptName = 'IT') {
   const [dept] = await db
     .insert(schema.departments)
@@ -39,6 +43,7 @@ export async function seedDepartment(db: Db, deptName = 'IT') {
   return dept;
 }
 
+/** Inserts the seed role (idempotent on name). */
 export async function seedRole(
   db: Db,
   roleName = 'site-content-employee',
@@ -52,6 +57,7 @@ export async function seedRole(
   return role;
 }
 
+/** Links the seed user to a department and role as an employee. */
 export async function seedEmployee(
   db: Db,
   userId: string,
@@ -65,6 +71,7 @@ export async function seedEmployee(
   return emp;
 }
 
+/** Reloads the seeded user/employee/role chain for verification. */
 export async function verifySeed(db: Db, id: string) {
   const user = await db.query.users.findFirst({
     where: eq(schema.users.id, id),
@@ -92,16 +99,19 @@ export async function verifySeed(db: Db, id: string) {
 }
 
 // ---------- jwt decode ----------
+/** Verifies a token with the access secret. */
 export function decodeAccessToken(token: string) {
   return jwt.verify(token, config.jwtAccessSecret) as jwt.JwtPayload &
     JwtPayload;
 }
 
+/** Verifies a token with the refresh secret. */
 export function decodeRefreshToken(token: string) {
   return jwt.verify(token, config.jwtRefreshSecret) as jwt.JwtPayload &
     JwtPayload;
 }
 
+/** Verifies an access or refresh token with the matching secret. */
 export function decodeToken(
   token: string,
   type: 'access' | 'refresh' = 'access',
@@ -111,6 +121,7 @@ export function decodeToken(
     : decodeAccessToken(token);
 }
 
+/** Decodes a token without verifying (debugging only). */
 export function decodeUnsafe(token: string) {
   return jwt.decode(token, { complete: true });
 }
