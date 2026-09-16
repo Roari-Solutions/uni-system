@@ -1,1 +1,39 @@
-{}
+{
+  "gradesNav": {
+    "curriculum": "Curriculum",
+    "students": "Students",
+    "grades": "Grades",
+    "list": "List",
+    "entry": "Entry",
+    "switchLanguage": "العربية"
+  },
+  "curriculumEntry": {
+    "title": "Add curriculum",
+    "name": "Curriculum name",
+    "faculty": "Faculty",
+    "facultyPlaceholder": "Search faculties...",
+    "noResults": "No results",
+    "abbreviation": "Abbreviation",
+    "academicYear": "Academic year",
+    "selectYear": "Select academic year",
+    "submit": "Save",
+    "errors": {
+      "required": "This field is required",
+      "abbreviationTooLong": "Abbreviation must be at most 10 characters"
+    }
+  },
+  "curriculumList": {
+    "title": "Curriculums",
+    "faculty": "Faculty",
+    "allFaculties": "All faculties",
+    "academicYear": "Academic year",
+    "allYears": "All academic years",
+    "empty": "No curriculums match the selected filters",
+    "columns": {
+      "name": "Name",
+      "faculty": "Faculty",
+      "abbreviation": "Abbreviation",
+      "academicYear": "Academic year"
+    }
+  }
+}

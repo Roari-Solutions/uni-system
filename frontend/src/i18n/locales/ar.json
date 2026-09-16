@@ -1,1 +1,39 @@
-{}
+{
+  "gradesNav": {
+    "curriculum": "المناهج",
+    "students": "الطلاب",
+    "grades": "الدرجات",
+    "list": "القائمة",
+    "entry": "الإدخال",
+    "switchLanguage": "English"
+  },
+  "curriculumEntry": {
+    "title": "إضافة منهج",
+    "name": "اسم المنهج",
+    "faculty": "الكلية",
+    "facultyPlaceholder": "ابحث عن كلية...",
+    "noResults": "لا توجد نتائج",
+    "abbreviation": "الاختصار",
+    "academicYear": "العام الدراسي",
+    "selectYear": "اختر العام الدراسي",
+    "submit": "حفظ",
+    "errors": {
+      "required": "هذا الحقل مطلوب",
+      "abbreviationTooLong": "يجب ألا يتجاوز الاختصار 10 أحرف"
+    }
+  },
+  "curriculumList": {
+    "title": "المناهج",
+    "faculty": "الكلية",
+    "allFaculties": "جميع الكليات",
+    "academicYear": "العام الدراسي",
+    "allYears": "جميع الأعوام الدراسية",
+    "empty": "لا توجد مناهج تطابق عوامل التصفية المحددة",
+    "columns": {
+      "name": "الاسم",
+      "faculty": "الكلية",
+      "abbreviation": "الاختصار",
+      "academicYear": "العام الدراسي"
+    }
+  }
+}
