@@ -1,24 +1,13 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import ColumnToggle from "../../../components/columnToggle";
+import ConfirmDialog from "../../../components/confirmDialog";
 import DataTable, { type Column } from "../../../components/dataTable";
+import DeleteButton from "../../../components/deleteButton";
 import FilterSelect from "../../../components/filterSelect";
-import { FACULTIES, type Localized } from "../../../mocks/faculties";
+import { FACULTIES } from "../../../mocks/faculties";
+import type { Student } from "../../../types/student";
 import { ACCEPTANCE_YEARS, STUDY_LEVELS } from "../../../utils/academicYears";
-
-type AcceptanceType = "general" | "special" | "vacancies" | "teachersChildren";
-
-type Student = {
-	id: string;
-	name: Localized;
-	uniNumber: string;
-	acceptanceYear: string;
-	acceptanceType: AcceptanceType;
-	level: (typeof STUDY_LEVELS)[number];
-	facultyId: string;
-	// null until the year's result is determined
-	status: "pass" | "fail" | null;
-};
 
 // TODO: replace mock data with the students API
 const STUDENTS: Student[] = [
@@ -32,16 +21,18 @@ const STUDENTS: Student[] = [
 ];
 
 // columns that can't be hidden
-const ALWAYS_VISIBLE = ["name"];
+const ALWAYS_VISIBLE = ["name", "actions"];
 
 const StudentList = () => {
 	const { t, i18n } = useTranslation();
 	const lang = i18n.language === "ar" ? "ar" : "en";
 
+	const [students, setStudents] = useState(STUDENTS);
 	const [level, setLevel] = useState("");
 	const [facultyId, setFacultyId] = useState("");
 	const [acceptanceYear, setAcceptanceYear] = useState("");
 	const [hiddenColumns, setHiddenColumns] = useState<string[]>([]);
+	const [pendingDelete, setPendingDelete] = useState<Student | null>(null);
 
 	const toggleColumn = (key: string) => {
 		setHiddenColumns((prev) =>
@@ -49,10 +40,17 @@ const StudentList = () => {
 		);
 	};
 
+	const confirmDelete = () => {
+		if (!pendingDelete) return;
+		// TODO: call the delete student API before removing the row
+		setStudents((prev) => prev.filter((s) => s.id !== pendingDelete.id));
+		setPendingDelete(null);
+	};
+
 	const facultyName = (id: string) =>
 		FACULTIES.find((f) => f.id === id)?.name[lang] ?? "";
 
-	const rows = STUDENTS.filter(
+	const rows = students.filter(
 		(s) =>
 			(!level || String(s.level) === level) &&
 			(!facultyId || s.facultyId === facultyId) &&
@@ -63,10 +61,20 @@ const StudentList = () => {
 		{ key: "name", header: t("studentList.columns.name"), render: (s) => s.name[lang] },
 		{ key: "uniNumber", header: t("studentList.columns.uniNumber"), render: (s) => s.uniNumber },
 		{ key: "acceptanceYear", header: t("studentList.columns.acceptanceYear"), render: (s) => s.acceptanceYear },
-		{ key: "acceptanceType", header: t("studentList.columns.acceptanceType"), render: (s) => t(`studentList.acceptanceTypes.${s.acceptanceType}`) },
-		{ key: "level", header: t("studentList.columns.level"), render: (s) => t(`studentList.levels.${s.level}`) },
+		{ key: "acceptanceType", header: t("studentList.columns.acceptanceType"), render: (s) => t(`student.acceptanceTypes.${s.acceptanceType}`) },
+		{ key: "level", header: t("studentList.columns.level"), render: (s) => t(`student.levels.${s.level}`) },
 		{ key: "faculty", header: t("studentList.columns.faculty"), render: (s) => facultyName(s.facultyId) },
-		{ key: "status", header: t("studentList.columns.status"), render: (s) => (s.status ? t(`studentList.statuses.${s.status}`) : "—") },
+		{ key: "status", header: t("studentList.columns.status"), render: (s) => (s.status ? t(`student.statuses.${s.status}`) : "—") },
+		{
+			key: "actions",
+			header: t("common.actions"),
+			render: (s) => (
+				<DeleteButton
+					label={t("common.deleteItem", { name: s.name[lang] })}
+					onClick={() => setPendingDelete(s)}
+				/>
+			),
+		},
 	];
 
 	return (
@@ -82,7 +90,7 @@ const StudentList = () => {
 					value={level}
 					onChange={setLevel}
 					allLabel={t("studentList.filters.allLevels")}
-					options={STUDY_LEVELS.map((l) => ({ value: String(l), label: t(`studentList.levels.${l}`) }))}
+					options={STUDY_LEVELS.map((l) => ({ value: String(l), label: t(`student.levels.${l}`) }))}
 				/>
 				<FilterSelect
 					id="facultyFilter"
@@ -116,6 +124,16 @@ const StudentList = () => {
 				rows={rows}
 				getRowId={(s) => s.id}
 				emptyText={t("studentList.empty")}
+			/>
+
+			<ConfirmDialog
+				open={pendingDelete !== null}
+				title={t("studentList.deleteTitle")}
+				message={t("studentList.deleteMessage", { name: pendingDelete?.name[lang] })}
+				confirmLabel={t("common.delete")}
+				cancelLabel={t("common.cancel")}
+				onConfirm={confirmDelete}
+				onCancel={() => setPendingDelete(null)}
 			/>
 		</div>
 	);

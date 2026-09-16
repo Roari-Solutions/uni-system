@@ -1,7 +1,9 @@
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
+import FormField from "../../../components/formField";
 import SearchSelect, { type SearchOption } from "../../../components/searchSelect";
+import { formCardClass, inputClass, submitButtonClass } from "../../../styles/form";
 import { ACADEMIC_YEARS } from "../../../utils/academicYears";
 
 // messages are i18n keys, translated when rendered
@@ -25,11 +27,6 @@ const EMPTY_FORM: CurriculumForm = {
 	abbreviation: "",
 	academicYear: "",
 };
-
-const inputClass = (invalid: boolean) =>
-	`w-full rounded-md border bg-white px-3 py-2 text-palette-6 outline-none focus:ring-2 focus:ring-palette-4 ${
-		invalid ? "border-red-600" : "border-palette-2"
-	}`;
 
 const CurriculumEntry = () => {
 	const { t } = useTranslation();
@@ -66,9 +63,9 @@ const CurriculumEntry = () => {
 			<form
 				noValidate
 				onSubmit={handleSubmit}
-				className="flex flex-col gap-5 rounded-lg border border-palette-2 bg-white p-6"
+				className={formCardClass}
 			>
-				<Field id="name" label={t("curriculumEntry.name")} error={errors.name?.[0]}>
+				<FormField id="name" label={t("curriculumEntry.name")} error={errors.name?.[0]}>
 					<input
 						id="name"
 						type="text"
@@ -77,9 +74,9 @@ const CurriculumEntry = () => {
 						aria-invalid={!!errors.name}
 						className={inputClass(!!errors.name)}
 					/>
-				</Field>
+				</FormField>
 
-				<Field id="faculty" label={t("curriculumEntry.faculty")} error={errors.facultyId?.[0]}>
+				<FormField id="faculty" label={t("curriculumEntry.faculty")} error={errors.facultyId?.[0]}>
 					<SearchSelect
 						id="faculty"
 						query={facultyQuery}
@@ -97,9 +94,9 @@ const CurriculumEntry = () => {
 						noResultsText={t("curriculumEntry.noResults")}
 						invalid={!!errors.facultyId}
 					/>
-				</Field>
+				</FormField>
 
-				<Field
+				<FormField
 					id="abbreviation"
 					label={t("curriculumEntry.abbreviation")}
 					error={errors.abbreviation?.[0]}
@@ -112,9 +109,9 @@ const CurriculumEntry = () => {
 						aria-invalid={!!errors.abbreviation}
 						className={inputClass(!!errors.abbreviation)}
 					/>
-				</Field>
+				</FormField>
 
-				<Field
+				<FormField
 					id="academicYear"
 					label={t("curriculumEntry.academicYear")}
 					error={errors.academicYear?.[0]}
@@ -135,36 +132,15 @@ const CurriculumEntry = () => {
 							</option>
 						))}
 					</select>
-				</Field>
+				</FormField>
 
 				<button
 					type="submit"
-					className="self-start rounded-md bg-palette-6 px-5 py-2 font-medium text-palette-1 hover:bg-palette-5"
+					className={submitButtonClass}
 				>
 					{t("curriculumEntry.submit")}
 				</button>
 			</form>
-		</div>
-	);
-};
-
-type FieldProps = {
-	id: string;
-	label: string;
-	error?: string;
-	children: ReactNode;
-};
-
-const Field = ({ id, label, error, children }: FieldProps) => {
-	const { t } = useTranslation();
-
-	return (
-		<div className="flex flex-col gap-1.5">
-			<label htmlFor={id} className="font-medium text-palette-6">
-				{label}
-			</label>
-			{children}
-			{error && <p className="text-sm text-red-600">{t(error)}</p>}
 		</div>
 	);
 };

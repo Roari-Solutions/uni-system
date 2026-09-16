@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import ConfirmDialog from "../../../components/confirmDialog";
 import DataTable, { type Column } from "../../../components/dataTable";
+import DeleteButton from "../../../components/deleteButton";
 import FilterSelect from "../../../components/filterSelect";
 import { FACULTIES, type Localized } from "../../../mocks/faculties";
 import { ACADEMIC_YEARS } from "../../../utils/academicYears";
@@ -26,13 +28,22 @@ const CurriculumList = () => {
 	const { t, i18n } = useTranslation();
 	const lang = i18n.language === "ar" ? "ar" : "en";
 
+	const [curriculums, setCurriculums] = useState(CURRICULUMS);
 	const [facultyId, setFacultyId] = useState("");
 	const [academicYear, setAcademicYear] = useState("");
+	const [pendingDelete, setPendingDelete] = useState<Curriculum | null>(null);
 
 	const facultyName = (id: string) =>
 		FACULTIES.find((f) => f.id === id)?.name[lang] ?? "";
 
-	const rows = CURRICULUMS.filter(
+	const confirmDelete = () => {
+		if (!pendingDelete) return;
+		// TODO: call the delete curriculum API before removing the row
+		setCurriculums((prev) => prev.filter((c) => c.id !== pendingDelete.id));
+		setPendingDelete(null);
+	};
+
+	const rows = curriculums.filter(
 		(c) =>
 			(!facultyId || c.facultyId === facultyId) &&
 			(!academicYear || c.academicYear === academicYear),
@@ -43,6 +54,16 @@ const CurriculumList = () => {
 		{ key: "faculty", header: t("curriculumList.columns.faculty"), render: (c) => facultyName(c.facultyId) },
 		{ key: "abbreviation", header: t("curriculumList.columns.abbreviation"), render: (c) => c.abbreviation },
 		{ key: "academicYear", header: t("curriculumList.columns.academicYear"), render: (c) => c.academicYear },
+		{
+			key: "actions",
+			header: t("common.actions"),
+			render: (c) => (
+				<DeleteButton
+					label={t("common.deleteItem", { name: c.name[lang] })}
+					onClick={() => setPendingDelete(c)}
+				/>
+			),
+		},
 	];
 
 	return (
@@ -75,6 +96,16 @@ const CurriculumList = () => {
 				rows={rows}
 				getRowId={(c) => c.id}
 				emptyText={t("curriculumList.empty")}
+			/>
+
+			<ConfirmDialog
+				open={pendingDelete !== null}
+				title={t("curriculumList.deleteTitle")}
+				message={t("curriculumList.deleteMessage", { name: pendingDelete?.name[lang] })}
+				confirmLabel={t("common.delete")}
+				cancelLabel={t("common.cancel")}
+				onConfirm={confirmDelete}
+				onCancel={() => setPendingDelete(null)}
 			/>
 		</div>
 	);
