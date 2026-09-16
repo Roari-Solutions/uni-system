@@ -9,6 +9,7 @@ import CurriculumList from './pages/grades/curriculum/curriculumList';
 import StudentList from './pages/grades/students/studentList';
 import StudentEntry from './pages/grades/students/studentEntry';
 import GradeList from './pages/grades/grades/gradeList';
+import GradeEntry from './pages/grades/grades/gradeEntry';
 
 const router = createBrowserRouter([
 	{
@@ -36,7 +37,7 @@ const router = createBrowserRouter([
 						path: "grades",
 						children: [
 							{ path: "list", element: <GradeList /> },
-							{ path: "entry" },
+							{ path: "entry", element: <GradeEntry /> },
 						],
 					},
 				],

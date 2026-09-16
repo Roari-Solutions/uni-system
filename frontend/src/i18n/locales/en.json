@@ -134,5 +134,22 @@
       "status": "Status",
       "allStatuses": "All statuses"
     }
+  },
+  "gradeEntry": {
+    "title": "Add grade",
+    "student": "Student",
+    "studentPlaceholder": "Search by name or university number...",
+    "curriculum": "Curriculum",
+    "curriculumPlaceholder": "Search curriculums...",
+    "noResults": "No results",
+    "grade": "Grade",
+    "status": "Status",
+    "selectStatus": "Select status",
+    "submit": "Save",
+    "errors": {
+      "required": "This field is required",
+      "gradeNumber": "Grade must be a number",
+      "gradeRange": "Grade must be between 0 and 100"
+    }
   }
 }

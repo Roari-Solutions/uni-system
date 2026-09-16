@@ -134,5 +134,22 @@
       "status": "الحالة",
       "allStatuses": "جميع الحالات"
     }
+  },
+  "gradeEntry": {
+    "title": "إضافة درجة",
+    "student": "الطالب",
+    "studentPlaceholder": "ابحث بالاسم أو الرقم الجامعي...",
+    "curriculum": "المنهج",
+    "curriculumPlaceholder": "ابحث عن منهج...",
+    "noResults": "لا توجد نتائج",
+    "grade": "الدرجة",
+    "status": "الحالة",
+    "selectStatus": "اختر الحالة",
+    "submit": "حفظ",
+    "errors": {
+      "required": "هذا الحقل مطلوب",
+      "gradeNumber": "يجب أن تكون الدرجة رقمًا",
+      "gradeRange": "يجب أن تكون الدرجة بين 0 و 100"
+    }
   }
 }
