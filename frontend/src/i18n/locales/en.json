@@ -34,6 +34,79 @@
       "faculty": "Faculty",
       "abbreviation": "Abbreviation",
       "academicYear": "Academic year"
+    },
+    "deleteTitle": "Delete curriculum",
+    "deleteMessage": "Are you sure you want to delete \"{{name}}\"? This can't be undone."
+  },
+  "studentList": {
+    "title": "Students",
+    "columnsToggle": "Columns",
+    "empty": "No students match the selected filters",
+    "columns": {
+      "name": "Name",
+      "uniNumber": "University number",
+      "acceptanceYear": "Acceptance year",
+      "acceptanceType": "Acceptance type",
+      "level": "Current academic year",
+      "faculty": "Faculty",
+      "status": "Status"
+    },
+    "filters": {
+      "level": "Academic year",
+      "allLevels": "All academic years",
+      "faculty": "Faculty",
+      "allFaculties": "All faculties",
+      "acceptanceYear": "Acceptance year",
+      "allAcceptanceYears": "All acceptance years"
+    },
+    "deleteTitle": "Delete student",
+    "deleteMessage": "Are you sure you want to delete \"{{name}}\"? This can't be undone."
+  },
+  "student": {
+    "acceptanceTypes": {
+      "general": "General admission",
+      "special": "Special admission",
+      "vacancies": "Vacancy admission",
+      "teachersChildren": "Teachers' children admission"
+    },
+    "levels": {
+      "1": "First year",
+      "2": "Second year",
+      "3": "Third year",
+      "4": "Fourth year",
+      "5": "Fifth year",
+      "6": "Sixth year"
+    },
+    "statuses": {
+      "pass": "Pass",
+      "fail": "Fail"
+    }
+  },
+  "common": {
+    "actions": "Actions",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "deleteItem": "Delete {{name}}"
+  },
+  "studentEntry": {
+    "title": "Add student",
+    "name": "Student name",
+    "uniNumber": "University number",
+    "faculty": "Faculty",
+    "facultyPlaceholder": "Search faculties...",
+    "noResults": "No results",
+    "acceptanceYear": "Acceptance year",
+    "selectAcceptanceYear": "Select acceptance year",
+    "acceptanceType": "Acceptance type",
+    "selectAcceptanceType": "Select acceptance type",
+    "level": "Current academic year",
+    "selectLevel": "Select academic year",
+    "status": "Status",
+    "statusUndetermined": "Not determined yet",
+    "submit": "Save",
+    "errors": {
+      "required": "This field is required",
+      "uniNumberDigits": "University number must contain digits only"
     }
   }
 }

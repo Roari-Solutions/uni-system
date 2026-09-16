@@ -34,6 +34,79 @@
       "faculty": "الكلية",
       "abbreviation": "الاختصار",
       "academicYear": "العام الدراسي"
+    },
+    "deleteTitle": "حذف المنهج",
+    "deleteMessage": "هل أنت متأكد من حذف \"{{name}}\"؟ لا يمكن التراجع عن هذا الإجراء."
+  },
+  "studentList": {
+    "title": "الطلاب",
+    "columnsToggle": "الأعمدة",
+    "empty": "لا يوجد طلاب يطابقون عوامل التصفية المحددة",
+    "columns": {
+      "name": "الاسم",
+      "uniNumber": "الرقم الجامعي",
+      "acceptanceYear": "سنة القبول",
+      "acceptanceType": "نوع القبول",
+      "level": "السنة الدراسية الحالية",
+      "faculty": "الكلية",
+      "status": "الحالة"
+    },
+    "filters": {
+      "level": "السنة الدراسية",
+      "allLevels": "جميع السنوات الدراسية",
+      "faculty": "الكلية",
+      "allFaculties": "جميع الكليات",
+      "acceptanceYear": "سنة القبول",
+      "allAcceptanceYears": "جميع سنوات القبول"
+    },
+    "deleteTitle": "حذف الطالب",
+    "deleteMessage": "هل أنت متأكد من حذف \"{{name}}\"؟ لا يمكن التراجع عن هذا الإجراء."
+  },
+  "student": {
+    "acceptanceTypes": {
+      "general": "قبول عام",
+      "special": "قبول خاص",
+      "vacancies": "قبول شواغر",
+      "teachersChildren": "قبول أبناء معلمين"
+    },
+    "levels": {
+      "1": "السنة الأولى",
+      "2": "السنة الثانية",
+      "3": "السنة الثالثة",
+      "4": "السنة الرابعة",
+      "5": "السنة الخامسة",
+      "6": "السنة السادسة"
+    },
+    "statuses": {
+      "pass": "ناجح",
+      "fail": "راسب"
+    }
+  },
+  "common": {
+    "actions": "الإجراءات",
+    "delete": "حذف",
+    "cancel": "إلغاء",
+    "deleteItem": "حذف {{name}}"
+  },
+  "studentEntry": {
+    "title": "إضافة طالب",
+    "name": "اسم الطالب",
+    "uniNumber": "الرقم الجامعي",
+    "faculty": "الكلية",
+    "facultyPlaceholder": "ابحث عن كلية...",
+    "noResults": "لا توجد نتائج",
+    "acceptanceYear": "سنة القبول",
+    "selectAcceptanceYear": "اختر سنة القبول",
+    "acceptanceType": "نوع القبول",
+    "selectAcceptanceType": "اختر نوع القبول",
+    "level": "السنة الدراسية الحالية",
+    "selectLevel": "اختر السنة الدراسية",
+    "status": "الحالة",
+    "statusUndetermined": "لم تحدد بعد",
+    "submit": "حفظ",
+    "errors": {
+      "required": "هذا الحقل مطلوب",
+      "uniNumberDigits": "يجب أن يحتوي الرقم الجامعي على أرقام فقط"
     }
   }
 }
