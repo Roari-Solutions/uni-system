@@ -26,7 +26,9 @@ export class ContentService {
       return await this.db.query.news.findMany();
     } catch (error) {
       this.logger.error('Failed to fetch news', error);
-      throw new InternalServerErrorException();
+      throw new InternalServerErrorException('Content operation failed', {
+        cause: error,
+      });
     }
   }
   async getNewsByTitle(
@@ -39,7 +41,9 @@ export class ContentService {
       return result ?? null;
     } catch (error) {
       this.logger.error(`Failed to fetch news by title: ${title}`, error);
-      throw new InternalServerErrorException();
+      throw new InternalServerErrorException('Content operation failed', {
+        cause: error,
+      });
     }
   }
   async createNews(dto: CreateNewsDto): Promise<{ status: string }> {
@@ -57,7 +61,9 @@ export class ContentService {
     } catch (error) {
       if (error instanceof ConflictException) throw error;
       this.logger.error('Failed to create news', error);
-      throw new InternalServerErrorException();
+      throw new InternalServerErrorException('Content operation failed', {
+        cause: error,
+      });
     }
   }
   async updateNewsByTitle(
@@ -78,7 +84,9 @@ export class ContentService {
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
       this.logger.error(`Failed to update news: ${title}`, error);
-      throw new InternalServerErrorException();
+      throw new InternalServerErrorException('Content operation failed', {
+        cause: error,
+      });
     }
   }
   async deleteNewsByTitle(title: string): Promise<{ status: string }> {
@@ -94,7 +102,9 @@ export class ContentService {
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
       this.logger.error(`Failed to delete news: ${title}`, error);
-      throw new InternalServerErrorException();
+      throw new InternalServerErrorException('Content operation failed', {
+        cause: error,
+      });
     }
   }
 
@@ -103,7 +113,9 @@ export class ContentService {
       return await this.db.query.contacts.findMany();
     } catch (error) {
       this.logger.error('Failed to fetch contacts', error);
-      throw new InternalServerErrorException();
+      throw new InternalServerErrorException('Content operation failed', {
+        cause: error,
+      });
     }
   }
 
@@ -122,7 +134,9 @@ export class ContentService {
     } catch (error) {
       if (error instanceof ConflictException) throw error;
       this.logger.error('Failed to create contact', error);
-      throw new InternalServerErrorException();
+      throw new InternalServerErrorException('Content operation failed', {
+        cause: error,
+      });
     }
   }
 
@@ -143,7 +157,9 @@ export class ContentService {
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
       this.logger.error(`Failed to update contact: ${name}`, error);
-      throw new InternalServerErrorException();
+      throw new InternalServerErrorException('Content operation failed', {
+        cause: error,
+      });
     }
   }
 
@@ -160,7 +176,9 @@ export class ContentService {
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
       this.logger.error(`Failed to delete contact: ${name}`, error);
-      throw new InternalServerErrorException();
+      throw new InternalServerErrorException('Content operation failed', {
+        cause: error,
+      });
     }
   }
 }

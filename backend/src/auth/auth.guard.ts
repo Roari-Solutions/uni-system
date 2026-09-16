@@ -34,9 +34,11 @@ export class AuthGuard implements CanActivate {
         req.cookies['access_token'] as string,
         { secret: config.jwtAccessSecret },
       );
-    } catch {
+    } catch (error) {
       this.logger.warn('Access denied: expired, tampered, or missing token');
-      throw new UnauthorizedException(); // expired, tampered, or missing token
+      throw new UnauthorizedException('Invalid or expired access token', {
+        cause: error,
+      }); // expired, tampered, or missing token
     }
 
     req.user = payload;

@@ -91,9 +91,11 @@ export class AuthService {
       payload = await this.jwt.verifyAsync<JwtPayload>(token, {
         secret: config.jwtRefreshSecret,
       });
-    } catch {
+    } catch (error) {
       this.logger.warn('Refresh failed: invalid or expired refresh token');
-      throw new UnauthorizedException();
+      throw new UnauthorizedException('Invalid or expired refresh token', {
+        cause: error,
+      });
     }
 
     const user = await this.db.query.users.findFirst({

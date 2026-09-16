@@ -145,16 +145,16 @@ const main = async () => {
     if (accessToken) {
       try {
         console.log('access:', decodeAccessToken(accessToken));
-      } catch (e: any) {
-        console.error('access decode failed:', e.message);
+      } catch (e: unknown) {
+        console.error('access decode failed:', e);
         console.log('unsafe:', decodeUnsafe(accessToken));
       }
     }
     if (refreshToken) {
       try {
         console.log('refresh:', decodeRefreshToken(refreshToken));
-      } catch (e: any) {
-        console.error('refresh decode failed:', e.message);
+      } catch (e: unknown) {
+        console.error('refresh decode failed:', e);
         console.log('unsafe:', decodeUnsafe(refreshToken));
       }
     }
@@ -197,7 +197,9 @@ const main = async () => {
           'decoded extra token (as access):',
           decodeAccessToken(args[2]),
         );
-      } catch {}
+      } catch {
+        // best-effort: extra token may not be a valid access token
+      }
     }
   } finally {
     await db.$client.end();
