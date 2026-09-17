@@ -1,6 +1,16 @@
 import { relations } from 'drizzle-orm';
 import { numeric, unique } from 'drizzle-orm/pg-core';
-import { integer, pgTable, pgEnum, uuid, text, timestamp, boolean } from 'drizzle-orm/pg-core';
+import {
+  integer,
+  pgTable,
+  pgEnum,
+  uuid,
+  text,
+  timestamp,
+  boolean,
+  jsonb,
+} from 'drizzle-orm/pg-core';
+import type { MainPageContent } from 'src/content/entities/main-page.entity';
 
 /** Blood group values stored on users. */
 export const bloodTypeEnum = pgEnum('blood_type', [
@@ -239,6 +249,15 @@ export const results = pgTable(
     ),
   ],
 );
+
+// ============================================== CMS ==============================================
+
+/** Main page website content as a single JSON document. */
+export const mainPage = pgTable('main_page', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  content: jsonb('content').$type<MainPageContent>().notNull(),
+  ...timestamps(),
+});
 
 // ==============================================relations=============================================================
 
