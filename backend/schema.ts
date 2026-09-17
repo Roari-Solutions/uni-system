@@ -11,6 +11,7 @@ import {
   jsonb,
 } from 'drizzle-orm/pg-core';
 import type { MainPageContent } from 'src/content/entities/main-page.entity';
+import type { FacultyPageContent } from 'src/content/entities/faculty-page.entity';
 
 /** Blood group values stored on users. */
 export const bloodTypeEnum = pgEnum('blood_type', [
@@ -259,6 +260,17 @@ export const mainPage = pgTable('main_page', {
   ...timestamps(),
 });
 
+/** Faculty sub page content, one JSON document per faculty. */
+export const facultyPages = pgTable('faculty_pages', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  facultyId: uuid('faculty_id')
+    .notNull()
+    .references(() => faculties.id)
+    .unique(),
+  content: jsonb('content').$type<FacultyPageContent>().notNull(),
+  ...timestamps(),
+});
+
 // ==============================================relations=============================================================
 
 /** Relations for users: employee, departments, faculty. */
@@ -333,9 +345,10 @@ export const rolePermissionRelations = relations(rolePermissions, ({ one }) => (
 
 /// academic relations
 
-/** Relations for faculties: users, students, curriculums. */
+/** Relations for faculties: users, students, curriculums, page. */
 export const facultiesRelations = relations(faculties, ({ many, one }) => ({
   user: one(users),
+  page: one(facultyPages),
   students: many(students),
   facultyCurriculums: many(facultyCurriculums),
 }));
@@ -385,5 +398,15 @@ export const resultsRelations = relations(results, ({ one }) => ({
   student: one(students, {
     fields: [results.studentId],
     references: [students.id],
+  }),
+}));
+
+/// cms relations
+
+/** Relations for faculty pages: faculty. */
+export const facultyPagesRelations = relations(facultyPages, ({ one }) => ({
+  faculty: one(faculties, {
+    fields: [facultyPages.facultyId],
+    references: [faculties.id],
   }),
 }));
