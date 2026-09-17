@@ -25,7 +25,7 @@ export interface GrRequest extends AuthedRequest {
 /**
  * Faculty-scope gate for /gr routes.
  * Must run after AuthGuard: relies on req.user being set.
- * Attaches req.grCaller; row-level checks live in GradesService.
+ * Attaches req.grCaller; row-level checks live in the grades/students/curriculums services.
  */
 @Injectable()
 export class GrGurdGuard implements CanActivate {

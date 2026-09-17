@@ -1,54 +1,6 @@
 import { IsIn, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 import { PartialType } from '@nestjs/mapped-types';
 
-/** Body for creating a curriculum. */
-export class CreateCurriculumDto {
-  @IsString()
-  @IsNotEmpty()
-  name!: string;
-
-  @IsString()
-  @IsNotEmpty()
-  year!: string;
-
-  @IsString()
-  @IsNotEmpty()
-  abbreviation!: string;
-
-  @IsString()
-  @IsNotEmpty()
-  faculty!: string;
-}
-
-/** Body for patching a curriculum (all fields optional). */
-export class UpdateCurriculumDto extends PartialType(CreateCurriculumDto) {}
-
-/** Body for creating a student. */
-export class CreateStudentDto {
-  @IsString()
-  @IsNotEmpty()
-  name!: string;
-
-  @IsString()
-  @IsNotEmpty()
-  year!: string;
-
-  @IsString()
-  @IsNotEmpty()
-  uniNo!: string;
-
-  @IsString()
-  @IsNotEmpty()
-  acceptanceType!: string;
-
-  @IsString()
-  @IsNotEmpty()
-  faculty!: string;
-}
-
-/** Body for patching a student (all fields optional). */
-export class UpdateStudentDto extends PartialType(CreateStudentDto) {}
-
 /** Body for creating a grade. */
 export class CreateGradeDto {
   @IsString()

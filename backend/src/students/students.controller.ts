@@ -1,22 +1,22 @@
 import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { GrGurdGuard, type GrRequest } from 'src/gr-gurd/gr-gurd.guard';
-import { GradesService } from './grades.service';
-import { CreateStudentDto, UpdateStudentDto } from './dto/grades.dto';
+import { StudentsService } from './students.service';
+import { CreateStudentDto, UpdateStudentDto } from './dto/students.dto';
 
 @Controller('gr/students')
 @UseGuards(AuthGuard, GrGurdGuard)
-export class StudenController {
-  constructor(@Inject() private readonly gradesService: GradesService) {}
+export class StudentsController {
+  constructor(@Inject() private readonly studentsService: StudentsService) {}
 
   @Get()
   async GetAllStudents(@Req() req: GrRequest) {
-    return await this.gradesService.listStudents(req.grCaller);
+    return await this.studentsService.listStudents(req.grCaller);
   }
 
   @Post()
   async CreateStudent(@Body() dto: CreateStudentDto, @Req() req: GrRequest) {
-    return await this.gradesService.createStudent(dto, req.grCaller);
+    return await this.studentsService.createStudent(dto, req.grCaller);
   }
 
   @Patch(':uniNo')
@@ -25,11 +25,11 @@ export class StudenController {
     @Body() dto: UpdateStudentDto,
     @Req() req: GrRequest,
   ) {
-    return await this.gradesService.updateStudent(uniNo, dto, req.grCaller);
+    return await this.studentsService.updateStudent(uniNo, dto, req.grCaller);
   }
 
   @Delete(':uniNo')
   async DeleteStudent(@Param('uniNo') uniNo: string, @Req() req: GrRequest) {
-    return await this.gradesService.deleteStudent(uniNo, req.grCaller);
+    return await this.studentsService.deleteStudent(uniNo, req.grCaller);
   }
 }

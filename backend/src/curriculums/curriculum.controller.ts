@@ -1,21 +1,21 @@
 import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
-import { GradesService } from './grades.service';
+import { CurriculumsService } from './curriculums.service';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { GrGurdGuard, type GrRequest } from 'src/gr-gurd/gr-gurd.guard';
-import { CreateCurriculumDto, UpdateCurriculumDto } from './dto/grades.dto';
+import { CreateCurriculumDto, UpdateCurriculumDto } from './dto/curriculums.dto';
 
 @Controller('gr/curriculum')
 @UseGuards(AuthGuard, GrGurdGuard)
 export class CurriculumController {
-  constructor(@Inject() private readonly gradesService: GradesService) {}
+  constructor(@Inject() private readonly curriculumsService: CurriculumsService) {}
   @Get()
   async getAllCurriculums(@Req() req: GrRequest) {
-    return await this.gradesService.listCurriculums(req.grCaller);
+    return await this.curriculumsService.listCurriculums(req.grCaller);
   }
 
   @Post()
   async CreateCurriculum(@Body() dto: CreateCurriculumDto, @Req() req: GrRequest) {
-    return await this.gradesService.createCurriculum(dto, req.grCaller);
+    return await this.curriculumsService.createCurriculum(dto, req.grCaller);
   }
 
   @Patch(':name/:faculty')
@@ -25,7 +25,7 @@ export class CurriculumController {
     @Body() dto: UpdateCurriculumDto,
     @Req() req: GrRequest,
   ) {
-    return await this.gradesService.updateCurriculum(name, faculty, dto, req.grCaller);
+    return await this.curriculumsService.updateCurriculum(name, faculty, dto, req.grCaller);
   }
 
   @Delete(':name/:faculty')
@@ -35,6 +35,6 @@ export class CurriculumController {
     @Body() dto: UpdateCurriculumDto,
     @Req() req: GrRequest,
   ) {
-    return await this.gradesService.deleteCurriculum(name, faculty, req.grCaller);
+    return await this.curriculumsService.deleteCurriculum(name, faculty, req.grCaller);
   }
 }
