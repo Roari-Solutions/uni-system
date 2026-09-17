@@ -5,6 +5,7 @@ import { AuthModule } from './auth/auth.module';
 import { DatabaseModule } from './database/database.module';
 import { ConfigModule } from '@nestjs/config';
 import { ContentModule } from './content/content.module';
+import { CurriculumsModule } from './curriculums/curriculums.module';
 import { GrGurdGuard } from './gr-gurd/gr-gurd.guard';
 
 @Module({
@@ -14,6 +15,7 @@ import { GrGurdGuard } from './gr-gurd/gr-gurd.guard';
     }),
 
     ContentModule,
+    CurriculumsModule,
     AuthModule,
     DatabaseModule,
   ],
