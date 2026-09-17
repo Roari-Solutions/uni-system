@@ -166,7 +166,8 @@ export const news = pgTable('news', {
 export const curriculums = pgTable('curriculums', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull().unique(),
-  code: text('code').unique(),
+  abbreviation: text('code').unique(),
+  academicYear: text('academic_year').notNull(),
   courseHours: integer('course_hours').notNull().default(1), // Course credit / weight
   ...timestamps(),
 });
@@ -250,6 +251,7 @@ export const results = pgTable(
     ),
   ],
 );
+
 
 // ============================================== CMS ==============================================
 

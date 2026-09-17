@@ -35,10 +35,9 @@ export class AuthGuard implements CanActivate {
 
     let payload: JwtPayload;
     try {
-      payload = await this.jwt.verifyAsync<JwtPayload>(
-        req.cookies['access_token'] as string,
-        { secret: config.jwtAccessSecret },
-      );
+      payload = await this.jwt.verifyAsync<JwtPayload>(req.cookies['access_token'] as string, {
+        secret: config.jwtAccessSecret,
+      });
     } catch (error) {
       this.logger.warn('Access denied: expired, tampered, or missing token');
       throw new UnauthorizedException('Invalid or expired access token', {
@@ -47,9 +46,7 @@ export class AuthGuard implements CanActivate {
     }
 
     req.user = payload;
-    this.logger.debug(
-      `Authenticated user ${payload.sub} (role: ${payload.role})`,
-    );
+    this.logger.debug(`Authenticated user ${payload.sub} (role: ${payload.role})`);
     return true;
   }
 }
