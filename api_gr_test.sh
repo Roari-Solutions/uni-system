@@ -1,7 +1,8 @@
 #!/bin/bash
 # Grades/curriculum/student endpoint tests. Server must be up.
-# Usage: ./api_gr_test.sh [base_url]  (default http://localhost:3000/api/v1)
-B=${1:-${BASE_URL:-http://localhost:3000/api/v1}}
+# Usage: ./api_gr_test.sh [base_url]  (default from backend/.env PORT, fallback 4000)
+ENV_PORT=$(grep -E '^PORT=[0-9]+' "$(dirname "$0")/backend/.env" 2>/dev/null | cut -d= -f2)
+B=${1:-${BASE_URL:-http://localhost:${ENV_PORT:-4000}/api/v1}}
 JA=/tmp/gr-admin.txt; JE=/tmp/gr-entry.txt; JU=/tmp/gr-user.txt
 rm -f $JA $JE $JU
 PASS=0; FAIL=0
