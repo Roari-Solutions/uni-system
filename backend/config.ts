@@ -6,7 +6,11 @@ function required(name: string): string {
   return value;
 }
 
+/** Central validated environment access; throws on missing secrets. */
 export const config = {
+  get nodeEnv() {
+    return process.env.NODE_ENV ?? 'development';
+  },
   get databaseUrl() {
     return required('DATABASE_URL');
   },

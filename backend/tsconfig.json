@@ -26,5 +26,5 @@
     "noFallthroughCasesInSwitch": false
     
   },
-  "exclude": ["node_modules", "dist", "test", "**/*spec.ts", "seed_user.ts"]
+  "exclude": ["node_modules", "dist", "test", "**/*spec.ts", "seed_user.ts", "schema-smoke.ts"]
 }

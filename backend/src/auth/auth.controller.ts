@@ -9,6 +9,7 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  Inject,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { Logger } from '@nestjs/common';
@@ -17,12 +18,14 @@ import { type Request, type Response } from 'express';
 import { AuthGuard, CurrentUser } from './auth.guard';
 import type { JwtPayload } from './auth.guard';
 
+/** Login/refresh/profile endpoints. */
 @Controller('auth')
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
 
-  constructor(private readonly authService: AuthService) {}
+  constructor(@Inject(AuthService) private readonly authService: AuthService) {}
 
+  /** POST /auth/login — validates credentials, sets auth cookies. */
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(
@@ -34,24 +37,26 @@ export class AuthController {
     this.authService.setAuthCookies(res, tokens);
   }
 
+  /** GET /auth/refresh — rotates tokens from the refresh cookie. */
   @Get('refresh')
   @HttpCode(HttpStatus.OK)
   async refresh(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const refresh_token = req.cookies['refresh_token'] as string;
-    if (!refresh_token) {
+    const refreshToken = req.cookies['refresh_token'] as string;
+    if (!refreshToken) {
       this.logger.warn('Refresh attempt with no refresh_token cookie');
       throw new UnauthorizedException();
     }
     this.logger.log('Refreshing tokens');
 
-    const tokens = await this.authService.refresh(refresh_token);
+    const tokens = await this.authService.refresh(refreshToken);
 
     this.authService.setAuthCookies(res, tokens);
   }
 
+  /** GET /auth/me — returns the current user's safe profile. */
   @UseGuards(AuthGuard)
   @Get('me')
   @HttpCode(HttpStatus.OK)

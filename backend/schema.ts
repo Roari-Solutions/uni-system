@@ -1,13 +1,8 @@
 import { relations } from 'drizzle-orm';
-import {
-  pgTable,
-  pgEnum,
-  uuid,
-  text,
-  timestamp,
-  boolean,
-} from 'drizzle-orm/pg-core';
+import { numeric, unique } from 'drizzle-orm/pg-core';
+import { integer, pgTable, pgEnum, uuid, text, timestamp, boolean } from 'drizzle-orm/pg-core';
 
+/** Blood group values stored on users. */
 export const bloodTypeEnum = pgEnum('blood_type', [
   'A+',
   'A-',
@@ -19,17 +14,31 @@ export const bloodTypeEnum = pgEnum('blood_type', [
   'O-',
 ]);
 
+/** Academic semester (first/second half of the year). */
+export const semesterEnum = pgEnum('semester', ['1', '2']);
+
+/** Per-semester student outcome. */
+export const studentStatusEnum = pgEnum('student_status_enum', ['pass', 'fail']);
+
+/** Role seniority level (1-4). */
 export const roleLevelEnum = pgEnum('role_level', ['1', '2', '3', '4']);
 
-const timestamps = {
-  createdAt: timestamp('created_at', { withTimezone: true })
-    .notNull()
-    .defaultNow(),
+const timestamps = () => ({
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true })
     .notNull()
-    .defaultNow(),
-};
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
 
+/** University faculties; each user belongs to at most one. */
+export const faculties = pgTable('faculties', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull().unique(),
+  ...timestamps(),
+});
+
+/** App users (login identity + profile). */
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
@@ -39,28 +48,50 @@ export const users = pgTable('users', {
   bloodType: bloodTypeEnum('blood_type'),
   password: text('password').notNull(),
   nationalId: text('national_id').unique(),
+  facultyId: uuid('faculty_id')
+    .references(() => faculties.id)
+    .unique(),
   pfp: text('pfp'),
-  ...timestamps,
+  ...timestamps(),
 });
+/** User <-> department memberships (one pair once). */
+export const usersDepartments = pgTable(
+  'users_departments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .references(() => users.id)
+      .notNull(),
+    departmentId: uuid('department_id')
+      .references(() => departments.id)
+      .notNull(),
+    ...timestamps(),
+  },
+  (t) => [unique('user_department').on(t.userId, t.departmentId)],
+);
 
+/** Organizational departments. */
 export const departments = pgTable('departments', {
   id: uuid('id').primaryKey().defaultRandom(),
-  name: text('name').notNull(),
-  ...timestamps,
+  name: text('name').notNull().unique(),
+  ...timestamps(),
 });
 
+/** Employee roles (each employee holds exactly one). */
 export const roles = pgTable('roles', {
   id: uuid('id').primaryKey().defaultRandom(),
-  name: text('name').notNull(),
+  name: text('name').notNull().unique(),
   level: roleLevelEnum('level'),
-  ...timestamps,
+  ...timestamps(),
 });
 
+/** Staff records; one per user (userId unique). */
 export const employees = pgTable('employees', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id')
     .notNull()
-    .references(() => users.id),
+    .references(() => users.id)
+    .unique(),
   departmentId: uuid('department_id')
     .notNull()
     .references(() => departments.id),
@@ -68,55 +99,160 @@ export const employees = pgTable('employees', {
     .notNull()
     .references(() => roles.id),
   title: text('title'),
-  ...timestamps,
+  ...timestamps(),
 });
 
+/** Granular permissions granted via roles. */
 export const permissions = pgTable('permissions', {
   id: uuid('id').primaryKey().defaultRandom(),
-  name: text('name').notNull(),
-  ...timestamps,
+  name: text('name').notNull().unique(),
+  ...timestamps(),
 });
 
-export const rolePermissions = pgTable('role_permissions', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  roleId: uuid('role_id')
-    .notNull()
-    .references(() => roles.id),
-  permissionId: uuid('permission_id')
-    .notNull()
-    .references(() => permissions.id),
-});
+/** Role <-> permission grants (one pair once). */
+export const rolePermissions = pgTable(
+  'role_permissions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    roleId: uuid('role_id')
+      .notNull()
+      .references(() => roles.id),
+    permissionId: uuid('permission_id')
+      .notNull()
+      .references(() => permissions.id),
+  },
+  (t) => [unique('role_premission').on(t.permissionId, t.roleId)],
+);
 
+/** Work crews, each tied to an employee. */
 export const crews = pgTable('crews', {
   id: uuid('id').primaryKey().defaultRandom(),
   employeeId: uuid('employee_id')
     .notNull()
     .references(() => employees.id),
-  ...timestamps,
+  ...timestamps(),
 });
 
+/** Public contact entries (unique names). */
 export const contacts = pgTable('contacts', {
   id: uuid('id').primaryKey().defaultRandom(),
-  name: text('name').notNull(),
+  name: text('name').notNull().unique(),
   value: text('value').notNull(),
   iconName: text('icon_name'),
-  ...timestamps,
+  ...timestamps(),
 });
 
+/** Published news items (unique titles). */
 export const news = pgTable('news', {
   id: uuid('id').primaryKey().defaultRandom(),
   title: text('title').notNull().unique(),
   content: text('content').notNull(),
-  ...timestamps,
+  ...timestamps(),
 });
+// ============================================== ACADEMIC TABLES ==============================================
+
+/** Course curriculums with credit weight. */
+export const curriculums = pgTable('curriculums', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull().unique(),
+  code: text('code').unique(),
+  courseHours: integer('course_hours').notNull().default(1), // Course credit / weight
+  ...timestamps(),
+});
+
+/** Faculty <-> curriculum offerings (one pair once). */
+export const facultyCurriculums = pgTable(
+  'faculty_curriculums',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    facultyId: uuid('faculty_id')
+      .notNull()
+      .references(() => faculties.id),
+    curriculumId: uuid('curriculum_id')
+      .notNull()
+      .references(() => curriculums.id),
+    ...timestamps(),
+  },
+  (t) => [unique('faculty_curriculum_unique').on(t.facultyId, t.curriculumId)],
+);
+
+/** Enrolled students, identified by university number. */
+export const students = pgTable('students', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  uniNumber: text('uni_number').notNull().unique(),
+  name: text('name').notNull(),
+  acceptanceType: text('acceptance_type').notNull(),
+  acceptanceYear: text('acceptance_year').notNull(),
+  facultyId: uuid('faculty_id')
+    .notNull()
+    .references(() => faculties.id),
+  ...timestamps(),
+});
+
+/** Per-student per-course per-term grades (one row each). */
+export const grades = pgTable(
+  'grades',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    studentId: uuid('student_id')
+      .notNull()
+      .references(() => students.id),
+    curriculumId: uuid('curriculum_id')
+      .notNull()
+      .references(() => curriculums.id),
+    grade: numeric('grade', { precision: 5, scale: 2 }),
+    academicYear: text('academic_year').notNull(),
+    semester: semesterEnum('semester').notNull(),
+    ...timestamps(),
+  },
+  (t) => [
+    unique('student_curriculum_academic_year_semester_grade_unique').on(
+      t.studentId,
+      t.curriculumId,
+      t.academicYear,
+      t.semester,
+    ),
+  ],
+);
+
+/** Per-student per-term aggregate results (one row each). */
+export const results = pgTable(
+  'results',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    studentId: uuid('student_id')
+      .notNull()
+      .references(() => students.id),
+    academicYear: text('academic_year').notNull(),
+    semester: semesterEnum('semester').notNull(),
+    result: numeric('result', { precision: 6, scale: 2 }).notNull(),
+    gpa: numeric('gpa', { precision: 3, scale: 2 }).notNull(),
+    status: studentStatusEnum('status'),
+    ...timestamps(),
+  },
+  (t) => [
+    unique('unique_result_student_academic_year_semester').on(
+      t.studentId,
+      t.academicYear,
+      t.semester,
+    ),
+  ],
+);
 
 // ==============================================relations=============================================================
 
-export const user_relations = relations(users, ({ one }) => ({
+/** Relations for users: employee, departments, faculty. */
+export const userRelations = relations(users, ({ many, one }) => ({
   employee: one(employees),
+  usersDepartments: many(usersDepartments),
+  faculty: one(faculties, {
+    fields: [users.facultyId],
+    references: [faculties.id],
+  }),
 }));
 
-export const employee_relations = relations(employees, ({ one }) => ({
+/** Relations for employees: crew, user, department, role. */
+export const employeeRelations = relations(employees, ({ one }) => ({
   crew: one(crews),
   user: one(users, { fields: [employees.userId], references: [users.id] }),
   department: one(departments, {
@@ -126,36 +262,108 @@ export const employee_relations = relations(employees, ({ one }) => ({
   role: one(roles, { fields: [employees.roleId], references: [roles.id] }),
 }));
 
-export const crew_relations = relations(crews, ({ one }) => ({
+/** Relations for crews: owning employee. */
+export const crewRelations = relations(crews, ({ one }) => ({
   employee: one(employees, {
     fields: [crews.employeeId],
     references: [employees.id],
   }),
 }));
 
-export const role_relations = relations(roles, ({ many }) => ({
+/** Relations for roles: employees, permission grants. */
+export const roleRelations = relations(roles, ({ many }) => ({
   employees: many(employees),
   rolePermission: many(rolePermissions),
 }));
 
-export const permissions_relations = relations(permissions, ({ many }) => ({
+/** Relations for permissions: role grants. */
+export const permissionsRelations = relations(permissions, ({ many }) => ({
   rolePermissions: many(rolePermissions),
 }));
 
-export const department_relations = relations(departments, ({ many }) => ({
+/** Relations for departments: employees, user memberships. */
+export const departmentRelations = relations(departments, ({ many }) => ({
   employees: many(employees),
+  usersDepartments: many(usersDepartments),
 }));
 
-export const role_permission_relations = relations(
-  rolePermissions,
-  ({ one }) => ({
-    role: one(roles, {
-      fields: [rolePermissions.roleId],
-      references: [roles.id],
-    }),
-    permission: one(permissions, {
-      fields: [rolePermissions.permissionId],
-      references: [permissions.id],
-    }),
+/** Relations for user-department memberships: user, department. */
+export const usersDepartmentsRelations = relations(usersDepartments, ({ one }) => ({
+  user: one(users, {
+    fields: [usersDepartments.userId],
+    references: [users.id],
   }),
-);
+  department: one(departments, {
+    fields: [usersDepartments.departmentId],
+    references: [departments.id],
+  }),
+}));
+
+/** Relations for role-permission grants: role, permission. */
+export const rolePermissionRelations = relations(rolePermissions, ({ one }) => ({
+  role: one(roles, {
+    fields: [rolePermissions.roleId],
+    references: [roles.id],
+  }),
+  permission: one(permissions, {
+    fields: [rolePermissions.permissionId],
+    references: [permissions.id],
+  }),
+}));
+
+/// academic relations
+
+/** Relations for faculties: users, students, curriculums. */
+export const facultiesRelations = relations(faculties, ({ many, one }) => ({
+  user: one(users),
+  students: many(students),
+  facultyCurriculums: many(facultyCurriculums),
+}));
+
+/** Relations for curriculums: faculties, grades. */
+export const curriculumsRelations = relations(curriculums, ({ many }) => ({
+  facultyCurriculums: many(facultyCurriculums),
+  grades: many(grades),
+}));
+
+/** Relations for faculty-curriculum links: faculty, curriculum. */
+export const facultyCurriculumsRelations = relations(facultyCurriculums, ({ one }) => ({
+  faculty: one(faculties, {
+    fields: [facultyCurriculums.facultyId],
+    references: [faculties.id],
+  }),
+  curriculum: one(curriculums, {
+    fields: [facultyCurriculums.curriculumId],
+    references: [curriculums.id],
+  }),
+}));
+
+/** Relations for students: faculty, grades, results. */
+export const studentsRelations = relations(students, ({ one, many }) => ({
+  faculty: one(faculties, {
+    fields: [students.facultyId],
+    references: [faculties.id],
+  }),
+  grades: many(grades),
+  results: many(results),
+}));
+
+/** Relations for grades: student, curriculum. */
+export const gradesRelations = relations(grades, ({ one }) => ({
+  student: one(students, {
+    fields: [grades.studentId],
+    references: [students.id],
+  }),
+  curriculum: one(curriculums, {
+    fields: [grades.curriculumId],
+    references: [curriculums.id],
+  }),
+}));
+
+/** Relations for results: student. */
+export const resultsRelations = relations(results, ({ one }) => ({
+  student: one(students, {
+    fields: [results.studentId],
+    references: [students.id],
+  }),
+}));

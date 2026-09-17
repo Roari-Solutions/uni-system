@@ -9,4 +9,5 @@ import { DatabaseModule } from 'src/database/database.module';
   controllers: [ContentController],
   providers: [ContentService],
 })
+/** Wires the news/contact controller and service. */
 export class ContentModule {}

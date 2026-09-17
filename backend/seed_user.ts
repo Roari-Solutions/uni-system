@@ -7,19 +7,23 @@ import { eq } from 'drizzle-orm';
 import * as jwt from 'jsonwebtoken';
 import type { Db } from './src/database/database.module';
 import type { JwtPayload } from './src/auth/auth.guard';
+import { config } from './config';
 
 // ---------- db ----------
+/** Opens a Drizzle handle using the central database URL. */
 export function getDb() {
-  return drizzle(new Pool({ connectionString: process.env.DATABASE_URL }), {
+  return drizzle(new Pool({ connectionString: config.databaseUrl }), {
     schema,
   });
 }
 
 // ---------- helpers ----------
+/** Hashes a plaintext password with bcrypt. */
 export async function hashPassword(pass: string) {
   return bcrypt.hash(pass, 10);
 }
 
+/** Inserts the seed user (idempotent on email). */
 export async function seedUser(db: Db, name: string, hashed: string) {
   const [user] = await db
     .insert(schema.users)
@@ -29,14 +33,17 @@ export async function seedUser(db: Db, name: string, hashed: string) {
   return user;
 }
 
+/** Inserts the seed department (idempotent on name). */
 export async function seedDepartment(db: Db, deptName = 'IT') {
   const [dept] = await db
     .insert(schema.departments)
     .values({ name: deptName })
+    .onConflictDoNothing({ target: schema.departments.name })
     .returning();
   return dept;
 }
 
+/** Inserts the seed role (idempotent on name). */
 export async function seedRole(
   db: Db,
   roleName = 'site-content-employee',
@@ -45,10 +52,12 @@ export async function seedRole(
   const [role] = await db
     .insert(schema.roles)
     .values({ name: roleName, level })
+    .onConflictDoNothing({ target: schema.roles.name })
     .returning();
   return role;
 }
 
+/** Links the seed user to a department and role as an employee. */
 export async function seedEmployee(
   db: Db,
   userId: string,
@@ -62,6 +71,7 @@ export async function seedEmployee(
   return emp;
 }
 
+/** Reloads the seeded user/employee/role chain for verification. */
 export async function verifySeed(db: Db, id: string) {
   const user = await db.query.users.findFirst({
     where: eq(schema.users.id, id),
@@ -89,18 +99,19 @@ export async function verifySeed(db: Db, id: string) {
 }
 
 // ---------- jwt decode ----------
+/** Verifies a token with the access secret. */
 export function decodeAccessToken(token: string) {
-  const secret = process.env.JWT_ACCESS_SECRET;
-  if (!secret) throw new Error('Missing JWT_ACCESS_SECRET');
-  return jwt.verify(token, secret) as jwt.JwtPayload & JwtPayload;
+  return jwt.verify(token, config.jwtAccessSecret) as jwt.JwtPayload &
+    JwtPayload;
 }
 
+/** Verifies a token with the refresh secret. */
 export function decodeRefreshToken(token: string) {
-  const secret = process.env.JWT_REFRESH_SECRET;
-  if (!secret) throw new Error('Missing JWT_REFRESH_SECRET');
-  return jwt.verify(token, secret) as jwt.JwtPayload & JwtPayload;
+  return jwt.verify(token, config.jwtRefreshSecret) as jwt.JwtPayload &
+    JwtPayload;
 }
 
+/** Verifies an access or refresh token with the matching secret. */
 export function decodeToken(
   token: string,
   type: 'access' | 'refresh' = 'access',
@@ -110,49 +121,47 @@ export function decodeToken(
     : decodeAccessToken(token);
 }
 
+/** Decodes a token without verifying (debugging only). */
 export function decodeUnsafe(token: string) {
   return jwt.decode(token, { complete: true });
 }
 
-// ---------- main ----------
-const main = async () => {
-  const args = process.argv.slice(2);
-
-  // --decode mode: npm run seed -- --decode <access> [refresh]  /  --decode-access / --decode-refresh
-  if (
-    args.includes('--decode') ||
-    args.includes('--decode-access') ||
-    args.includes('--decode-refresh')
-  ) {
-    const getArg = (flag: string) => {
-      const i = args.indexOf(flag);
-      return i !== -1 ? args[i + 1] : undefined;
-    };
-
-    const accessToken =
+// ---------- cli modes ----------
+function parseDecodeTokens(args: string[]) {
+  const getArg = (flag: string) => {
+    const i = args.indexOf(flag);
+    return i !== -1 ? args[i + 1] : undefined;
+  };
+  return {
+    accessToken:
       getArg('--decode-access') ??
       (args.includes('--decode')
         ? args[args.indexOf('--decode') + 1]
-        : undefined);
-    const refreshToken =
+        : undefined),
+    refreshToken:
       getArg('--decode-refresh') ??
       (args.includes('--decode')
         ? args[args.indexOf('--decode') + 2]
-        : undefined);
+        : undefined),
+  };
+}
+
+function runDecodeMode(args: string[]) {
+  const { accessToken, refreshToken } = parseDecodeTokens(args);
 
     if (accessToken) {
       try {
         console.log('access:', decodeAccessToken(accessToken));
-      } catch (e: any) {
-        console.error('access decode failed:', e.message);
+      } catch (e: unknown) {
+        console.error('access decode failed:', e);
         console.log('unsafe:', decodeUnsafe(accessToken));
       }
     }
     if (refreshToken) {
       try {
         console.log('refresh:', decodeRefreshToken(refreshToken));
-      } catch (e: any) {
-        console.error('refresh decode failed:', e.message);
+      } catch (e: unknown) {
+        console.error('refresh decode failed:', e);
         console.log('unsafe:', decodeUnsafe(refreshToken));
       }
     }
@@ -167,8 +176,7 @@ const main = async () => {
     }
     return;
   }
-
-  // normal seed mode
+async function runSeedMode(args: string[]) {
   const user = args[0] ?? 'user';
   const pass = args[1] ?? '123';
 
@@ -195,11 +203,28 @@ const main = async () => {
           'decoded extra token (as access):',
           decodeAccessToken(args[2]),
         );
-      } catch {}
+      } catch {
+        // best-effort: extra token may not be a valid access token
+      }
     }
   } finally {
     await db.$client.end();
   }
+}
+
+// ---------- main ----------
+const main = async () => {
+  const args = process.argv.slice(2);
+  // --decode mode: npm run seed -- --decode <access> [refresh] / --decode-access / --decode-refresh
+  if (
+    args.includes('--decode') ||
+    args.includes('--decode-access') ||
+    args.includes('--decode-refresh')
+  ) {
+    runDecodeMode(args);
+    return;
+  }
+  await runSeedMode(args);
 };
 if (import.meta.url === `file://${process.argv[1]}`) {
   main().catch((err) => {

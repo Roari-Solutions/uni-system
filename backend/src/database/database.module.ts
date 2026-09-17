@@ -4,8 +4,11 @@ import { drizzle, NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import * as schema from 'schema';
 
+/** Injection token for the Drizzle database handle. */
 export const DATABASE = 'DATABASE';
+/** Injection token for the raw pg pool. */
 export const POOL = 'POOL';
+/** Drizzle database type bound to this app's schema. */
 export type Db = NodePgDatabase<typeof schema>;
 
 @Module({
@@ -34,6 +37,7 @@ export type Db = NodePgDatabase<typeof schema>;
 
   exports: [DATABASE, POOL],
 })
+/** Provides the pg pool and Drizzle handle; closes the pool on shutdown. */
 export class DatabaseModule {
   private readonly logger = new Logger(DatabaseModule.name);
 

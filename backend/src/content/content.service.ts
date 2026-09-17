@@ -16,20 +16,25 @@ import {
   UpdateNewsDto,
 } from './dto/content.dto';
 
+/** CRUD for news items and contact entries. */
 @Injectable()
 export class ContentService {
   private readonly logger = new Logger(ContentService.name);
 
   constructor(@Inject(DATABASE) private readonly db: Db) {}
+  /** Lists all news items. */
   async news() {
     try {
       return await this.db.query.news.findMany();
     } catch (error) {
       this.logger.error('Failed to fetch news', error);
-      throw new InternalServerErrorException();
+      throw new InternalServerErrorException('Content operation failed', {
+        cause: error,
+      });
     }
   }
-  async get_news_by_title(
+  /** Finds one news item by title, or null. */
+  async getNewsByTitle(
     title: string,
   ): Promise<typeof news.$inferSelect | null> {
     try {
@@ -39,10 +44,13 @@ export class ContentService {
       return result ?? null;
     } catch (error) {
       this.logger.error(`Failed to fetch news by title: ${title}`, error);
-      throw new InternalServerErrorException();
+      throw new InternalServerErrorException('Content operation failed', {
+        cause: error,
+      });
     }
   }
-  async create_news(dto: CreateNewsDto): Promise<{ status: string }> {
+  /** Creates a news item; throws ConflictException on duplicate title. */
+  async createNews(dto: CreateNewsDto): Promise<{ status: string }> {
     try {
       const existing = await this.db.query.news.findFirst({
         where: eq(news.title, dto.title),
@@ -57,10 +65,13 @@ export class ContentService {
     } catch (error) {
       if (error instanceof ConflictException) throw error;
       this.logger.error('Failed to create news', error);
-      throw new InternalServerErrorException();
+      throw new InternalServerErrorException('Content operation failed', {
+        cause: error,
+      });
     }
   }
-  async update_news_by_title(
+  /** Updates a news item; throws NotFoundException when missing. */
+  async updateNewsByTitle(
     title: string,
     dto: UpdateNewsDto,
   ): Promise<{ status: string }> {
@@ -78,10 +89,13 @@ export class ContentService {
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
       this.logger.error(`Failed to update news: ${title}`, error);
-      throw new InternalServerErrorException();
+      throw new InternalServerErrorException('Content operation failed', {
+        cause: error,
+      });
     }
   }
-  async delete_news_by_title(title: string): Promise<{ status: string }> {
+  /** Deletes a news item; throws NotFoundException when missing. */
+  async deleteNewsByTitle(title: string): Promise<{ status: string }> {
     try {
       const [deleted] = await this.db
         .delete(news)
@@ -94,20 +108,26 @@ export class ContentService {
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
       this.logger.error(`Failed to delete news: ${title}`, error);
-      throw new InternalServerErrorException();
+      throw new InternalServerErrorException('Content operation failed', {
+        cause: error,
+      });
     }
   }
 
+  /** Lists all contact entries. */
   async contacts(): Promise<(typeof contacts.$inferSelect)[]> {
     try {
       return await this.db.query.contacts.findMany();
     } catch (error) {
       this.logger.error('Failed to fetch contacts', error);
-      throw new InternalServerErrorException();
+      throw new InternalServerErrorException('Content operation failed', {
+        cause: error,
+      });
     }
   }
 
-  async create_contact(dto: CreateContactDto): Promise<{ status: string }> {
+  /** Creates a contact; throws ConflictException on duplicate name. */
+  async createContact(dto: CreateContactDto): Promise<{ status: string }> {
     try {
       const existing = await this.db.query.contacts.findFirst({
         where: eq(contacts.name, dto.name),
@@ -122,11 +142,14 @@ export class ContentService {
     } catch (error) {
       if (error instanceof ConflictException) throw error;
       this.logger.error('Failed to create contact', error);
-      throw new InternalServerErrorException();
+      throw new InternalServerErrorException('Content operation failed', {
+        cause: error,
+      });
     }
   }
 
-  async update_contact_by_name(
+  /** Updates a contact; throws NotFoundException when missing. */
+  async updateContactByName(
     name: string,
     dto: CreateContactDto,
   ): Promise<{ status: string }> {
@@ -143,11 +166,14 @@ export class ContentService {
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
       this.logger.error(`Failed to update contact: ${name}`, error);
-      throw new InternalServerErrorException();
+      throw new InternalServerErrorException('Content operation failed', {
+        cause: error,
+      });
     }
   }
 
-  async delete_contact_by_name(name: string): Promise<{ status: string }> {
+  /** Deletes a contact; throws NotFoundException when missing. */
+  async deleteContactByName(name: string): Promise<{ status: string }> {
     try {
       const deleted = await this.db
         .delete(contacts)
@@ -160,7 +186,9 @@ export class ContentService {
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
       this.logger.error(`Failed to delete contact: ${name}`, error);
-      throw new InternalServerErrorException();
+      throw new InternalServerErrorException('Content operation failed', {
+        cause: error,
+      });
     }
   }
 }

@@ -11,4 +11,5 @@ import { AuthGuard } from './auth.guard';
   providers: [AuthService, AuthGuard],
   exports: [AuthGuard, JwtModule],
 })
+/** Wires auth endpoints, guard, and JWT support. */
 export class AuthModule {}
