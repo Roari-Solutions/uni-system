@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { type Request } from 'express';
-import { config } from '../../config';
+import { config } from 'config';
 
 /** JWT payload carried on authenticated requests. */
 export interface JwtPayload {
