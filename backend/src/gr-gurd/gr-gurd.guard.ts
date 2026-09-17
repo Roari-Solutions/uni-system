@@ -19,13 +19,13 @@ export interface GrCaller {
 
 /** Request carrying the verified user plus the guard-attached caller. */
 export interface GrRequest extends AuthedRequest {
-  grCaller?: GrCaller;
+  grCaller: GrCaller;
 }
 
 /**
  * Faculty-scope gate for /gr routes.
  * Must run after AuthGuard: relies on req.user being set.
- * Attaches req.grCaller; row-level checks live in GrService.
+ * Attaches req.grCaller; row-level checks live in GradesService.
  */
 @Injectable()
 export class GrGurdGuard implements CanActivate {
