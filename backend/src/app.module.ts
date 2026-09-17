@@ -5,6 +5,7 @@ import { AuthModule } from './auth/auth.module';
 import { DatabaseModule } from './database/database.module';
 import { ConfigModule } from '@nestjs/config';
 import { ContentModule } from './content/content.module';
+import { GrGurdGuard } from './gr-gurd/gr-gurd.guard';
 
 @Module({
   imports: [
@@ -17,7 +18,7 @@ import { ContentModule } from './content/content.module';
     DatabaseModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, GrGurdGuard],
 })
 
 /** Root module: global config plus auth/content/database. */
