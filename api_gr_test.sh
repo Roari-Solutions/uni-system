@@ -1,6 +1,7 @@
 #!/bin/bash
-# Grades/curriculum/student endpoint tests. Server must be up (PORT=3000).
-B=http://localhost:3000/api/v1
+# Grades/curriculum/student endpoint tests. Server must be up.
+# Usage: ./api_gr_test.sh [base_url]  (default http://localhost:3000/api/v1)
+B=${1:-${BASE_URL:-http://localhost:3000/api/v1}}
 JA=/tmp/gr-admin.txt; JE=/tmp/gr-entry.txt; JU=/tmp/gr-user.txt
 rm -f $JA $JE $JU
 PASS=0; FAIL=0
@@ -29,10 +30,15 @@ contains() { # label needle got_output
   else FAIL=$((FAIL+1)); echo "FAIL $label (missing '$needle') $(echo "$out" | head -n -1)"; fi
 }
 
-echo "=== login ==="
-curl -s -c $JA -o /dev/null -X POST $B/auth/login -H 'Content-Type: application/json' -d '{"email":"test-admin","password":"secret123"}'
-curl -s -c $JE -o /dev/null -X POST $B/auth/login -H 'Content-Type: application/json' -d '{"email":"test-entry","password":"secret123"}'
-curl -s -c $JU -o /dev/null -X POST $B/auth/login -H 'Content-Type: application/json' -d '{"email":"test-testuser","password":"secret123"}'
+echo "=== login ($B) ==="
+login() { # jar email
+  local code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 -c "$1" -X POST $B/auth/login -H 'Content-Type: application/json' -d "{\"email\":\"$2\",\"password\":\"secret123\"}")
+  if [ "$code" != "200" ]; then echo "FATAL: login failed for $2 (HTTP $code) — is the server up at $B and seeded?"; exit 1; fi
+}
+login $JA test-admin
+login $JE test-entry
+login $JU test-testuser
+echo "logins ok"
 
 echo "=== guards ==="
 expect "gr no cookie"            401 "$(hit GET /gr /dev/null)"
