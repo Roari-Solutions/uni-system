@@ -8,13 +8,13 @@ import { config } from './config';
 
 const PASS = 'secret123';
 
-/** Initial faculties: English names with their codes. */
+/** Initial faculties: English names with their abbreviations. */
 const FACULTIES = [
-  { name: 'Nursing', code: 'NS' },
-  { name: 'Law', code: 'LW' },
-  { name: 'Information Systems', code: 'IS' },
-  { name: 'Computer and Information Technology', code: 'IT' },
-  { name: 'Business Studies', code: 'CS' },
+  { name: 'Nursing', abbreviation: 'NS' },
+  { name: 'Law', abbreviation: 'LW' },
+  { name: 'Information Systems', abbreviation: 'IS' },
+  { name: 'Computer and Information Technology', abbreviation: 'IT' },
+  { name: 'Business Studies', abbreviation: 'CS' },
 ];
 
 /** Opens a Drizzle handle using the central database URL. */
@@ -24,23 +24,23 @@ function getDb() {
 
 type Db = ReturnType<typeof getDb>;
 
-/** Ensures a faculty exists by name; fills in a missing code. */
+/** Ensures a faculty exists by name; fills in a missing abbreviation. */
 async function ensureFaculty(
   db: Db,
   name: string,
-  code: string,
-): Promise<{ id: string; name: string; code: string }> {
+  abbreviation: string,
+): Promise<{ id: string; name: string; abbreviation: string }> {
   const found = await db.query.faculties.findFirst({
     where: eq(schema.faculties.name, name),
   });
   if (found) {
-    if (!found.code) {
-      await db.update(schema.faculties).set({ code }).where(eq(schema.faculties.id, found.id));
+    if (!found.abbreviation) {
+      await db.update(schema.faculties).set({ abbreviation }).where(eq(schema.faculties.id, found.id));
     }
-    return { id: found.id, name: found.name, code: found.code ?? code };
+    return { id: found.id, name: found.name, abbreviation: found.abbreviation ?? abbreviation };
   }
-  const [row] = await db.insert(schema.faculties).values({ name, code }).returning();
-  return { id: row.id, name: row.name, code: row.code ?? code };
+  const [row] = await db.insert(schema.faculties).values({ name, abbreviation }).returning();
+  return { id: row.id, name: row.name, abbreviation: row.abbreviation ?? abbreviation };
 }
 
 /** Ensures a department exists; returns its id. */
@@ -102,13 +102,13 @@ async function main() {
   const db = getDb();
   try {
     const rows = [];
-    for (const f of FACULTIES) rows.push(await ensureFaculty(db, f.name, f.code));
+    for (const f of FACULTIES) rows.push(await ensureFaculty(db, f.name, f.abbreviation));
     await ensureRole(db, 'admin');
     await ensureRole(db, 'data-entry');
     const deptId = await ensureDepartment(db, 'IT');
     await ensureUser(db, 'admin', 'Admin', 'admin', null, deptId);
     for (const f of rows) {
-      await ensureUser(db, `entry-${f.code.toLowerCase()}`, `${f.name} Entry`, 'data-entry', f.id, deptId);
+      await ensureUser(db, `entry-${f.abbreviation.toLowerCase()}`, `${f.name} Entry`, 'data-entry', f.id, deptId);
     }
   } finally {
     await db.$client.end();
