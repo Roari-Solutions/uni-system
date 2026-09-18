@@ -35,6 +35,7 @@ const timestamps = () => ({
 export const faculties = pgTable('faculties', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull().unique(),
+  code: text('code').unique(),
   ...timestamps(),
 });
 
