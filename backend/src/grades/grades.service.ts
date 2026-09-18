@@ -349,7 +349,7 @@ export class GradesService {
       });
     }
   }
-  async deleteAllGrades(uniNo: string, caller: GrCaller) {
+  async deleteAllGrades(uniNo: string, caller: GrCaller): Promise<{ status: string }> {
     try {
       const student = await this.db.query.students.findFirst({
         where: eq(students.uniNumber, uniNo),
@@ -360,6 +360,7 @@ export class GradesService {
       await this.db.delete(grades).where(eq(grades.studentId, student.id));
       await this.db.delete(results).where(eq(results.studentId, student.id));
       this.logger.log(`Deleted all grade for student: ${uniNo}`);
+      return { status: 'Ok' };
     } catch (error) {
       if (
         error instanceof BadRequestException ||
