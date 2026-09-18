@@ -1,1 +1,155 @@
-{}
+{
+  "gradesNav": {
+    "curriculum": "Curriculum",
+    "students": "Students",
+    "grades": "Grades",
+    "list": "List",
+    "entry": "Entry",
+    "switchLanguage": "العربية"
+  },
+  "curriculumEntry": {
+    "title": "Add curriculum",
+    "name": "Curriculum name",
+    "faculty": "Faculty",
+    "facultyPlaceholder": "Search faculties...",
+    "noResults": "No results",
+    "abbreviation": "Abbreviation",
+    "academicYear": "Academic year",
+    "selectYear": "Select academic year",
+    "submit": "Save",
+    "errors": {
+      "required": "This field is required",
+      "abbreviationTooLong": "Abbreviation must be at most 10 characters"
+    }
+  },
+  "curriculumList": {
+    "title": "Curriculums",
+    "faculty": "Faculty",
+    "allFaculties": "All faculties",
+    "academicYear": "Academic year",
+    "allYears": "All academic years",
+    "empty": "No curriculums match the selected filters",
+    "columns": {
+      "name": "Name",
+      "faculty": "Faculty",
+      "abbreviation": "Abbreviation",
+      "academicYear": "Academic year"
+    },
+    "deleteTitle": "Delete curriculum",
+    "deleteMessage": "Are you sure you want to delete \"{{name}}\"? This can't be undone."
+  },
+  "studentList": {
+    "title": "Students",
+    "columnsToggle": "Columns",
+    "empty": "No students match the selected filters",
+    "columns": {
+      "name": "Name",
+      "uniNumber": "University number",
+      "acceptanceYear": "Acceptance year",
+      "acceptanceType": "Acceptance type",
+      "level": "Current academic year",
+      "faculty": "Faculty",
+      "status": "Status"
+    },
+    "filters": {
+      "level": "Academic year",
+      "allLevels": "All academic years",
+      "faculty": "Faculty",
+      "allFaculties": "All faculties",
+      "acceptanceYear": "Acceptance year",
+      "allAcceptanceYears": "All acceptance years"
+    },
+    "deleteTitle": "Delete student",
+    "deleteMessage": "Are you sure you want to delete \"{{name}}\"? This can't be undone."
+  },
+  "student": {
+    "acceptanceTypes": {
+      "general": "General admission",
+      "special": "Special admission",
+      "vacancies": "Vacancy admission",
+      "teachersChildren": "Teachers' children admission"
+    },
+    "levels": {
+      "1": "First year",
+      "2": "Second year",
+      "3": "Third year",
+      "4": "Fourth year",
+      "5": "Fifth year",
+      "6": "Sixth year"
+    },
+    "statuses": {
+      "success": "Success",
+      "repeat": "Repeat"
+    }
+  },
+  "common": {
+    "actions": "Actions",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "deleteItem": "Delete {{name}}"
+  },
+  "studentEntry": {
+    "title": "Add student",
+    "name": "Student name",
+    "uniNumber": "University number",
+    "faculty": "Faculty",
+    "facultyPlaceholder": "Search faculties...",
+    "noResults": "No results",
+    "acceptanceYear": "Acceptance year",
+    "selectAcceptanceYear": "Select acceptance year",
+    "acceptanceType": "Acceptance type",
+    "selectAcceptanceType": "Select acceptance type",
+    "level": "Current academic year",
+    "selectLevel": "Select academic year",
+    "status": "Status",
+    "statusUndetermined": "Not determined yet",
+    "submit": "Save",
+    "errors": {
+      "required": "This field is required",
+      "uniNumberDigits": "University number must contain digits only"
+    }
+  },
+  "grade": {
+    "statuses": {
+      "pass": "Pass",
+      "fail": "Fail"
+    }
+  },
+  "gradeList": {
+    "title": "Grades",
+    "empty": "No grades match the selected filters",
+    "columns": {
+      "name": "Name",
+      "uniNumber": "University number",
+      "faculty": "Faculty",
+      "curriculum": "Curriculum",
+      "grade": "Grade",
+      "status": "Status"
+    },
+    "filters": {
+      "faculty": "Faculty",
+      "allFaculties": "All faculties",
+      "curriculum": "Curriculum",
+      "allCurriculums": "All curriculums",
+      "status": "Status",
+      "allStatuses": "All statuses"
+    }
+  },
+  "gradeEntry": {
+    "title": "Add grade",
+    "student": "Student",
+    "studentPlaceholder": "Search by name or university number...",
+    "curriculum": "Curriculum",
+    "curriculumPlaceholder": "Search curriculums...",
+    "noResults": "No results",
+    "grade": "Grade",
+    "status": "Status",
+    "selectStatus": "Select status",
+    "submit": "Save",
+    "errors": {
+      "required": "This field is required",
+      "gradeNumber": "Grade must be a number",
+      "gradeRange": "Grade must be between 0 and 100"
+    }
+  }
+}
