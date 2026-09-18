@@ -22,6 +22,7 @@ COPY --from=builder /usr/src/app/schema.ts ./schema.ts
 COPY --from=builder /usr/src/app/config.ts ./config.ts
 COPY --from=builder /usr/src/app/drizzle.config.ts ./drizzle.config.ts
 COPY --from=builder /usr/src/app/drizzle ./drizzle
+COPY --from=builder /usr/src/app/seed_faculties.ts ./seed_faculties.ts
 COPY --from=builder /usr/src/app/docker-entrypoint.sh ./docker-entrypoint.sh
 
 RUN chmod +x docker-entrypoint.sh
