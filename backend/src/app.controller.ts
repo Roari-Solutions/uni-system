@@ -1,4 +1,4 @@
-import { Controller, Get, Inject, UseGuards } from '@nestjs/common';
+import { Controller, Get, Inject } from '@nestjs/common';
 import { AppService } from './app.service';
 
 /** Default root controller (health-check greeting). */
