@@ -46,7 +46,7 @@ const timestamps = () => ({
 export const faculties = pgTable('faculties', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull().unique(),
-  abbreviation: text('code').unique(),
+  abbreviation: text('abbreviation').unique(),
   ...timestamps(),
 });
 
@@ -252,7 +252,6 @@ export const results = pgTable(
     ),
   ],
 );
-
 
 // ============================================== CMS ==============================================
 
