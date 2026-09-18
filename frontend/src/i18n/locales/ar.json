@@ -7,7 +7,8 @@
     "entry": "الإدخال",
     "switchLanguage": "English",
     "logout": "تسجيل الخروج",
-    "toggleMenu": "القائمة"
+    "toggleMenu": "القائمة",
+    "users": "المستخدمون"
   },
   "curriculumEntry": {
     "title": "إضافة منهج",
@@ -170,7 +171,8 @@
   },
   "roles": {
     "admin": "مسؤول",
-    "data-entry": "مدخل بيانات"
+    "data-entry": "مدخل بيانات",
+    "site-content-employee": "محتوى الموقع"
   },
   "login": {
     "title": "تسجيل الدخول",
@@ -182,6 +184,55 @@
     "errors": {
       "required": "هذا الحقل مطلوب",
       "credentials": "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+      "unavailable": "تعذّر الوصول إلى الخادم. حاول مرة أخرى بعد قليل."
+    }
+  },
+  "userList": {
+    "title": "المستخدمون",
+    "empty": "لا يوجد مستخدمون مطابقون للفلاتر المحددة",
+    "allFaculties": "كل الكليات",
+    "active": "نشط",
+    "suspended": "موقوف",
+    "you": "أنت",
+    "suspend": "إيقاف",
+    "restore": "إعادة تفعيل",
+    "suspendTitle": "إيقاف المستخدم",
+    "restoreTitle": "إعادة تفعيل المستخدم",
+    "suspendMessage": "إيقاف \"{{name}}\"؟ لن يتمكن من تسجيل الدخول حتى تتم إعادة تفعيله.",
+    "restoreMessage": "إعادة تفعيل \"{{name}}\"؟ سيتمكن من تسجيل الدخول مرة أخرى.",
+    "columns": {
+      "name": "الاسم",
+      "email": "اسم الدخول",
+      "role": "الدور",
+      "faculty": "الكلية",
+      "status": "الحالة"
+    },
+    "filters": {
+      "faculty": "الكلية",
+      "allFaculties": "كل الكليات",
+      "role": "الدور",
+      "allRoles": "كل الأدوار"
+    }
+  },
+  "userEntry": {
+    "title": "إضافة مستخدم",
+    "name": "الاسم الكامل",
+    "email": "اسم الدخول",
+    "password": "كلمة المرور",
+    "passwordHint": "تظهر بشكل واضح — سلّمها للمستخدم بنفسك.",
+    "role": "الدور",
+    "selectRole": "اختر الدور",
+    "faculty": "الكلية",
+    "facultyPlaceholder": "ابحث عن الكليات...",
+    "noResults": "لا توجد نتائج",
+    "unscopedRole": "المسؤولون غير مرتبطين بكلية معيّنة.",
+    "phone": "الهاتف (اختياري)",
+    "submit": "حفظ",
+    "saved": "تم إنشاء المستخدم.",
+    "errors": {
+      "required": "هذا الحقل مطلوب",
+      "passwordLength": "يجب ألا تقل كلمة المرور عن 8 أحرف",
+      "taken": "اسم الدخول مستخدم بالفعل.",
       "unavailable": "تعذّر الوصول إلى الخادم. حاول مرة أخرى بعد قليل."
     }
   }

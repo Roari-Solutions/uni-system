@@ -7,7 +7,8 @@
     "entry": "Entry",
     "switchLanguage": "العربية",
     "logout": "Sign out",
-    "toggleMenu": "Menu"
+    "toggleMenu": "Menu",
+    "users": "Users"
   },
   "curriculumEntry": {
     "title": "Add curriculum",
@@ -170,7 +171,8 @@
   },
   "roles": {
     "admin": "Administrator",
-    "data-entry": "Data entry"
+    "data-entry": "Data entry",
+    "site-content-employee": "Site content"
   },
   "login": {
     "title": "Sign in",
@@ -182,6 +184,55 @@
     "errors": {
       "required": "This field is required",
       "credentials": "Incorrect email or password.",
+      "unavailable": "Couldn't reach the server. Please try again in a moment."
+    }
+  },
+  "userList": {
+    "title": "Users",
+    "empty": "No users match the selected filters",
+    "allFaculties": "All faculties",
+    "active": "Active",
+    "suspended": "Suspended",
+    "you": "You",
+    "suspend": "Suspend",
+    "restore": "Restore",
+    "suspendTitle": "Suspend user",
+    "restoreTitle": "Restore user",
+    "suspendMessage": "Suspend \"{{name}}\"? They will not be able to sign in until restored.",
+    "restoreMessage": "Restore \"{{name}}\"? They will be able to sign in again.",
+    "columns": {
+      "name": "Name",
+      "email": "Login",
+      "role": "Role",
+      "faculty": "Faculty",
+      "status": "Status"
+    },
+    "filters": {
+      "faculty": "Faculty",
+      "allFaculties": "All faculties",
+      "role": "Role",
+      "allRoles": "All roles"
+    }
+  },
+  "userEntry": {
+    "title": "Add user",
+    "name": "Full name",
+    "email": "Login",
+    "password": "Password",
+    "passwordHint": "Shown in the clear — pass it to the user yourself.",
+    "role": "Role",
+    "selectRole": "Select role",
+    "faculty": "Faculty",
+    "facultyPlaceholder": "Search faculties...",
+    "noResults": "No results",
+    "unscopedRole": "Administrators are not tied to a faculty.",
+    "phone": "Phone (optional)",
+    "submit": "Save",
+    "saved": "User created.",
+    "errors": {
+      "required": "This field is required",
+      "passwordLength": "Password must be at least 8 characters",
+      "taken": "That login is already in use.",
       "unavailable": "Couldn't reach the server. Please try again in a moment."
     }
   }

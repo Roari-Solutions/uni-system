@@ -64,9 +64,8 @@ export const users = pgTable('users', {
   bloodType: bloodTypeEnum('blood_type'),
   password: text('password').notNull(),
   nationalId: text('national_id').unique(),
-  facultyId: uuid('faculty_id')
-    .references(() => faculties.id)
-    .unique(),
+  /** Many users may belong to one faculty; null for staff who span all of them. */
+  facultyId: uuid('faculty_id').references(() => faculties.id),
   pfp: text('pfp'),
   ...timestamps(),
 });

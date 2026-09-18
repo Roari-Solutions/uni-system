@@ -5,6 +5,7 @@ import "./i18n";
 import './index.css'
 import AuthProvider from './auth/authProvider';
 import RequireAuth from './auth/requireAuth';
+import RequireRole from './auth/requireRole';
 import GradesLayout from './layouts/grades/gradesLayout';
 import Login from './pages/auth/login';
 import CurriculumEntry from './pages/grades/curriculum/curriculumEntry';
@@ -13,6 +14,8 @@ import StudentList from './pages/grades/students/studentList';
 import StudentEntry from './pages/grades/students/studentEntry';
 import GradeList from './pages/grades/grades/gradeList';
 import GradeEntry from './pages/grades/grades/gradeEntry';
+import UserList from './pages/admin/userList';
+import UserEntry from './pages/admin/userEntry';
 
 const router = createBrowserRouter([
 	{ path: "/", element: <Navigate to="/dashboards/grades/students/list" replace /> },
@@ -47,6 +50,19 @@ const router = createBrowserRouter([
 								children: [
 									{ path: "list", element: <GradeList /> },
 									{ path: "entry", element: <GradeEntry /> },
+								],
+							},
+							{
+								// admin only; AdminGuard enforces the same rule on the API
+								element: <RequireRole allow={["admin"]} />,
+								children: [
+									{
+										path: "users",
+										children: [
+											{ path: "list", element: <UserList /> },
+											{ path: "entry", element: <UserEntry /> },
+										],
+									},
 								],
 							},
 						],

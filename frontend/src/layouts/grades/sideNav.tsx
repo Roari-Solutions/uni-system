@@ -9,6 +9,7 @@ import {
 	ChevronDownIcon,
 	ClipboardDocumentListIcon,
 	LanguageIcon,
+	UsersIcon,
 	UserCircleIcon,
 } from "@heroicons/react/24/outline";
 import useAuth from "../../auth/useAuth";
@@ -19,14 +20,17 @@ const HOVER_DELAY = 130; // ms — expand/collapse delay on mouse enter/leave
 const BASE_PATH = "/dashboards/grades";
 
 type Section = {
-	id: "curriculum" | "students" | "grades";
+	id: "curriculum" | "students" | "grades" | "users";
 	icon: typeof BookOpenIcon;
+	// sections only some roles may reach
+	adminOnly?: boolean;
 };
 
 const SECTIONS: Section[] = [
 	{ id: "curriculum", icon: BookOpenIcon },
 	{ id: "students", icon: AcademicCapIcon },
 	{ id: "grades", icon: ClipboardDocumentListIcon },
+	{ id: "users", icon: UsersIcon, adminOnly: true },
 ];
 
 const SUB_OPTIONS = ["list", "entry"] as const;
@@ -39,6 +43,8 @@ const SideNav = () => {
 	const { t, i18n } = useTranslation();
 	const { pathname } = useLocation();
 	const { user, logout } = useAuth();
+	// the API rejects these routes for anyone else; the nav just hides the door
+	const sections = SECTIONS.filter((s) => !s.adminOnly || user?.role === "admin");
 	const { lockedFaculty } = useFaculties();
 
 	// hovering expands on pointer devices; `pinned` is the tap/keyboard path,
@@ -51,6 +57,7 @@ const SideNav = () => {
 	const [openSections, setOpenSections] = useState<string[]>(() =>
 		SECTIONS.filter((s) => pathname.startsWith(`${BASE_PATH}/${s.id}`)).map((s) => s.id),
 	);
+
 	const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
 	useEffect(() => () => clearTimeout(timer.current), []);
@@ -115,7 +122,7 @@ const SideNav = () => {
 				</div>
 
 				<nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-2">
-					{SECTIONS.map(({ id, icon: Icon }) => {
+					{sections.map(({ id, icon: Icon }) => {
 						const isOpen = openSections.includes(id);
 						const showOptions = expanded && isOpen;
 
