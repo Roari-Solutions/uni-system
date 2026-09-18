@@ -105,8 +105,10 @@ async function main() {
     for (const f of FACULTIES) rows.push(await ensureFaculty(db, f.name, f.abbreviation));
     await ensureRole(db, 'admin');
     await ensureRole(db, 'data-entry');
+    await ensureRole(db, 'site-content-employee');
     const deptId = await ensureDepartment(db, 'IT');
     await ensureUser(db, 'admin', 'Admin', 'admin', null, deptId);
+    await ensureUser(db, 'test-testuser', 'Test User', 'site-content-employee', null, deptId);
     for (const f of rows) {
       await ensureUser(db, `entry-${f.abbreviation.toLowerCase()}`, `${f.name} Entry`, 'data-entry', f.id, deptId);
     }
