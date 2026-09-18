@@ -146,7 +146,7 @@ export class AuthService {
 
   /** Writes access/refresh tokens as HttpOnly cookies. */
   setAuthCookies(res: Response, { accessToken, refreshToken }: AuthTokens) {
-    const isSecure = config.nodeEnv === 'production';
+    const isSecure = config.cookieSecure;
     res.cookie('access_token', accessToken, {
       httpOnly: true,
       secure: isSecure,
