@@ -1,10 +1,11 @@
-import { useState, type FormEvent } from "react";
+import { useCallback, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
+import FacultyField from "../../../components/facultyField";
 import FormField from "../../../components/formField";
-import SearchSelect, { type SearchOption } from "../../../components/searchSelect";
+import { createCurriculum } from "../../../api/curriculums";
 import { formCardClass, inputClass, submitButtonClass } from "../../../styles/form";
-import { ACADEMIC_YEARS } from "../../../utils/academicYears";
+import { STUDY_LEVELS } from "../../../utils/academicYears";
 
 // messages are i18n keys, translated when rendered
 const curriculumSchema = z.object({
@@ -15,10 +16,11 @@ const curriculumSchema = z.object({
 		.trim()
 		.min(1, "curriculumEntry.errors.required")
 		.max(10, "curriculumEntry.errors.abbreviationTooLong"),
-	academicYear: z.string().min(1, "curriculumEntry.errors.required"),
+	// academic year = study year 1-6
+	academicYear: z.string().min(1, "curriculumEntry.errors.required").transform(Number),
 });
 
-type CurriculumForm = z.infer<typeof curriculumSchema>;
+type CurriculumForm = z.input<typeof curriculumSchema>;
 type FormErrors = Partial<Record<keyof CurriculumForm, string[]>>;
 
 const EMPTY_FORM: CurriculumForm = {
@@ -33,15 +35,20 @@ const CurriculumEntry = () => {
 
 	const [form, setForm] = useState<CurriculumForm>(EMPTY_FORM);
 	const [errors, setErrors] = useState<FormErrors>({});
-	const [facultyQuery, setFacultyQuery] = useState("");
-	// TODO: fill from the faculties search API using facultyQuery
-	const facultyOptions: SearchOption[] = [];
+	const [submitting, setSubmitting] = useState(false);
+	const [saved, setSaved] = useState(false);
+	const [failed, setFailed] = useState(false);
 
 	const setField = <K extends keyof CurriculumForm>(key: K, value: CurriculumForm[K]) => {
 		setForm((prev) => ({ ...prev, [key]: value }));
 	};
 
-	const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+	// stable identity: FacultyField reports the locked faculty from an effect
+	const setFacultyId = useCallback((facultyId: string) => {
+		setForm((prev) => (prev.facultyId === facultyId ? prev : { ...prev, facultyId }));
+	}, []);
+
+	const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 
 		const result = curriculumSchema.safeParse(form);
@@ -51,7 +58,24 @@ const CurriculumEntry = () => {
 		}
 
 		setErrors({});
-		// TODO: send result.data to the API
+		setSaved(false);
+		setFailed(false);
+		setSubmitting(true);
+		try {
+			await createCurriculum({
+				// one name, both languages — the API stores them separately
+				name: { en: result.data.name, ar: result.data.name },
+				facultyId: result.data.facultyId,
+				abbreviation: result.data.abbreviation,
+				academicYear: result.data.academicYear,
+			});
+			setForm({ ...EMPTY_FORM, facultyId: form.facultyId });
+			setSaved(true);
+		} catch {
+			setFailed(true);
+		} finally {
+			setSubmitting(false);
+		}
 	};
 
 	return (
@@ -60,11 +84,7 @@ const CurriculumEntry = () => {
 				{t("curriculumEntry.title")}
 			</h1>
 
-			<form
-				noValidate
-				onSubmit={handleSubmit}
-				className={formCardClass}
-			>
+			<form noValidate onSubmit={(e) => void handleSubmit(e)} className={formCardClass}>
 				<FormField id="name" label={t("curriculumEntry.name")} error={errors.name?.[0]}>
 					<input
 						id="name"
@@ -76,25 +96,14 @@ const CurriculumEntry = () => {
 					/>
 				</FormField>
 
-				<FormField id="faculty" label={t("curriculumEntry.faculty")} error={errors.facultyId?.[0]}>
-					<SearchSelect
-						id="faculty"
-						query={facultyQuery}
-						onQueryChange={(query) => {
-							setFacultyQuery(query);
-							// typing invalidates any previous selection
-							setField("facultyId", "");
-						}}
-						options={facultyOptions}
-						onSelect={(option) => {
-							setFacultyQuery(option.label);
-							setField("facultyId", option.id);
-						}}
-						placeholder={t("curriculumEntry.facultyPlaceholder")}
-						noResultsText={t("curriculumEntry.noResults")}
-						invalid={!!errors.facultyId}
-					/>
-				</FormField>
+				<FacultyField
+					label={t("curriculumEntry.faculty")}
+					placeholder={t("curriculumEntry.facultyPlaceholder")}
+					noResultsText={t("curriculumEntry.noResults")}
+					value={form.facultyId}
+					onChange={setFacultyId}
+					error={errors.facultyId?.[0]}
+				/>
 
 				<FormField
 					id="abbreviation"
@@ -126,19 +135,27 @@ const CurriculumEntry = () => {
 						<option value="" disabled>
 							{t("curriculumEntry.selectYear")}
 						</option>
-						{ACADEMIC_YEARS.map((year) => (
-							<option key={year} value={year}>
-								{year}
+						{STUDY_LEVELS.map((level) => (
+							<option key={level} value={level}>
+								{t(`student.levels.${level}`)}
 							</option>
 						))}
 					</select>
 				</FormField>
 
-				<button
-					type="submit"
-					className={submitButtonClass}
-				>
-					{t("curriculumEntry.submit")}
+				{saved && (
+					<p role="status" className="text-sm text-palette-5">
+						{t("common.saved")}
+					</p>
+				)}
+				{failed && (
+					<p role="alert" className="text-sm text-red-600">
+						{t("common.saveFailed")}
+					</p>
+				)}
+
+				<button type="submit" disabled={submitting} className={submitButtonClass}>
+					{submitting ? t("common.saving") : t("curriculumEntry.submit")}
 				</button>
 			</form>
 		</div>

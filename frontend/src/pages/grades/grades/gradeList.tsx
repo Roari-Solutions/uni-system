@@ -1,42 +1,75 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import DataTable, { type Column } from "../../../components/dataTable";
 import FilterSelect from "../../../components/filterSelect";
-import { CURRICULUMS } from "../../../mocks/curriculums";
-import { FACULTIES } from "../../../mocks/faculties";
-import { GRADES } from "../../../mocks/grades";
-import { STUDENTS } from "../../../mocks/students";
-import { GRADE_STATUSES, type Grade } from "../../../types/grade";
+import useFaculties from "../../../hooks/useFaculties";
+import { fetchGrades } from "../../../api/grades";
+import { fetchCurriculums } from "../../../api/curriculums";
+import { fetchStudents } from "../../../api/students";
+import type { Curriculum } from "../../../types/curriculum";
+import type { Student } from "../../../types/student";
+import { GRADE_STATUSES, type Grade, type GradeStatus } from "../../../types/grade";
 
 const GradeList = () => {
 	const { t, i18n } = useTranslation();
 	const lang = i18n.language === "ar" ? "ar" : "en";
+	const { faculties, locked, lockedFacultyId } = useFaculties();
 
+	const [grades, setGrades] = useState<Grade[]>([]);
+	const [students, setStudents] = useState<Student[]>([]);
+	const [curriculums, setCurriculums] = useState<Curriculum[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [failed, setFailed] = useState(false);
 	const [facultyId, setFacultyId] = useState("");
 	const [curriculumId, setCurriculumId] = useState("");
 	const [status, setStatus] = useState("");
 
-	const student = (g: Grade) => STUDENTS.find((s) => s.id === g.studentId);
-	const facultyName = (id?: string) => FACULTIES.find((f) => f.id === id)?.name[lang] ?? "";
-	const curriculumName = (id: string) => CURRICULUMS.find((c) => c.id === id)?.name[lang] ?? "";
+	// a locked caller only ever sees their own faculty
+	const effectiveFacultyId = locked ? (lockedFacultyId ?? "") : facultyId;
 
-	// only offer curriculums of the selected faculty
-	const curriculumOptions = CURRICULUMS.filter((c) => !facultyId || c.facultyId === facultyId);
+	useEffect(() => {
+		let cancelled = false;
+		// the rows carry ids only, so the names come from the other two lists;
+		// state changes live in the callbacks to keep the effect body sync-free
+		Promise.all([
+			fetchGrades({
+				facultyId: effectiveFacultyId || undefined,
+				curriculumId: curriculumId || undefined,
+				status: status ? (status as GradeStatus) : undefined,
+			}),
+			fetchStudents({ facultyId: effectiveFacultyId || undefined }),
+			fetchCurriculums({ facultyId: effectiveFacultyId || undefined }),
+		])
+			.then(([gradeRows, studentRows, curriculumRows]) => {
+				if (cancelled) return;
+				setGrades(gradeRows);
+				setStudents(studentRows);
+				setCurriculums(curriculumRows);
+				setFailed(false);
+			})
+			.catch(() => {
+				if (!cancelled) setFailed(true);
+			})
+			.finally(() => {
+				if (!cancelled) setLoading(false);
+			});
+
+		return () => {
+			cancelled = true;
+		};
+	}, [effectiveFacultyId, curriculumId, status]);
+
+	const student = (g: Grade) => students.find((s) => s.id === g.studentId);
+	const facultyName = (id?: string) => faculties.find((f) => f.id === id)?.name[lang] ?? "";
+	const curriculumName = (id: string) => curriculums.find((c) => c.id === id)?.name[lang] ?? "";
 
 	const changeFaculty = (id: string) => {
 		setFacultyId(id);
 		// drop a curriculum selection that doesn't belong to the new faculty
-		if (id && CURRICULUMS.find((c) => c.id === curriculumId)?.facultyId !== id) {
+		if (id && curriculums.find((c) => c.id === curriculumId)?.facultyId !== id) {
 			setCurriculumId("");
 		}
 	};
-
-	const rows = GRADES.filter(
-		(g) =>
-			(!facultyId || student(g)?.facultyId === facultyId) &&
-			(!curriculumId || g.curriculumId === curriculumId) &&
-			(!status || g.status === status),
-	);
 
 	const columns: Column<Grade>[] = [
 		{ key: "name", header: t("gradeList.columns.name"), render: (g) => student(g)?.name[lang] },
@@ -57,10 +90,11 @@ const GradeList = () => {
 				<FilterSelect
 					id="facultyFilter"
 					label={t("gradeList.filters.faculty")}
-					value={facultyId}
+					value={effectiveFacultyId}
 					onChange={changeFaculty}
 					allLabel={t("gradeList.filters.allFaculties")}
-					options={FACULTIES.map((f) => ({ value: f.id, label: f.name[lang] }))}
+					options={faculties.map((f) => ({ value: f.id, label: f.name[lang] }))}
+					disabled={locked}
 				/>
 				<FilterSelect
 					id="curriculumFilter"
@@ -68,7 +102,7 @@ const GradeList = () => {
 					value={curriculumId}
 					onChange={setCurriculumId}
 					allLabel={t("gradeList.filters.allCurriculums")}
-					options={curriculumOptions.map((c) => ({ value: c.id, label: c.name[lang] }))}
+					options={curriculums.map((c) => ({ value: c.id, label: c.name[lang] }))}
 				/>
 				<FilterSelect
 					id="statusFilter"
@@ -80,11 +114,17 @@ const GradeList = () => {
 				/>
 			</div>
 
+			{failed && (
+				<p role="alert" className="mb-4 text-sm text-red-600">
+					{t("common.loadFailed")}
+				</p>
+			)}
+
 			<DataTable
 				columns={columns}
-				rows={rows}
+				rows={grades}
 				getRowId={(g) => g.id}
-				emptyText={t("gradeList.empty")}
+				emptyText={loading ? t("common.loading") : t("gradeList.empty")}
 			/>
 		</div>
 	);

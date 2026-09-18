@@ -8,12 +8,33 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { and, eq, SQL } from 'drizzle-orm';
 import { grades, results, students } from 'schema';
 import { DATABASE, type Db } from 'src/database/database.module';
 import { GrCaller } from 'src/gr-gurd/gr-gurd.guard';
-import { assertFaculty, facultyIdFromName, scopeFacultyId } from 'src/gr-scope/gr-scope';
-import { CreateStudentDto, UpdateStudentDto } from './dto/students.dto';
+import { assertFaculty, assertFacultyExists, scopeFacultyId } from 'src/gr-scope/gr-scope';
+import { academicYearToNumber } from 'src/common/academic-year';
+import {
+  CreateStudentDto,
+  ListStudentsQueryDto,
+  UpdateStudentDto,
+  type AcceptanceType,
+  type StudentStatus,
+} from './dto/students.dto';
+
+/** A student as the views consume it. */
+export interface StudentView {
+  id: string;
+  name: { en: string; ar: string };
+  uniNumber: string;
+  acceptanceYear: string;
+  acceptanceType: AcceptanceType;
+  level: number;
+  facultyId: string;
+  status: StudentStatus | null;
+}
+
+type StudentRow = typeof students.$inferSelect;
 
 /** CRUD for students with faculty scoping. */
 @Injectable()
@@ -22,14 +43,59 @@ export class StudentsService {
 
   constructor(@Inject(DATABASE) private readonly db: Db) {}
 
-  /** Lists students: all for admin, own faculty's for data-entry. */
-  async listStudents(caller: GrCaller) {
+  /** Maps a row to the shape the views bind to. */
+  private toView(row: StudentRow): StudentView {
+    return {
+      id: row.id,
+      name: { en: row.nameEn, ar: row.nameAr },
+      uniNumber: row.uniNumber,
+      acceptanceYear: row.acceptanceYear,
+      acceptanceType: row.acceptanceType as AcceptanceType,
+      level: academicYearToNumber(row.academicYear),
+      facultyId: row.facultyId,
+      status: row.status,
+    };
+  }
+
+  /**
+   * Lists students, narrowed by the caller's faculty scope and the optional
+   * filters the list view and the grade-entry cascade both send.
+   */
+  async listStudents(
+    caller: GrCaller,
+    query: ListStudentsQueryDto = {},
+  ): Promise<StudentView[]> {
     try {
       const scope = scopeFacultyId(caller);
-      if (!scope) return await this.db.query.students.findMany();
-      return await this.db.query.students.findMany({
-        where: eq(students.facultyId, scope),
+      // data-entry may only ever see their own faculty, whatever they asked for
+      const facultyId = scope ?? query.facultyId;
+      if (scope && query.facultyId && query.facultyId !== scope) {
+        throw new UnauthorizedException();
+      }
+
+      const filters: SQL[] = [];
+      if (facultyId) filters.push(eq(students.facultyId, facultyId));
+      if (query.level) filters.push(eq(students.academicYear, query.level));
+      if (query.acceptanceYear) {
+        filters.push(eq(students.acceptanceYear, query.acceptanceYear));
+      }
+
+      const rows = await this.db.query.students.findMany({
+        where: filters.length ? and(...filters) : undefined,
       });
+
+      let views = rows.map((row) => this.toView(row));
+      if (query.q?.trim()) {
+        const needle = query.q.trim().toLowerCase();
+        views = views.filter(
+          (v) =>
+            v.name.en.toLowerCase().includes(needle) ||
+            v.name.ar.includes(needle) ||
+            v.uniNumber.includes(needle),
+        );
+      }
+
+      return views;
     } catch (error) {
       if (error instanceof UnauthorizedException) throw error;
       this.logger.error('Failed to list students', error);
@@ -40,27 +106,33 @@ export class StudentsService {
   }
 
   /** Creates a student in the given faculty. */
-  async createStudent(dto: CreateStudentDto, caller: GrCaller): Promise<{ status: string }> {
+  async createStudent(dto: CreateStudentDto, caller: GrCaller): Promise<StudentView> {
     try {
-      const facultyId = await facultyIdFromName(this.db, dto.faculty);
+      const facultyId = await assertFacultyExists(this.db, dto.facultyId);
       assertFaculty(caller, facultyId);
 
+      const uniNumber = dto.uniNumber.trim();
       const existing = await this.db.query.students.findFirst({
-        where: eq(students.uniNumber, dto.uniNo.trim()),
+        where: eq(students.uniNumber, uniNumber),
       });
       if (existing) throw new ConflictException();
 
-      await this.db.insert(students).values({
-        name: dto.name.trim(),
-        uniNumber: dto.uniNo.trim(),
-        acceptanceType: dto.acceptanceType.trim(),
-        acceptanceYear: dto.year.trim(),
-        academicYear: dto.year.trim(),
-        facultyId,
-      });
+      const [created] = await this.db
+        .insert(students)
+        .values({
+          nameEn: dto.name.en.trim(),
+          nameAr: dto.name.ar.trim(),
+          uniNumber,
+          acceptanceType: dto.acceptanceType,
+          acceptanceYear: dto.acceptanceYear.trim(),
+          academicYear: dto.level,
+          status: dto.status ?? null,
+          facultyId,
+        })
+        .returning();
 
-      this.logger.log(`Created student: ${dto.uniNo}`);
-      return { status: 'Ok' };
+      this.logger.log(`Created student: ${uniNumber}`);
+      return this.toView(created);
     } catch (error) {
       if (
         error instanceof BadRequestException ||
@@ -76,47 +148,50 @@ export class StudentsService {
     }
   }
 
-  /** Updates a student identified by university number. */
+  /** Updates the student with this id. */
   async updateStudent(
-    uniNo: string,
+    id: string,
     dto: UpdateStudentDto,
     caller: GrCaller,
-  ): Promise<{ status: string }> {
+  ): Promise<StudentView> {
     if (!dto || !Object.keys(dto).length) throw new BadRequestException();
     try {
       const row = await this.db.query.students.findFirst({
-        where: eq(students.uniNumber, uniNo.trim()),
+        where: eq(students.id, id),
       });
       if (!row) throw new NotFoundException();
       assertFaculty(caller, row.facultyId);
 
-      // the uniNumber is immutable
-      if (dto.uniNo !== undefined && dto.uniNo.trim() !== row.uniNumber) {
+      // the university number is immutable
+      if (dto.uniNumber !== undefined && dto.uniNumber.trim() !== row.uniNumber) {
         throw new BadRequestException();
       }
 
       let facultyId = row.facultyId;
-      if (dto.faculty !== undefined) {
-        facultyId = await facultyIdFromName(this.db, dto.faculty);
+      if (dto.facultyId !== undefined) {
+        facultyId = await assertFacultyExists(this.db, dto.facultyId);
         assertFaculty(caller, facultyId);
       }
 
-      await this.db
+      const [updated] = await this.db
         .update(students)
         .set({
-          ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
-          ...(dto.acceptanceType !== undefined
-            ? { acceptanceType: dto.acceptanceType.trim() }
+          ...(dto.name !== undefined
+            ? { nameEn: dto.name.en.trim(), nameAr: dto.name.ar.trim() }
             : {}),
-          ...(dto.year !== undefined
-            ? { acceptanceYear: dto.year.trim(), academicYear: dto.year.trim() }
+          ...(dto.acceptanceType !== undefined ? { acceptanceType: dto.acceptanceType } : {}),
+          ...(dto.acceptanceYear !== undefined
+            ? { acceptanceYear: dto.acceptanceYear.trim() }
             : {}),
+          ...(dto.level !== undefined ? { academicYear: dto.level } : {}),
+          ...(dto.status !== undefined ? { status: dto.status } : {}),
           facultyId,
         })
-        .where(eq(students.id, row.id));
+        .where(eq(students.id, row.id))
+        .returning();
 
-      this.logger.log(`Updated student: ${uniNo}`);
-      return { status: 'Ok' };
+      this.logger.log(`Updated student: ${row.uniNumber}`);
+      return this.toView(updated);
     } catch (error) {
       if (
         error instanceof BadRequestException ||
@@ -125,19 +200,19 @@ export class StudentsService {
       ) {
         throw error;
       }
-      this.logger.error(`Failed to update student: ${uniNo}`, error);
+      this.logger.error(`Failed to update student: ${id}`, error);
       throw new InternalServerErrorException('Grades operation failed', {
         cause: error,
       });
     }
   }
 
-  /** Deletes a student plus their grades and results. */
-  async deleteStudent(uniNo: string, caller: GrCaller): Promise<{ status: string }> {
+  /** Deletes the student with this id, plus their grades and results. */
+  async deleteStudent(id: string, caller: GrCaller): Promise<{ status: string }> {
     try {
       const row = await this.db.query.students.findFirst({
-        where: eq(students.uniNumber, uniNo.trim()),
-        columns: { id: true, facultyId: true },
+        where: eq(students.id, id),
+        columns: { id: true, facultyId: true, uniNumber: true },
       });
       if (!row) throw new NotFoundException();
       assertFaculty(caller, row.facultyId);
@@ -148,17 +223,16 @@ export class StudentsService {
         await tx.delete(students).where(eq(students.id, row.id));
       });
 
-      this.logger.log(`Deleted student: ${uniNo}`);
+      this.logger.log(`Deleted student: ${row.uniNumber}`);
       return { status: 'Ok' };
     } catch (error) {
       if (error instanceof NotFoundException || error instanceof UnauthorizedException) {
         throw error;
       }
-      this.logger.error(`Failed to delete student: ${uniNo}`, error);
+      this.logger.error(`Failed to delete student: ${id}`, error);
       throw new InternalServerErrorException('Grades operation failed', {
         cause: error,
       });
     }
   }
-
 }

@@ -1,10 +1,14 @@
-import { useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
+import FacultyField from "../../../components/facultyField";
 import FormField from "../../../components/formField";
 import SearchSelect, { type SearchOption } from "../../../components/searchSelect";
+import { createGrade } from "../../../api/grades";
+import { fetchCurriculums } from "../../../api/curriculums";
+import { fetchStudents } from "../../../api/students";
 import { formCardClass, inputClass, submitButtonClass } from "../../../styles/form";
-import { GRADE_STATUSES } from "../../../types/grade";
+import { STUDY_LEVELS } from "../../../utils/academicYears";
 
 const REQUIRED = "gradeEntry.errors.required";
 const GRADE_RANGE = "gradeEntry.errors.gradeRange";
@@ -19,7 +23,6 @@ const gradeSchema = z.object({
 		.min(1, REQUIRED)
 		.transform(Number)
 		.pipe(z.number({ error: "gradeEntry.errors.gradeNumber" }).min(0, GRADE_RANGE).max(100, GRADE_RANGE)),
-	status: z.enum(GRADE_STATUSES, { error: REQUIRED }),
 });
 
 type GradeForm = z.input<typeof gradeSchema>;
@@ -29,26 +32,111 @@ const EMPTY_FORM: GradeForm = {
 	studentId: "",
 	curriculumId: "",
 	grade: "",
-	status: "" as GradeForm["status"],
 };
 
 const GradeEntry = () => {
-	const { t } = useTranslation();
+	const { t, i18n } = useTranslation();
+	const lang = i18n.language === "ar" ? "ar" : "en";
+
+	// the cascade: a faculty and an academic year scope both searches below
+	const [facultyId, setFacultyId] = useState("");
+	const [academicYear, setAcademicYear] = useState("");
 
 	const [form, setForm] = useState<GradeForm>(EMPTY_FORM);
 	const [errors, setErrors] = useState<FormErrors>({});
+	const [submitting, setSubmitting] = useState(false);
+	const [saved, setSaved] = useState(false);
+	const [failed, setFailed] = useState(false);
+
 	const [studentQuery, setStudentQuery] = useState("");
 	const [curriculumQuery, setCurriculumQuery] = useState("");
-	// TODO: fill from the students search API (by name or university number) using studentQuery
-	const studentOptions: SearchOption[] = [];
-	// TODO: fill from the curriculums search API using curriculumQuery
-	const curriculumOptions: SearchOption[] = [];
+	const [studentOptions, setStudentOptions] = useState<SearchOption[]>([]);
+	const [curriculumOptions, setCurriculumOptions] = useState<SearchOption[]>([]);
+
+	// both searches stay closed until the cascade is answered
+	const scoped = facultyId !== "" && academicYear !== "";
 
 	const setField = <K extends keyof GradeForm>(key: K, value: GradeForm[K]) => {
 		setForm((prev) => ({ ...prev, [key]: value }));
 	};
 
-	const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+	// changing the scope invalidates anything chosen under the old one
+	const clearScopedSelections = useCallback(() => {
+		setForm(EMPTY_FORM);
+		setStudentQuery("");
+		setCurriculumQuery("");
+		setStudentOptions([]);
+		setCurriculumOptions([]);
+	}, []);
+
+	// FacultyField reports the locked faculty from an effect, so this must no-op
+	// when nothing actually changed
+	const handleFacultyChange = useCallback(
+		(next: string) => {
+			if (next === facultyId) return;
+			clearScopedSelections();
+			setFacultyId(next);
+		},
+		[facultyId, clearScopedSelections],
+	);
+
+	const handleAcademicYearChange = (next: string) => {
+		if (next === academicYear) return;
+		clearScopedSelections();
+		setAcademicYear(next);
+	};
+
+	useEffect(() => {
+		if (!scoped) return;
+
+		let cancelled = false;
+		const load = async () => {
+			try {
+				const rows = await fetchStudents({
+					facultyId,
+					level: Number(academicYear),
+					q: studentQuery.trim() || undefined,
+				});
+				if (cancelled) return;
+				setStudentOptions(
+					rows.map((s) => ({ id: s.id, label: `${s.name[lang]} — ${s.uniNumber}` })),
+				);
+			} catch {
+				if (!cancelled) setStudentOptions([]);
+			}
+		};
+
+		void load();
+		return () => {
+			cancelled = true;
+		};
+	}, [scoped, facultyId, academicYear, studentQuery, lang]);
+
+	useEffect(() => {
+		if (!scoped) return;
+
+		let cancelled = false;
+		const load = async () => {
+			try {
+				const rows = await fetchCurriculums({
+					facultyId,
+					academicYear: Number(academicYear),
+					q: curriculumQuery.trim() || undefined,
+				});
+				if (cancelled) return;
+				setCurriculumOptions(rows.map((c) => ({ id: c.id, label: c.name[lang] })));
+			} catch {
+				if (!cancelled) setCurriculumOptions([]);
+			}
+		};
+
+		void load();
+		return () => {
+			cancelled = true;
+		};
+	}, [scoped, facultyId, academicYear, curriculumQuery, lang]);
+
+	const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 
 		const result = gradeSchema.safeParse(form);
@@ -58,7 +146,25 @@ const GradeEntry = () => {
 		}
 
 		setErrors({});
-		// TODO: send result.data to the API
+		setSaved(false);
+		setFailed(false);
+		setSubmitting(true);
+		try {
+			// pass/fail is derived from the mark by the API, never sent
+			await createGrade({
+				studentId: result.data.studentId,
+				curriculumId: result.data.curriculumId,
+				grade: result.data.grade,
+			});
+			setForm(EMPTY_FORM);
+			setStudentQuery("");
+			setCurriculumQuery("");
+			setSaved(true);
+		} catch {
+			setFailed(true);
+		} finally {
+			setSubmitting(false);
+		}
 	};
 
 	return (
@@ -67,7 +173,35 @@ const GradeEntry = () => {
 				{t("gradeEntry.title")}
 			</h1>
 
-			<form noValidate onSubmit={handleSubmit} className={formCardClass}>
+			<form noValidate onSubmit={(e) => void handleSubmit(e)} className={formCardClass}>
+				<FacultyField
+					label={t("gradeEntry.faculty")}
+					placeholder={t("gradeEntry.facultyPlaceholder")}
+					noResultsText={t("gradeEntry.noResults")}
+					value={facultyId}
+					onChange={handleFacultyChange}
+				/>
+
+				<FormField id="academicYear" label={t("gradeEntry.academicYear")}>
+					<select
+						id="academicYear"
+						value={academicYear}
+						onChange={(e) => handleAcademicYearChange(e.target.value)}
+						className={inputClass(false)}
+					>
+						<option value="" disabled>
+							{t("gradeEntry.selectAcademicYear")}
+						</option>
+						{STUDY_LEVELS.map((level) => (
+							<option key={level} value={level}>
+								{t(`student.levels.${level}`)}
+							</option>
+						))}
+					</select>
+				</FormField>
+
+				{!scoped && <p className="text-sm text-palette-5">{t("gradeEntry.chooseScope")}</p>}
+
 				<FormField id="student" label={t("gradeEntry.student")} error={errors.studentId?.[0]}>
 					<SearchSelect
 						id="student"
@@ -121,27 +255,19 @@ const GradeEntry = () => {
 					/>
 				</FormField>
 
-				<FormField id="status" label={t("gradeEntry.status")} error={errors.status?.[0]}>
-					<select
-						id="status"
-						value={form.status}
-						onChange={(e) => setField("status", e.target.value as GradeForm["status"])}
-						aria-invalid={!!errors.status}
-						className={inputClass(!!errors.status)}
-					>
-						<option value="" disabled>
-							{t("gradeEntry.selectStatus")}
-						</option>
-						{GRADE_STATUSES.map((status) => (
-							<option key={status} value={status}>
-								{t(`grade.statuses.${status}`)}
-							</option>
-						))}
-					</select>
-				</FormField>
+				{saved && (
+					<p role="status" className="text-sm text-palette-5">
+						{t("common.saved")}
+					</p>
+				)}
+				{failed && (
+					<p role="alert" className="text-sm text-red-600">
+						{t("common.saveFailed")}
+					</p>
+				)}
 
-				<button type="submit" className={submitButtonClass}>
-					{t("gradeEntry.submit")}
+				<button type="submit" disabled={submitting || !scoped} className={submitButtonClass}>
+					{submitting ? t("common.saving") : t("gradeEntry.submit")}
 				</button>
 			</form>
 		</div>

@@ -1,44 +1,72 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ConfirmDialog from "../../../components/confirmDialog";
 import DataTable, { type Column } from "../../../components/dataTable";
 import DeleteButton from "../../../components/deleteButton";
 import FilterSelect from "../../../components/filterSelect";
-import { CURRICULUMS } from "../../../mocks/curriculums";
-import { FACULTIES } from "../../../mocks/faculties";
+import useFaculties from "../../../hooks/useFaculties";
+import { deleteCurriculum, fetchCurriculums } from "../../../api/curriculums";
 import type { Curriculum } from "../../../types/curriculum";
-import { ACADEMIC_YEARS } from "../../../utils/academicYears";
+import { STUDY_LEVELS } from "../../../utils/academicYears";
 
 const CurriculumList = () => {
 	const { t, i18n } = useTranslation();
 	const lang = i18n.language === "ar" ? "ar" : "en";
+	const { faculties, locked, lockedFacultyId } = useFaculties();
 
-	const [curriculums, setCurriculums] = useState(CURRICULUMS);
+	const [curriculums, setCurriculums] = useState<Curriculum[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [failed, setFailed] = useState(false);
 	const [facultyId, setFacultyId] = useState("");
 	const [academicYear, setAcademicYear] = useState("");
 	const [pendingDelete, setPendingDelete] = useState<Curriculum | null>(null);
 
-	const facultyName = (id: string) =>
-		FACULTIES.find((f) => f.id === id)?.name[lang] ?? "";
+	// a locked caller only ever sees their own faculty
+	const effectiveFacultyId = locked ? (lockedFacultyId ?? "") : facultyId;
 
-	const confirmDelete = () => {
+	useEffect(() => {
+		let cancelled = false;
+		// state changes live in the callbacks: the effect body itself stays sync-free
+		fetchCurriculums({
+			facultyId: effectiveFacultyId || undefined,
+			academicYear: academicYear ? Number(academicYear) : undefined,
+		})
+			.then((rows) => {
+				if (cancelled) return;
+				setCurriculums(rows);
+				setFailed(false);
+			})
+			.catch(() => {
+				if (!cancelled) setFailed(true);
+			})
+			.finally(() => {
+				if (!cancelled) setLoading(false);
+			});
+
+		return () => {
+			cancelled = true;
+		};
+	}, [effectiveFacultyId, academicYear]);
+
+	const facultyName = (id: string) => faculties.find((f) => f.id === id)?.name[lang] ?? "";
+
+	const confirmDelete = async () => {
 		if (!pendingDelete) return;
-		// TODO: call the delete curriculum API before removing the row
-		setCurriculums((prev) => prev.filter((c) => c.id !== pendingDelete.id));
+		const target = pendingDelete;
 		setPendingDelete(null);
+		try {
+			await deleteCurriculum(target.id);
+			setCurriculums((prev) => prev.filter((c) => c.id !== target.id));
+		} catch {
+			setFailed(true);
+		}
 	};
-
-	const rows = curriculums.filter(
-		(c) =>
-			(!facultyId || c.facultyId === facultyId) &&
-			(!academicYear || c.academicYear === academicYear),
-	);
 
 	const columns: Column<Curriculum>[] = [
 		{ key: "name", header: t("curriculumList.columns.name"), render: (c) => c.name[lang] },
 		{ key: "faculty", header: t("curriculumList.columns.faculty"), render: (c) => facultyName(c.facultyId) },
 		{ key: "abbreviation", header: t("curriculumList.columns.abbreviation"), render: (c) => c.abbreviation },
-		{ key: "academicYear", header: t("curriculumList.columns.academicYear"), render: (c) => c.academicYear },
+		{ key: "academicYear", header: t("curriculumList.columns.academicYear"), render: (c) => t(`student.levels.${c.academicYear}`) },
 		{
 			key: "actions",
 			header: t("common.actions"),
@@ -61,10 +89,11 @@ const CurriculumList = () => {
 				<FilterSelect
 					id="facultyFilter"
 					label={t("curriculumList.faculty")}
-					value={facultyId}
+					value={effectiveFacultyId}
 					onChange={setFacultyId}
 					allLabel={t("curriculumList.allFaculties")}
-					options={FACULTIES.map((f) => ({ value: f.id, label: f.name[lang] }))}
+					options={faculties.map((f) => ({ value: f.id, label: f.name[lang] }))}
+					disabled={locked}
 				/>
 				<FilterSelect
 					id="yearFilter"
@@ -72,15 +101,21 @@ const CurriculumList = () => {
 					value={academicYear}
 					onChange={setAcademicYear}
 					allLabel={t("curriculumList.allYears")}
-					options={ACADEMIC_YEARS.map((year) => ({ value: year, label: year }))}
+					options={STUDY_LEVELS.map((l) => ({ value: String(l), label: t(`student.levels.${l}`) }))}
 				/>
 			</div>
 
+			{failed && (
+				<p role="alert" className="mb-4 text-sm text-red-600">
+					{t("common.loadFailed")}
+				</p>
+			)}
+
 			<DataTable
 				columns={columns}
-				rows={rows}
+				rows={curriculums}
 				getRowId={(c) => c.id}
-				emptyText={t("curriculumList.empty")}
+				emptyText={loading ? t("common.loading") : t("curriculumList.empty")}
 			/>
 
 			<ConfirmDialog
@@ -89,7 +124,7 @@ const CurriculumList = () => {
 				message={t("curriculumList.deleteMessage", { name: pendingDelete?.name[lang] })}
 				confirmLabel={t("common.delete")}
 				cancelLabel={t("common.cancel")}
-				onConfirm={confirmDelete}
+				onConfirm={() => void confirmDelete()}
 				onCancel={() => setPendingDelete(null)}
 			/>
 		</div>

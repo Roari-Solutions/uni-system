@@ -126,10 +126,13 @@ export class AuthService {
     return this.issueTokens({ sub: user.id, role: user.employee.role.name });
   }
 
-  /** Returns the safe profile (no password hash) for a user id. */
+  /** Returns the safe profile (no password hash) plus the caller's role. */
   async me(userId: string) {
     const user = await this.db.query.users.findFirst({
       where: eq(schema.users.id, userId),
+      with: {
+        employee: { columns: {}, with: { role: { columns: { name: true } } } },
+      },
     });
     if (!user) {
       this.logger.warn(`me: user ${userId} not found`);
@@ -140,8 +143,22 @@ export class AuthService {
       throw new ForbiddenException();
     }
 
-    const { password: _password, ...safe } = user;
-    return safe;
+    if (!user.employee?.role) {
+      this.logger.warn(`me: user ${userId} has no employee role`);
+      throw new ForbiddenException();
+    }
+
+    const { password: _password, employee: _employee, ...safe } = user;
+    // the views branch on role, so it travels with the profile
+    return { ...safe, role: user.employee.role.name };
+  }
+
+  /** Clears the auth cookies; the client cannot, since they are HttpOnly. */
+  clearAuthCookies(res: Response) {
+    const isSecure = config.cookieSecure;
+    const options = { httpOnly: true, secure: isSecure, sameSite: 'strict' as const };
+    res.clearCookie('access_token', options);
+    res.clearCookie('refresh_token', options);
   }
 
   /** Writes access/refresh tokens as HttpOnly cookies. */

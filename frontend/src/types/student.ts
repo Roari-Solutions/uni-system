@@ -1,4 +1,4 @@
-import type { Localized } from "../mocks/faculties";
+import type { Localized } from "./localized";
 import type { STUDY_LEVELS } from "../utils/academicYears";
 
 export const ACCEPTANCE_TYPES = ["general", "special", "vacancies", "teachersChildren"] as const;

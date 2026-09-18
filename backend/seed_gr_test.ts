@@ -13,13 +13,17 @@ function getDb() {
   return drizzle(new Pool({ connectionString: config.databaseUrl }), { schema });
 }
 
-/** Ensures a faculty exists by name; returns it. */
-async function ensureFaculty(db: ReturnType<typeof getDb>, name: string) {
+/** Ensures a faculty exists by its English name; returns it. */
+async function ensureFaculty(
+  db: ReturnType<typeof getDb>,
+  nameEn: string,
+  nameAr: string,
+) {
   const found = await db.query.faculties.findFirst({
-    where: eq(schema.faculties.name, name),
+    where: eq(schema.faculties.nameEn, nameEn),
   });
   if (found) return found;
-  const [row] = await db.insert(schema.faculties).values({ name }).returning();
+  const [row] = await db.insert(schema.faculties).values({ nameEn, nameAr }).returning();
   return row;
 }
 
@@ -81,8 +85,8 @@ async function ensureGrUser(
 async function main() {
   const db = getDb();
   try {
-    const eng = await ensureFaculty(db, 'Engineering');
-    await ensureFaculty(db, 'Medicine');
+    const eng = await ensureFaculty(db, 'Engineering', 'الهندسة');
+    await ensureFaculty(db, 'Medicine', 'الطب');
     await ensureRole(db, 'admin');
     await ensureRole(db, 'data-entry');
     const deptId = await ensureDepartment(db, 'IT');

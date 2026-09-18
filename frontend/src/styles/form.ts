@@ -7,3 +7,7 @@ export const formCardClass = "flex flex-col gap-5 rounded-lg border border-palet
 
 export const submitButtonClass =
 	"self-start rounded-md bg-palette-6 px-5 py-2 font-medium text-palette-1 hover:bg-palette-5";
+
+// same button, stretched — used where the form is a single centred card
+export const blockSubmitButtonClass =
+	"w-full rounded-md bg-palette-6 px-5 py-2 font-medium text-palette-1 hover:bg-palette-5 disabled:opacity-60";

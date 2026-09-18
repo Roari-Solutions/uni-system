@@ -5,7 +5,8 @@
     "grades": "Grades",
     "list": "List",
     "entry": "Entry",
-    "switchLanguage": "العربية"
+    "switchLanguage": "العربية",
+    "logout": "Sign out"
   },
   "curriculumEntry": {
     "title": "Add curriculum",
@@ -86,7 +87,13 @@
     "actions": "Actions",
     "delete": "Delete",
     "cancel": "Cancel",
-    "deleteItem": "Delete {{name}}"
+    "deleteItem": "Delete {{name}}",
+    "loading": "Loading…",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "saveFailed": "Couldn't save. Please try again.",
+    "loadFailed": "Couldn't load the data. Please try again.",
+    "facultyLocked": "Set from your account and cannot be changed."
   },
   "studentEntry": {
     "title": "Add student",
@@ -143,13 +150,32 @@
     "curriculumPlaceholder": "Search curriculums...",
     "noResults": "No results",
     "grade": "Grade",
-    "status": "Status",
-    "selectStatus": "Select status",
     "submit": "Save",
     "errors": {
       "required": "This field is required",
       "gradeNumber": "Grade must be a number",
       "gradeRange": "Grade must be between 0 and 100"
+    },
+    "faculty": "Faculty",
+    "facultyPlaceholder": "Search faculties...",
+    "academicYear": "Academic year",
+    "selectAcademicYear": "Select academic year",
+    "chooseScope": "Choose a faculty and an academic year to search students and curriculums."
+  },
+  "roles": {
+    "admin": "Administrator",
+    "data-entry": "Data entry"
+  },
+  "login": {
+    "title": "Sign in",
+    "subtitle": "Use your university account.",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Sign in",
+    "submitting": "Signing in…",
+    "errors": {
+      "required": "This field is required",
+      "failed": "Incorrect email or password."
     }
   }
 }

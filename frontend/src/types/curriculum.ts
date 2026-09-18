@@ -1,9 +1,11 @@
-import type { Localized } from "../mocks/faculties";
+import type { Localized } from "./localized";
+import type { STUDY_LEVELS } from "../utils/academicYears";
 
 export type Curriculum = {
 	id: string;
 	name: Localized;
 	facultyId: string;
 	abbreviation: string;
-	academicYear: string;
+	// academic year = study year 1-6, the same scale as Student.level
+	academicYear: (typeof STUDY_LEVELS)[number];
 };

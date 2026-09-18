@@ -12,26 +12,44 @@ import { and, eq, inArray, isNotNull } from 'drizzle-orm';
 import { curriculums, facultyCurriculums, grades, results, students } from 'schema';
 import { DATABASE, type Db } from 'src/database/database.module';
 import { GrCaller } from 'src/gr-gurd/gr-gurd.guard';
-import { CreateGradeDto, GradeIdentifiersDto, UpdateGradeDto } from './dto/grades.dto';
+import {
+  CreateGradeDto,
+  ListGradesQueryDto,
+  UpdateGradeDto,
+  type GradeStatus,
+} from './dto/grades.dto';
 import { assertFaculty, scopeFacultyId } from 'src/gr-scope/gr-scope';
+import { type AcademicYear } from 'src/common/academic-year';
 
-/** CRUD for grades and term results with faculty scoping. */
+/** A grade as the views consume it; `status` is derived, never stored. */
+export interface GradeView {
+  id: string;
+  studentId: string;
+  curriculumId: string;
+  grade: number;
+  status: GradeStatus;
+}
+
+/** CRUD for grades and per-academic-year results, with faculty scoping. */
 @Injectable()
 export class GradesService {
   private readonly logger = new Logger(GradesService.name);
 
+  /** The single pass threshold: a grade's status and a year's result both use it. */
+  static readonly PASS_MARK = 50;
+
   constructor(@Inject(DATABASE) private readonly db: Db) {}
 
-  /** Resolves a curriculum by name (or abbreviation); throws when missing. */
-  private async curriculumOrThrow(name: string, notFound: boolean) {
-    const clean = name.trim();
-    const row =
-      (await this.db.query.curriculums.findFirst({
-        where: eq(curriculums.name, clean),
-      })) ??
-      (await this.db.query.curriculums.findFirst({
-        where: eq(curriculums.abbreviation, clean),
-      }));
+  /** Derives pass/fail from a mark. The only place a grade's status comes from. */
+  private static statusOf(grade: number): GradeStatus {
+    return grade >= GradesService.PASS_MARK ? 'pass' : 'fail';
+  }
+
+  /** Resolves a curriculum by id, with the academic year the grade inherits. */
+  private async curriculumOrThrow(id: string, notFound: boolean) {
+    const row = await this.db.query.curriculums.findFirst({
+      where: eq(curriculums.id, id),
+    });
     if (!row) {
       if (notFound) throw new NotFoundException();
       throw new BadRequestException();
@@ -39,150 +57,117 @@ export class GradesService {
     return row;
   }
 
-  /** Narrows a student's grades to exactly one row using the given identifiers. */
-  private async gradeOrThrow(studentId: string, ids: GradeIdentifiersDto, notFound: boolean) {
-    const rows = await this.db.query.grades.findMany({
-      where: eq(grades.studentId, studentId),
-      with: { curriculum: { columns: { name: true, abbreviation: true } } },
-    });
-    const clean = {
-      curriculum: ids.curriculum?.trim(),
-      year: ids.year?.trim(),
-      semester: ids.semester,
-    };
-    // get all the grades that has this name or abbr and year and semester
-    const matches = rows.filter(
-      (g) =>
-        (clean.curriculum === undefined ||
-          g.curriculum.name === clean.curriculum ||
-          g.curriculum.abbreviation === clean.curriculum) &&
-        (clean.year === undefined || g.academicYear === clean.year) &&
-        (clean.semester === undefined || g.semester === clean.semester),
-    );
-    // if no matches and not found is allowed throw it or throw a bad request
-    if (!matches.length) {
-      if (notFound) throw new NotFoundException();
-      throw new BadRequestException();
-    }
-    if (matches.length > 1) throw new BadRequestException();
-    return matches[0];
-  }
-
-  async termCoverage(studentId: string, academicYear: string, semester: '1' | '2') {
+  /**
+   * Coverage of one academic year: true once every curriculum the student's
+   * faculty offers for that year carries a mark, plus the average of those marks.
+   */
+  async yearCoverage(studentId: string, academicYear: AcademicYear) {
     const student = await this.db.query.students.findFirst({
       where: eq(students.id, studentId),
       columns: { facultyId: true },
     });
     if (!student) throw new NotFoundException();
 
-    const facultyId = student.facultyId;
-    const facultyRequiredCurriculums = await this.db.query.facultyCurriculums.findMany({
-      where: eq(facultyCurriculums.facultyId, facultyId),
+    const links = await this.db.query.facultyCurriculums.findMany({
+      where: eq(facultyCurriculums.facultyId, student.facultyId),
+      with: { curriculum: { columns: { id: true, academicYear: true } } },
     });
+    // only the curriculums of this academic year count toward it
+    const curriculumIds = links
+      .filter((link) => link.curriculum.academicYear === academicYear)
+      .map((link) => link.curriculumId);
 
-    const curriculumIds = facultyRequiredCurriculums.map((obj) => obj.curriculumId);
+    if (!curriculumIds.length) return { complete: false, average: null as number | null };
 
-    const studetGrades = await this.db.query.grades.findMany({
+    const marked = await this.db.query.grades.findMany({
       where: and(
         eq(grades.studentId, studentId),
-        eq(grades.academicYear, academicYear),
-        eq(grades.semester, semester),
+        inArray(grades.curriculumId, curriculumIds),
         isNotNull(grades.grade),
       ),
     });
 
-    const filledIds = new Set(studetGrades.map((g) => g.curriculumId));
+    const filledIds = new Set(marked.map((g) => g.curriculumId));
     const complete = curriculumIds.every((id) => filledIds.has(id));
     if (!complete) return { complete, average: null as number | null };
 
-    const average =
-      studetGrades.reduce((acc, cur) => acc + Number(cur.grade), 0) / studetGrades.length;
+    const average = marked.reduce((acc, cur) => acc + Number(cur.grade), 0) / marked.length;
     return { complete, average };
   }
 
-  /** True when every faculty curriculum has a filled grade for the term. not used now but might be need later to check i will keep it*/
-  async areGradesComplete(
-    uniNo: string,
-    academicYear: string,
-    semester: '1' | '2',
-  ): Promise<boolean> {
-    const student = await this.db.query.students.findFirst({
-      where: eq(students.uniNumber, uniNo.trim()),
-      columns: { id: true },
-    });
-
-    if (!student) throw new NotFoundException();
-    const { complete } = await this.termCoverage(student.id, academicYear, semester);
+  /** True when every curriculum of that academic year carries a mark. */
+  async areGradesComplete(studentId: string, academicYear: AcademicYear): Promise<boolean> {
+    const { complete } = await this.yearCoverage(studentId, academicYear);
     return complete;
   }
 
   /**
-   * Recomputes and stores the term result: upserts results when complete,
+   * Recomputes and stores the academic year's result: upserts when complete,
    * removes any stale row when incomplete.
    */
-  private async refreshTermResult(
+  private async refreshYearResult(
     studentId: string,
-    academicYear: string,
-    semester: '1' | '2',
+    academicYear: AcademicYear,
   ): Promise<void> {
-    const { complete, average } = await this.termCoverage(studentId, academicYear, semester);
+    const { complete, average } = await this.yearCoverage(studentId, academicYear);
     if (!complete || average === null) {
       await this.db
         .delete(results)
-        .where(
-          and(
-            eq(results.studentId, studentId),
-            eq(results.academicYear, academicYear),
-            eq(results.semester, semester),
-          ),
-        );
+        .where(and(eq(results.studentId, studentId), eq(results.academicYear, academicYear)));
       return;
     }
     const result = average.toFixed(2);
     const gpa = Math.min(average / 25, 4).toFixed(2);
+    const status = average >= GradesService.PASS_MARK ? 'pass' : 'fail';
     await this.db
       .insert(results)
-      .values({
-        studentId,
-        academicYear,
-        semester,
-        result,
-        gpa,
-        status: average >= 50 ? 'pass' : 'fail',
-      })
+      .values({ studentId, academicYear, result, gpa, status })
       .onConflictDoUpdate({
-        target: [results.studentId, results.academicYear, results.semester],
-        set: {
-          result,
-          gpa,
-          status: average >= 50 ? 'pass' : 'fail',
-        },
+        target: [results.studentId, results.academicYear],
+        set: { result, gpa, status },
       });
   }
 
-
-  /** Lists grades: all for admin, own faculty's students' for data-entry. */
-  async listGrades(caller: GrCaller) {
+  /**
+   * Lists grades, narrowed by the caller's faculty scope and the list view's
+   * filters. Rows with no mark yet are omitted: the views model status as
+   * pass/fail with no undetermined state.
+   */
+  async listGrades(caller: GrCaller, query: ListGradesQueryDto = {}): Promise<GradeView[]> {
     try {
       const scope = scopeFacultyId(caller);
-      if (!scope) {
-        return await this.db.query.grades.findMany({
-          with: { student: true, curriculum: true },
-        });
+      // data-entry may only ever see their own faculty, whatever they asked for
+      const facultyId = scope ?? query.facultyId;
+      if (scope && query.facultyId && query.facultyId !== scope) {
+        throw new UnauthorizedException();
       }
-      const owned = await this.db.query.students.findMany({
-        where: eq(students.facultyId, scope),
-        columns: { id: true },
+
+      const rows = await this.db.query.grades.findMany({
+        where: isNotNull(grades.grade),
+        with: {
+          student: { columns: { id: true, facultyId: true } },
+          curriculum: { columns: { id: true, academicYear: true } },
+        },
       });
-      if (!owned.length) return [];
-      // get all the grades of all the studens in the faculty
-      return await this.db.query.grades.findMany({
-        where: inArray(
-          grades.studentId,
-          owned.map((s) => s.id),
-        ),
-        with: { student: true, curriculum: true },
-      });
+
+      let views = rows
+        .filter((row) => !facultyId || row.student.facultyId === facultyId)
+        .filter((row) => !query.curriculumId || row.curriculumId === query.curriculumId)
+        .filter((row) => !query.academicYear || row.curriculum.academicYear === query.academicYear)
+        .map((row) => {
+          const grade = Number(row.grade);
+          return {
+            id: row.id,
+            studentId: row.studentId,
+            curriculumId: row.curriculumId,
+            grade,
+            status: GradesService.statusOf(grade),
+          };
+        });
+
+      if (query.status) views = views.filter((v) => v.status === query.status);
+
+      return views;
     } catch (error) {
       if (error instanceof UnauthorizedException) throw error;
       this.logger.error('Failed to list grades', error);
@@ -192,42 +177,43 @@ export class GradesService {
     }
   }
 
-  /** Creates a grade for a student; the student's faculty governs access. */
-  async createGrade(dto: CreateGradeDto, caller: GrCaller): Promise<{ status: string }> {
+  /** Creates a grade; the student's faculty governs access. */
+  async createGrade(dto: CreateGradeDto, caller: GrCaller): Promise<GradeView> {
     try {
       const student = await this.db.query.students.findFirst({
-        where: eq(students.uniNumber, dto.uniNo.trim()),
+        where: eq(students.id, dto.studentId),
         columns: { id: true, facultyId: true, uniNumber: true },
       });
       if (!student) throw new BadRequestException();
       assertFaculty(caller, student.facultyId);
 
-      const curriculum = await this.curriculumOrThrow(dto.curriculum, false);
-      const semester = dto.semester ?? '1';
+      const curriculum = await this.curriculumOrThrow(dto.curriculumId, false);
 
       const existing = await this.db.query.grades.findFirst({
-        where: and(
-          eq(grades.studentId, student.id),
-          eq(grades.curriculumId, curriculum.id),
-          eq(grades.academicYear, dto.year.trim()),
-          eq(grades.semester, semester),
-        ),
+        where: and(eq(grades.studentId, student.id), eq(grades.curriculumId, curriculum.id)),
         columns: { id: true },
       });
       if (existing) throw new ConflictException();
 
-      await this.db.insert(grades).values({
-        studentId: student.id,
-        curriculumId: curriculum.id,
-        grade: String(dto.grade),
-        academicYear: dto.year.trim(),
-        semester,
-      });
+      const [created] = await this.db
+        .insert(grades)
+        .values({
+          studentId: student.id,
+          curriculumId: curriculum.id,
+          grade: String(dto.grade),
+        })
+        .returning();
 
-      await this.refreshTermResult(student.id, dto.year.trim(), semester);
+      await this.refreshYearResult(student.id, curriculum.academicYear);
 
-      this.logger.log(`Created grade for student: ${dto.uniNo}`);
-      return { status: 'Ok' };
+      this.logger.log(`Created grade for student: ${student.uniNumber}`);
+      return {
+        id: created.id,
+        studentId: created.studentId,
+        curriculumId: created.curriculumId,
+        grade: dto.grade,
+        status: GradesService.statusOf(dto.grade),
+      };
     } catch (error) {
       if (
         error instanceof BadRequestException ||
@@ -242,63 +228,62 @@ export class GradesService {
       });
     }
   }
-  /** Updates the single grade row selected by uniNo plus identifiers. */
-  async updateGrade(
-    uniNo: string,
-    dto: UpdateGradeDto,
-    caller: GrCaller,
-  ): Promise<{ status: string }> {
+
+  /** Updates the grade with this id. */
+  async updateGrade(id: string, dto: UpdateGradeDto, caller: GrCaller): Promise<GradeView> {
     if (!dto || !Object.keys(dto).length) throw new BadRequestException();
     try {
-      const student = await this.db.query.students.findFirst({
-        where: eq(students.uniNumber, uniNo.trim()),
-        columns: { id: true, facultyId: true, uniNumber: true },
+      const row = await this.db.query.grades.findFirst({
+        where: eq(grades.id, id),
+        with: {
+          student: { columns: { id: true, facultyId: true } },
+          curriculum: { columns: { id: true, academicYear: true } },
+        },
       });
-      if (!student) throw new NotFoundException();
-      assertFaculty(caller, student.facultyId);
+      if (!row) throw new NotFoundException();
+      assertFaculty(caller, row.student.facultyId);
 
-      if (dto.uniNo !== undefined && dto.uniNo.trim() !== uniNo.trim()) {
+      if (dto.studentId !== undefined && dto.studentId !== row.studentId) {
         throw new BadRequestException();
       }
 
-      const row = await this.gradeOrThrow(student.id, dto, true);
-
       let curriculumId = row.curriculumId;
-      if (dto.curriculum !== undefined) {
-        const curriculum = await this.curriculumOrThrow(dto.curriculum, true);
+      let academicYear = row.curriculum.academicYear;
+      if (dto.curriculumId !== undefined && dto.curriculumId !== row.curriculumId) {
+        const curriculum = await this.curriculumOrThrow(dto.curriculumId, true);
         curriculumId = curriculum.id;
+        academicYear = curriculum.academicYear;
+
+        const clash = await this.db.query.grades.findFirst({
+          where: and(eq(grades.studentId, row.studentId), eq(grades.curriculumId, curriculumId)),
+          columns: { id: true },
+        });
+        if (clash && clash.id !== row.id) throw new ConflictException();
       }
-      const academicYear = dto.year !== undefined ? dto.year.trim() : row.academicYear;
-      const semester = dto.semester ?? row.semester;
 
-      const clash = await this.db.query.grades.findFirst({
-        where: and(
-          eq(grades.studentId, student.id),
-          eq(grades.curriculumId, curriculumId),
-          eq(grades.academicYear, academicYear),
-          eq(grades.semester, semester),
-        ),
-        columns: { id: true },
-      });
-      if (clash && clash.id !== row.id) throw new ConflictException();
-
-      await this.db
+      const [updated] = await this.db
         .update(grades)
         .set({
           curriculumId,
           ...(dto.grade !== undefined ? { grade: String(dto.grade) } : {}),
-          academicYear,
-          semester,
         })
-        .where(eq(grades.id, row.id));
+        .where(eq(grades.id, row.id))
+        .returning();
 
-      await this.refreshTermResult(student.id, academicYear, semester);
-      if (row.academicYear !== academicYear || row.semester !== semester) {
-        await this.refreshTermResult(student.id, row.academicYear, row.semester);
+      await this.refreshYearResult(row.studentId, academicYear);
+      if (academicYear !== row.curriculum.academicYear) {
+        await this.refreshYearResult(row.studentId, row.curriculum.academicYear);
       }
 
-      this.logger.log(`Updated grade for student: ${uniNo}`);
-      return { status: 'Ok' };
+      const grade = Number(updated.grade);
+      this.logger.log(`Updated grade: ${row.id}`);
+      return {
+        id: updated.id,
+        studentId: updated.studentId,
+        curriculumId: updated.curriculumId,
+        grade,
+        status: GradesService.statusOf(grade),
+      };
     } catch (error) {
       if (
         error instanceof BadRequestException ||
@@ -308,32 +293,30 @@ export class GradesService {
       ) {
         throw error;
       }
-      this.logger.error(`Failed to update grade: ${uniNo}`, error);
+      this.logger.error(`Failed to update grade: ${id}`, error);
       throw new InternalServerErrorException('Grades operation failed', {
         cause: error,
       });
     }
   }
 
-  /** Deletes the single grade row selected by uniNo plus identifiers. */
-  async deleteGrade(
-    uniNo: string,
-    ids: GradeIdentifiersDto,
-    caller: GrCaller,
-  ): Promise<{ status: string }> {
+  /** Deletes the grade with this id. */
+  async deleteGrade(id: string, caller: GrCaller): Promise<{ status: string }> {
     try {
-      const student = await this.db.query.students.findFirst({
-        where: eq(students.uniNumber, uniNo.trim()),
-        columns: { id: true, facultyId: true },
+      const row = await this.db.query.grades.findFirst({
+        where: eq(grades.id, id),
+        with: {
+          student: { columns: { id: true, facultyId: true } },
+          curriculum: { columns: { academicYear: true } },
+        },
       });
-      if (!student) throw new NotFoundException();
-      assertFaculty(caller, student.facultyId);
+      if (!row) throw new NotFoundException();
+      assertFaculty(caller, row.student.facultyId);
 
-      const row = await this.gradeOrThrow(student.id, ids, true);
       await this.db.delete(grades).where(eq(grades.id, row.id));
-      await this.refreshTermResult(student.id, row.academicYear, row.semester);
+      await this.refreshYearResult(row.studentId, row.curriculum.academicYear);
 
-      this.logger.log(`Deleted grade for student: ${uniNo}`);
+      this.logger.log(`Deleted grade: ${row.id}`);
       return { status: 'Ok' };
     } catch (error) {
       if (
@@ -343,23 +326,29 @@ export class GradesService {
       ) {
         throw error;
       }
-      this.logger.error(`Failed to delete grade: ${uniNo}`, error);
+      this.logger.error(`Failed to delete grade: ${id}`, error);
       throw new InternalServerErrorException('Grades operation failed', {
         cause: error,
       });
     }
   }
-  async deleteAllGrades(uniNo: string, caller: GrCaller): Promise<{ status: string }> {
+
+  /** Deletes every grade and result belonging to one student. */
+  async deleteAllGrades(studentId: string, caller: GrCaller): Promise<{ status: string }> {
     try {
       const student = await this.db.query.students.findFirst({
-        where: eq(students.uniNumber, uniNo),
+        where: eq(students.id, studentId),
+        columns: { id: true, facultyId: true, uniNumber: true },
       });
       if (!student) throw new NotFoundException();
       assertFaculty(caller, student.facultyId);
 
-      await this.db.delete(grades).where(eq(grades.studentId, student.id));
-      await this.db.delete(results).where(eq(results.studentId, student.id));
-      this.logger.log(`Deleted all grade for student: ${uniNo}`);
+      await this.db.transaction(async (tx) => {
+        await tx.delete(grades).where(eq(grades.studentId, student.id));
+        await tx.delete(results).where(eq(results.studentId, student.id));
+      });
+
+      this.logger.log(`Deleted all grades for student: ${student.uniNumber}`);
       return { status: 'Ok' };
     } catch (error) {
       if (
@@ -369,7 +358,7 @@ export class GradesService {
       ) {
         throw error;
       }
-      this.logger.error(`Failed to delete grades: ${uniNo}`, error);
+      this.logger.error(`Failed to delete grades: ${studentId}`, error);
       throw new InternalServerErrorException('Grades operation failed', {
         cause: error,
       });

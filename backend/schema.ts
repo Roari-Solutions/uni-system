@@ -25,11 +25,14 @@ export const bloodTypeEnum = pgEnum('blood_type', [
   'O-',
 ]);
 
-/** Academic semester (first/second half of the year). */
-export const semesterEnum = pgEnum('semester', ['1', '2']);
+/** Academic year = study year (1-6), the level a student or curriculum sits in. */
+export const studyLevelEnum = pgEnum('study_level', ['1', '2', '3', '4', '5', '6']);
 
-/** Per-semester student outcome. */
+/** Per-year student outcome. */
 export const studentStatusEnum = pgEnum('student_status_enum', ['pass', 'fail']);
+
+/** Whether a student carried their academic year or must repeat it. */
+export const studentResultEnum = pgEnum('student_result', ['success', 'repeat']);
 
 /** Role seniority level (1-4). */
 export const roleLevelEnum = pgEnum('role_level', ['1', '2', '3', '4']);
@@ -45,8 +48,9 @@ const timestamps = () => ({
 /** University faculties; each user belongs to at most one. */
 export const faculties = pgTable('faculties', {
   id: uuid('id').primaryKey().defaultRandom(),
-  name: text('name').notNull().unique(),
   abbreviation: text('abbreviation').unique(),
+  nameEn: text('name_en').notNull().unique(),
+  nameAr: text('name_ar').notNull(),
   ...timestamps(),
 });
 
@@ -166,9 +170,10 @@ export const news = pgTable('news', {
 /** Course curriculums with credit weight. */
 export const curriculums = pgTable('curriculums', {
   id: uuid('id').primaryKey().defaultRandom(),
-  name: text('name').notNull().unique(),
+  nameEn: text('name_en').notNull().unique(),
+  nameAr: text('name_ar').notNull(),
   abbreviation: text('code').unique(),
-  academicYear: text('academic_year').notNull(),
+  academicYear: studyLevelEnum('academic_year').notNull(),
   courseHours: integer('course_hours').notNull().default(1), // Course credit / weight
   ...timestamps(),
 });
@@ -193,17 +198,21 @@ export const facultyCurriculums = pgTable(
 export const students = pgTable('students', {
   id: uuid('id').primaryKey().defaultRandom(),
   uniNumber: text('uni_number').notNull().unique(),
-  name: text('name').notNull(),
+  nameEn: text('name_en').notNull(),
+  nameAr: text('name_ar').notNull(),
   acceptanceType: text('acceptance_type').notNull(),
   acceptanceYear: text('acceptance_year').notNull(),
-  academicYear: text('academic_year').notNull(),
+  /** Academic year = study year 1-6. */
+  academicYear: studyLevelEnum('academic_year').notNull(),
+  /** Null until the year's outcome is determined. */
+  status: studentResultEnum('status'),
   facultyId: uuid('faculty_id')
     .notNull()
     .references(() => faculties.id),
   ...timestamps(),
 });
 
-/** Per-student per-course per-term grades (one row each). */
+/** Per-student per-course grades (one row each). */
 export const grades = pgTable(
   'grades',
   {
@@ -215,21 +224,12 @@ export const grades = pgTable(
       .notNull()
       .references(() => curriculums.id),
     grade: numeric('grade', { precision: 5, scale: 2 }),
-    academicYear: text('academic_year').notNull(),
-    semester: semesterEnum('semester').notNull(),
     ...timestamps(),
   },
-  (t) => [
-    unique('student_curriculum_academic_year_semester_grade_unique').on(
-      t.studentId,
-      t.curriculumId,
-      t.academicYear,
-      t.semester,
-    ),
-  ],
+  (t) => [unique('student_curriculum_unique').on(t.studentId, t.curriculumId)],
 );
 
-/** Per-student per-term aggregate results (one row each). */
+/** Per-student per-academic-year aggregate results (one row each). */
 export const results = pgTable(
   'results',
   {
@@ -237,20 +237,13 @@ export const results = pgTable(
     studentId: uuid('student_id')
       .notNull()
       .references(() => students.id),
-    academicYear: text('academic_year').notNull(),
-    semester: semesterEnum('semester').notNull(),
+    academicYear: studyLevelEnum('academic_year').notNull(),
     result: numeric('result', { precision: 6, scale: 2 }).notNull(),
     gpa: numeric('gpa', { precision: 3, scale: 2 }).notNull(),
     status: studentStatusEnum('status'),
     ...timestamps(),
   },
-  (t) => [
-    unique('unique_result_student_academic_year_semester').on(
-      t.studentId,
-      t.academicYear,
-      t.semester,
-    ),
-  ],
+  (t) => [unique('unique_result_student_year').on(t.studentId, t.academicYear)],
 );
 
 // ============================================== CMS ==============================================

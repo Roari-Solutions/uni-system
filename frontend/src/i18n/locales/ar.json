@@ -5,7 +5,8 @@
     "grades": "الدرجات",
     "list": "القائمة",
     "entry": "الإدخال",
-    "switchLanguage": "English"
+    "switchLanguage": "English",
+    "logout": "تسجيل الخروج"
   },
   "curriculumEntry": {
     "title": "إضافة منهج",
@@ -14,8 +15,8 @@
     "facultyPlaceholder": "ابحث عن كلية...",
     "noResults": "لا توجد نتائج",
     "abbreviation": "الاختصار",
-    "academicYear": "العام الدراسي",
-    "selectYear": "اختر العام الدراسي",
+    "academicYear": "السنة الدراسية",
+    "selectYear": "اختر السنة الدراسية",
     "submit": "حفظ",
     "errors": {
       "required": "هذا الحقل مطلوب",
@@ -26,14 +27,14 @@
     "title": "المناهج",
     "faculty": "الكلية",
     "allFaculties": "جميع الكليات",
-    "academicYear": "العام الدراسي",
-    "allYears": "جميع الأعوام الدراسية",
+    "academicYear": "السنة الدراسية",
+    "allYears": "كل السنوات الدراسية",
     "empty": "لا توجد مناهج تطابق عوامل التصفية المحددة",
     "columns": {
       "name": "الاسم",
       "faculty": "الكلية",
       "abbreviation": "الاختصار",
-      "academicYear": "العام الدراسي"
+      "academicYear": "السنة الدراسية"
     },
     "deleteTitle": "حذف المنهج",
     "deleteMessage": "هل أنت متأكد من حذف \"{{name}}\"؟ لا يمكن التراجع عن هذا الإجراء."
@@ -86,7 +87,13 @@
     "actions": "الإجراءات",
     "delete": "حذف",
     "cancel": "إلغاء",
-    "deleteItem": "حذف {{name}}"
+    "deleteItem": "حذف {{name}}",
+    "loading": "جارٍ التحميل…",
+    "saving": "جارٍ الحفظ…",
+    "saved": "تم الحفظ",
+    "saveFailed": "تعذّر الحفظ. حاول مرة أخرى.",
+    "loadFailed": "تعذّر تحميل البيانات. حاول مرة أخرى.",
+    "facultyLocked": "محدّدة من حسابك ولا يمكن تغييرها."
   },
   "studentEntry": {
     "title": "إضافة طالب",
@@ -143,13 +150,32 @@
     "curriculumPlaceholder": "ابحث عن منهج...",
     "noResults": "لا توجد نتائج",
     "grade": "الدرجة",
-    "status": "الحالة",
-    "selectStatus": "اختر الحالة",
     "submit": "حفظ",
     "errors": {
       "required": "هذا الحقل مطلوب",
       "gradeNumber": "يجب أن تكون الدرجة رقمًا",
       "gradeRange": "يجب أن تكون الدرجة بين 0 و 100"
+    },
+    "faculty": "الكلية",
+    "facultyPlaceholder": "ابحث عن الكليات...",
+    "academicYear": "السنة الدراسية",
+    "selectAcademicYear": "اختر السنة الدراسية",
+    "chooseScope": "اختر الكلية والسنة الدراسية للبحث عن الطلاب والمقررات."
+  },
+  "roles": {
+    "admin": "مسؤول",
+    "data-entry": "مدخل بيانات"
+  },
+  "login": {
+    "title": "تسجيل الدخول",
+    "subtitle": "استخدم حساب الجامعة الخاص بك.",
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "submit": "تسجيل الدخول",
+    "submitting": "جارٍ تسجيل الدخول…",
+    "errors": {
+      "required": "هذا الحقل مطلوب",
+      "failed": "البريد الإلكتروني أو كلمة المرور غير صحيحة."
     }
   }
 }

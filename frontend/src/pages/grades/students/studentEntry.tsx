@@ -1,8 +1,9 @@
-import { useState, type FormEvent } from "react";
+import { useCallback, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
+import FacultyField from "../../../components/facultyField";
 import FormField from "../../../components/formField";
-import SearchSelect, { type SearchOption } from "../../../components/searchSelect";
+import { createStudent } from "../../../api/students";
 import { formCardClass, inputClass, submitButtonClass } from "../../../styles/form";
 import { ACCEPTANCE_TYPES, STUDENT_STATUSES } from "../../../types/student";
 import { ACCEPTANCE_YEARS, STUDY_LEVELS } from "../../../utils/academicYears";
@@ -43,15 +44,20 @@ const StudentEntry = () => {
 
 	const [form, setForm] = useState<StudentForm>(EMPTY_FORM);
 	const [errors, setErrors] = useState<FormErrors>({});
-	const [facultyQuery, setFacultyQuery] = useState("");
-	// TODO: fill from the faculties search API using facultyQuery
-	const facultyOptions: SearchOption[] = [];
+	const [submitting, setSubmitting] = useState(false);
+	const [saved, setSaved] = useState(false);
+	const [failed, setFailed] = useState(false);
 
 	const setField = <K extends keyof StudentForm>(key: K, value: StudentForm[K]) => {
 		setForm((prev) => ({ ...prev, [key]: value }));
 	};
 
-	const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+	// stable identity: FacultyField reports the locked faculty from an effect
+	const setFacultyId = useCallback((facultyId: string) => {
+		setForm((prev) => (prev.facultyId === facultyId ? prev : { ...prev, facultyId }));
+	}, []);
+
+	const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 
 		const result = studentSchema.safeParse(form);
@@ -61,7 +67,27 @@ const StudentEntry = () => {
 		}
 
 		setErrors({});
-		// TODO: send result.data to the API
+		setSaved(false);
+		setFailed(false);
+		setSubmitting(true);
+		try {
+			await createStudent({
+				// one name, both languages — the API stores them separately
+				name: { en: result.data.name, ar: result.data.name },
+				uniNumber: result.data.uniNumber,
+				facultyId: result.data.facultyId,
+				acceptanceYear: result.data.acceptanceYear,
+				acceptanceType: result.data.acceptanceType,
+				level: result.data.level,
+				status: result.data.status,
+			});
+			setForm({ ...EMPTY_FORM, facultyId: form.facultyId });
+			setSaved(true);
+		} catch {
+			setFailed(true);
+		} finally {
+			setSubmitting(false);
+		}
 	};
 
 	return (
@@ -70,7 +96,7 @@ const StudentEntry = () => {
 				{t("studentEntry.title")}
 			</h1>
 
-			<form noValidate onSubmit={handleSubmit} className={formCardClass}>
+			<form noValidate onSubmit={(e) => void handleSubmit(e)} className={formCardClass}>
 				<FormField id="name" label={t("studentEntry.name")} error={errors.name?.[0]}>
 					<input
 						id="name"
@@ -94,25 +120,14 @@ const StudentEntry = () => {
 					/>
 				</FormField>
 
-				<FormField id="faculty" label={t("studentEntry.faculty")} error={errors.facultyId?.[0]}>
-					<SearchSelect
-						id="faculty"
-						query={facultyQuery}
-						onQueryChange={(query) => {
-							setFacultyQuery(query);
-							// typing invalidates any previous selection
-							setField("facultyId", "");
-						}}
-						options={facultyOptions}
-						onSelect={(option) => {
-							setFacultyQuery(option.label);
-							setField("facultyId", option.id);
-						}}
-						placeholder={t("studentEntry.facultyPlaceholder")}
-						noResultsText={t("studentEntry.noResults")}
-						invalid={!!errors.facultyId}
-					/>
-				</FormField>
+				<FacultyField
+					label={t("studentEntry.faculty")}
+					placeholder={t("studentEntry.facultyPlaceholder")}
+					noResultsText={t("studentEntry.noResults")}
+					value={form.facultyId}
+					onChange={setFacultyId}
+					error={errors.facultyId?.[0]}
+				/>
 
 				<FormField
 					id="acceptanceYear"
@@ -195,8 +210,19 @@ const StudentEntry = () => {
 					</select>
 				</FormField>
 
-				<button type="submit" className={submitButtonClass}>
-					{t("studentEntry.submit")}
+				{saved && (
+					<p role="status" className="text-sm text-palette-5">
+						{t("common.saved")}
+					</p>
+				)}
+				{failed && (
+					<p role="alert" className="text-sm text-red-600">
+						{t("common.saveFailed")}
+					</p>
+				)}
+
+				<button type="submit" disabled={submitting} className={submitButtonClass}>
+					{submitting ? t("common.saving") : t("studentEntry.submit")}
 				</button>
 			</form>
 		</div>

@@ -1,12 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ColumnToggle from "../../../components/columnToggle";
 import ConfirmDialog from "../../../components/confirmDialog";
 import DataTable, { type Column } from "../../../components/dataTable";
 import DeleteButton from "../../../components/deleteButton";
 import FilterSelect from "../../../components/filterSelect";
-import { FACULTIES } from "../../../mocks/faculties";
-import { STUDENTS } from "../../../mocks/students";
+import useFaculties from "../../../hooks/useFaculties";
+import { deleteStudent, fetchStudents } from "../../../api/students";
 import type { Student } from "../../../types/student";
 import { ACCEPTANCE_YEARS, STUDY_LEVELS } from "../../../utils/academicYears";
 
@@ -16,13 +16,44 @@ const ALWAYS_VISIBLE = ["name", "actions"];
 const StudentList = () => {
 	const { t, i18n } = useTranslation();
 	const lang = i18n.language === "ar" ? "ar" : "en";
+	const { faculties, locked, lockedFacultyId } = useFaculties();
 
-	const [students, setStudents] = useState(STUDENTS);
+	const [students, setStudents] = useState<Student[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [failed, setFailed] = useState(false);
 	const [level, setLevel] = useState("");
 	const [facultyId, setFacultyId] = useState("");
 	const [acceptanceYear, setAcceptanceYear] = useState("");
 	const [hiddenColumns, setHiddenColumns] = useState<string[]>([]);
 	const [pendingDelete, setPendingDelete] = useState<Student | null>(null);
+
+	// a locked caller only ever sees their own faculty
+	const effectiveFacultyId = locked ? (lockedFacultyId ?? "") : facultyId;
+
+	useEffect(() => {
+		let cancelled = false;
+		// state changes live in the callbacks: the effect body itself stays sync-free
+		fetchStudents({
+			facultyId: effectiveFacultyId || undefined,
+			level: level ? Number(level) : undefined,
+			acceptanceYear: acceptanceYear || undefined,
+		})
+			.then((rows) => {
+				if (cancelled) return;
+				setStudents(rows);
+				setFailed(false);
+			})
+			.catch(() => {
+				if (!cancelled) setFailed(true);
+			})
+			.finally(() => {
+				if (!cancelled) setLoading(false);
+			});
+
+		return () => {
+			cancelled = true;
+		};
+	}, [effectiveFacultyId, level, acceptanceYear]);
 
 	const toggleColumn = (key: string) => {
 		setHiddenColumns((prev) =>
@@ -30,22 +61,19 @@ const StudentList = () => {
 		);
 	};
 
-	const confirmDelete = () => {
+	const confirmDelete = async () => {
 		if (!pendingDelete) return;
-		// TODO: call the delete student API before removing the row
-		setStudents((prev) => prev.filter((s) => s.id !== pendingDelete.id));
+		const target = pendingDelete;
 		setPendingDelete(null);
+		try {
+			await deleteStudent(target.id);
+			setStudents((prev) => prev.filter((s) => s.id !== target.id));
+		} catch {
+			setFailed(true);
+		}
 	};
 
-	const facultyName = (id: string) =>
-		FACULTIES.find((f) => f.id === id)?.name[lang] ?? "";
-
-	const rows = students.filter(
-		(s) =>
-			(!level || String(s.level) === level) &&
-			(!facultyId || s.facultyId === facultyId) &&
-			(!acceptanceYear || s.acceptanceYear === acceptanceYear),
-	);
+	const facultyName = (id: string) => faculties.find((f) => f.id === id)?.name[lang] ?? "";
 
 	const columns: Column<Student>[] = [
 		{ key: "name", header: t("studentList.columns.name"), render: (s) => s.name[lang] },
@@ -85,10 +113,11 @@ const StudentList = () => {
 				<FilterSelect
 					id="facultyFilter"
 					label={t("studentList.filters.faculty")}
-					value={facultyId}
+					value={effectiveFacultyId}
 					onChange={setFacultyId}
 					allLabel={t("studentList.filters.allFaculties")}
-					options={FACULTIES.map((f) => ({ value: f.id, label: f.name[lang] }))}
+					options={faculties.map((f) => ({ value: f.id, label: f.name[lang] }))}
+					disabled={locked}
 				/>
 				<FilterSelect
 					id="acceptanceYearFilter"
@@ -109,11 +138,17 @@ const StudentList = () => {
 				</div>
 			</div>
 
+			{failed && (
+				<p role="alert" className="mb-4 text-sm text-red-600">
+					{t("common.loadFailed")}
+				</p>
+			)}
+
 			<DataTable
 				columns={columns.filter((col) => !hiddenColumns.includes(col.key))}
-				rows={rows}
+				rows={students}
 				getRowId={(s) => s.id}
-				emptyText={t("studentList.empty")}
+				emptyText={loading ? t("common.loading") : t("studentList.empty")}
 			/>
 
 			<ConfirmDialog
@@ -122,7 +157,7 @@ const StudentList = () => {
 				message={t("studentList.deleteMessage", { name: pendingDelete?.name[lang] })}
 				confirmLabel={t("common.delete")}
 				cancelLabel={t("common.cancel")}
-				onConfirm={confirmDelete}
+				onConfirm={() => void confirmDelete()}
 				onCancel={() => setPendingDelete(null)}
 			/>
 		</div>

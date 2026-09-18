@@ -56,12 +56,20 @@ export class AuthController {
     this.authService.setAuthCookies(res, tokens);
   }
 
+  /** POST /auth/logout — clears the auth cookies. */
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  logout(@Res({ passthrough: true }) res: Response) {
+    this.authService.clearAuthCookies(res);
+    return { status: 'Ok' };
+  }
+
   /** GET /auth/me — returns the current user's safe profile. */
   @UseGuards(AuthGuard)
   @Get('me')
   @HttpCode(HttpStatus.OK)
   me(@CurrentUser() user: JwtPayload) {
     this.logger.log(`Fetching profile for user ${user.sub}`);
-    this.authService.me(user.sub);
+    return this.authService.me(user.sub);
   }
 }

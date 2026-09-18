@@ -1,16 +1,36 @@
-import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Inject,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { CurriculumsService } from './curriculums.service';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { GrGurdGuard, type GrRequest } from 'src/gr-gurd/gr-gurd.guard';
-import { CreateCurriculumDto, UpdateCurriculumDto } from './dto/curriculums.dto';
+import {
+  CreateCurriculumDto,
+  ListCurriculumsQueryDto,
+  UpdateCurriculumDto,
+} from './dto/curriculums.dto';
 
+/** Curriculum endpoints (auth + faculty-scope guarded). */
 @Controller('gr/curriculum')
 @UseGuards(AuthGuard, GrGurdGuard)
 export class CurriculumController {
   constructor(@Inject() private readonly curriculumsService: CurriculumsService) {}
+
+  /** GET /gr/curriculum — list view rows, and the cascade's curriculum options. */
   @Get()
-  async getAllCurriculums(@Req() req: GrRequest) {
-    return await this.curriculumsService.listCurriculums(req.grCaller);
+  async getAllCurriculums(@Req() req: GrRequest, @Query() query: ListCurriculumsQueryDto) {
+    return await this.curriculumsService.listCurriculums(req.grCaller, query);
   }
 
   @Post()
@@ -18,23 +38,17 @@ export class CurriculumController {
     return await this.curriculumsService.createCurriculum(dto, req.grCaller);
   }
 
-  @Patch(':name/:faculty')
+  @Patch(':id')
   async UpdateCurriculum(
-    @Param('name') name: string,
-    @Param('faculty') faculty: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateCurriculumDto,
     @Req() req: GrRequest,
   ) {
-    return await this.curriculumsService.updateCurriculum(name, faculty, dto, req.grCaller);
+    return await this.curriculumsService.updateCurriculum(id, dto, req.grCaller);
   }
 
-  @Delete(':name/:faculty')
-  async DeleteCurriculum(
-    @Param('name') name: string,
-    @Param('faculty') faculty: string,
-    @Body() dto: UpdateCurriculumDto,
-    @Req() req: GrRequest,
-  ) {
-    return await this.curriculumsService.deleteCurriculum(name, faculty, req.grCaller);
+  @Delete(':id')
+  async DeleteCurriculum(@Param('id', ParseUUIDPipe) id: string, @Req() req: GrRequest) {
+    return await this.curriculumsService.deleteCurriculum(id, req.grCaller);
   }
 }
