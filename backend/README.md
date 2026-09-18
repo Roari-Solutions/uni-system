@@ -25,6 +25,38 @@
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
+## Run with Docker Compose
+
+From the repo root. Requires `backend/.env` (see `backend/.env.example`).
+
+```bash
+# 1. Point the app at the compose database (NOT a remote host)
+# backend/.env must contain:
+#   DATABASE_USER=admin
+#   DATABASE_PASS=123
+#   DATABASE_NAME=uni
+#   DATABASE_URL=postgresql://admin:123@database:5432/uni
+
+# 2. Build and start (migrate service pushes the schema automatically)
+docker compose up --build -d
+
+# 3. Seed faculties + test users (admin/entry, password: secret123)
+docker compose exec backend bunx tsx seed_faculties.ts
+docker compose exec backend bunx tsx seed_gr_test.ts
+
+# 4. Verify: 401 without a token means the guards are up
+curl -s -o /dev/null -w '%{http_code}\n' http://localhost:4000/api/v1/auth/me
+
+# 5. Run the endpoint suites
+bash api_gr_test.sh http://localhost:4000/api/v1
+
+# Stop (add -v to wipe the database volume)
+docker compose down
+```
+
+> The production image prunes devDependencies, so seeds run via `bunx tsx`
+> (fetched on the fly) — the `ts-node`-based `seed:*` scripts only work locally.
+
 ## Project setup
 
 ```bash
