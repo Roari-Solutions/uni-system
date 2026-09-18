@@ -93,7 +93,9 @@ expect "entry x-fac grade -> 401" 401 "$(hit POST /gr $JE "{\"uniNo\":\"$U2\",\"
 expect "delete one grade"        200 "$(hit DELETE /gr/$U1 $JA "{\"curriculum\":\"$C3\",\"year\":\"2026\"}")"
 expect "recreate s1+s2 terms"    201 "$(hit POST /gr $JA "{\"uniNo\":\"$U1\",\"curriculum\":\"$C3\",\"grade\":80,\"year\":\"2026\",\"semester\":\"1\"}")"
 expect "second term"             201 "$(hit POST /gr $JA "{\"uniNo\":\"$U1\",\"curriculum\":\"$C3\",\"grade\":82,\"year\":\"2026\",\"semester\":\"2\"}")"
-expect "delete all grades"       200 "$(hit DELETE /gr/all/$U1 $JA)"
+out=$(hit DELETE /gr/all/$U1 $JA)
+expect "delete all grades"       200 "$out"
+contains "delete all returns Ok" '"status":"Ok"' "$out"
 expect "delete all miss -> 404"  404 "$(hit DELETE /gr/all/NOPE$RUN $JA)"
 expect "delete one miss -> 404"  404 "$(hit DELETE /gr/NOPE$RUN $JA '{}')"
 
