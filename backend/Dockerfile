@@ -12,6 +12,8 @@ WORKDIR /usr/src/app
 COPY --from=deps /usr/src/app/node_modules ./node_modules
 COPY package.json bun.lock tsconfig.json tsconfig.build.json nest-cli.json drizzle.config.ts schema.ts config.ts ./
 COPY src ./src
+COPY drizzle ./drizzle
+COPY seed_faculties.ts seed_gr_test.ts ./
 RUN bun run build
 
 FROM base AS migrate
