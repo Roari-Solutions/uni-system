@@ -8,13 +8,23 @@ import { config } from './config';
 
 const PASS = 'secret123';
 
-/** Initial faculties: English names with their abbreviations. */
+/**
+ * Initial faculties, in both UI languages.
+ *
+ * REVIEW: the Arabic names are standard translations, not official institutional
+ * names. Replace them with the university's own wording before this runs against
+ * anything but a test database — they are what Arabic users actually see.
+ */
 const FACULTIES = [
-  { name: 'Nursing', abbreviation: 'NS' },
-  { name: 'Law', abbreviation: 'LW' },
-  { name: 'Information Systems', abbreviation: 'IS' },
-  { name: 'Computer and Information Technology', abbreviation: 'IT' },
-  { name: 'Business Studies', abbreviation: 'CS' },
+  { nameEn: 'Nursing', nameAr: 'كلية التمريض', abbreviation: 'NS' },
+  { nameEn: 'Law', nameAr: 'كلية الحقوق', abbreviation: 'LW' },
+  { nameEn: 'Information Systems', nameAr: 'كلية نظم المعلومات', abbreviation: 'IS' },
+  {
+    nameEn: 'Computer and Information Technology',
+    nameAr: 'كلية الحاسوب وتقنية المعلومات',
+    abbreviation: 'IT',
+  },
+  { nameEn: 'Business Studies', nameAr: 'كلية الدراسات التجارية', abbreviation: 'CS' },
 ];
 
 /** Opens a Drizzle handle using the central database URL. */
@@ -24,23 +34,37 @@ function getDb() {
 
 type Db = ReturnType<typeof getDb>;
 
-/** Ensures a faculty exists by name; fills in a missing abbreviation. */
+/** Ensures a faculty exists by its English name; fills in anything missing. */
 async function ensureFaculty(
   db: Db,
-  name: string,
+  nameEn: string,
+  nameAr: string,
   abbreviation: string,
-): Promise<{ id: string; name: string; abbreviation: string }> {
+): Promise<{ id: string; nameEn: string; abbreviation: string }> {
   const found = await db.query.faculties.findFirst({
-    where: eq(schema.faculties.name, name),
+    where: eq(schema.faculties.nameEn, nameEn),
   });
   if (found) {
-    if (!found.abbreviation) {
-      await db.update(schema.faculties).set({ abbreviation }).where(eq(schema.faculties.id, found.id));
+    // back-fill a row seeded before the column existed, but never overwrite
+    // an Arabic name someone has already corrected by hand
+    const patch = {
+      ...(found.abbreviation ? {} : { abbreviation }),
+      ...(found.nameAr ? {} : { nameAr }),
+    };
+    if (Object.keys(patch).length) {
+      await db.update(schema.faculties).set(patch).where(eq(schema.faculties.id, found.id));
     }
-    return { id: found.id, name: found.name, abbreviation: found.abbreviation ?? abbreviation };
+    return {
+      id: found.id,
+      nameEn: found.nameEn,
+      abbreviation: found.abbreviation ?? abbreviation,
+    };
   }
-  const [row] = await db.insert(schema.faculties).values({ name, abbreviation }).returning();
-  return { id: row.id, name: row.name, abbreviation: row.abbreviation ?? abbreviation };
+  const [row] = await db
+    .insert(schema.faculties)
+    .values({ nameEn, nameAr, abbreviation })
+    .returning();
+  return { id: row.id, nameEn: row.nameEn, abbreviation: row.abbreviation ?? abbreviation };
 }
 
 /** Ensures a department exists; returns its id. */
@@ -102,7 +126,9 @@ async function main() {
   const db = getDb();
   try {
     const rows = [];
-    for (const f of FACULTIES) rows.push(await ensureFaculty(db, f.name, f.abbreviation));
+    for (const f of FACULTIES) {
+      rows.push(await ensureFaculty(db, f.nameEn, f.nameAr, f.abbreviation));
+    }
     await ensureRole(db, 'admin');
     await ensureRole(db, 'data-entry');
     await ensureRole(db, 'site-content-employee');
@@ -110,7 +136,14 @@ async function main() {
     await ensureUser(db, 'admin', 'Admin', 'admin', null, deptId);
     await ensureUser(db, 'test-testuser', 'Test User', 'site-content-employee', null, deptId);
     for (const f of rows) {
-      await ensureUser(db, `entry-${f.abbreviation.toLowerCase()}`, `${f.name} Entry`, 'data-entry', f.id, deptId);
+      await ensureUser(
+        db,
+        `entry-${f.abbreviation.toLowerCase()}`,
+        `${f.nameEn} Entry`,
+        'data-entry',
+        f.id,
+        deptId,
+      );
     }
   } finally {
     await db.$client.end();

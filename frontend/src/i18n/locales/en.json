@@ -175,7 +175,8 @@
     "submitting": "Signing in…",
     "errors": {
       "required": "This field is required",
-      "failed": "Incorrect email or password."
+      "credentials": "Incorrect email or password.",
+      "unavailable": "Couldn't reach the server. Please try again in a moment."
     }
   }
 }

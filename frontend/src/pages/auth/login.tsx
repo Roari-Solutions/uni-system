@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import axios from "axios";
 import { useTranslation } from "react-i18next";
 import { Navigate, useLocation, useNavigate } from "react-router";
 import { LanguageIcon } from "@heroicons/react/24/outline";
@@ -32,7 +33,8 @@ const Login = () => {
 
 	const [form, setForm] = useState<LoginForm>(EMPTY_FORM);
 	const [errors, setErrors] = useState<FormErrors>({});
-	const [failed, setFailed] = useState(false);
+	// "credentials" is the user's problem; "unavailable" is ours
+	const [failure, setFailure] = useState<"credentials" | "unavailable" | null>(null);
 	const [submitting, setSubmitting] = useState(false);
 
 	// where the guard bounced them from, if anywhere
@@ -56,14 +58,17 @@ const Login = () => {
 		}
 
 		setErrors({});
-		setFailed(false);
+		setFailure(null);
 		setSubmitting(true);
 		try {
 			await login(result.data.email, result.data.password);
 			void navigate(from ?? "/dashboards/grades/students/list", { replace: true });
-		} catch {
-			// the API does not say which half was wrong, and neither should we
-			setFailed(true);
+		} catch (error) {
+			// only a 401 means the credentials were rejected. A 502 from the dev
+			// proxy, a dropped connection or a 500 must not accuse the user of
+			// mistyping something they got right.
+			const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+			setFailure(status === 401 ? "credentials" : "unavailable");
 		} finally {
 			setSubmitting(false);
 		}
@@ -117,9 +122,9 @@ const Login = () => {
 						/>
 					</FormField>
 
-					{failed && (
+					{failure && (
 						<p role="alert" className="text-sm text-red-600">
-							{t("login.errors.failed")}
+							{t(`login.errors.${failure}`)}
 						</p>
 					)}
 
