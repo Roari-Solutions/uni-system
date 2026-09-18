@@ -108,7 +108,9 @@ export class StudentsService {
           ...(dto.acceptanceType !== undefined
             ? { acceptanceType: dto.acceptanceType.trim() }
             : {}),
-          ...(dto.year !== undefined ? { acceptanceYear: dto.year.trim() } : {}),
+          ...(dto.year !== undefined
+            ? { acceptanceYear: dto.year.trim(), academicYear: dto.year.trim() }
+            : {}),
           facultyId,
         })
         .where(eq(students.id, row.id));

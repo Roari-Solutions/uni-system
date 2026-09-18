@@ -71,6 +71,8 @@ expect "unknown faculty -> 400"  400 "$(hit POST /gr/students $JA "{\"name\":\"S
 contains "list has $U1"          "$U1" "$(hit GET /gr/students $JA)"
 contains "student has academicYear" '"academicYear":"2024"' "$(hit GET /gr/students $JA)"
 expect "update student"          200 "$(hit PATCH /gr/students/$U1 $JA "{\"name\":\"S1b\"}")"
+expect "update year"              200 "$(hit PATCH /gr/students/$U1 $JA "{\"year\":\"2025\"}")"
+contains "academicYear updated"   '"academicYear":"2025"' "$(hit GET /gr/students $JA)"
 expect "change uniNo -> 400"     400 "$(hit PATCH /gr/students/$U1 $JA "{\"uniNo\":\"OTHER\"}")"
 expect "update empty -> 400"     400 "$(hit PATCH /gr/students/$U1 $JA "{}")"
 expect "update miss -> 404"      404 "$(hit PATCH /gr/students/NOPE$RUN $JA "{\"name\":\"Z\"}")"
