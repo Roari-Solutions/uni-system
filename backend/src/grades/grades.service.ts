@@ -68,6 +68,99 @@ export class GradesService {
     return matches[0];
   }
 
+  async termCoverage(studentId: string, academicYear: string, semester: '1' | '2') {
+    const student = await this.db.query.students.findFirst({
+      where: eq(students.id, studentId),
+      columns: { facultyId: true },
+    });
+    if (!student) throw new NotFoundException();
+
+    const facultyId = student.facultyId;
+    const facultyRequiredCurriculums = await this.db.query.facultyCurriculums.findMany({
+      where: eq(facultyCurriculums.facultyId, facultyId),
+    });
+
+    const curriculumIds = facultyRequiredCurriculums.map((obj) => obj.curriculumId);
+
+    const studetGrades = await this.db.query.grades.findMany({
+      where: and(
+        eq(grades.studentId, studentId),
+        eq(grades.academicYear, academicYear),
+        eq(grades.semester, semester),
+        isNotNull(grades.grade),
+      ),
+    });
+
+    const filledIds = new Set(studetGrades.map((g) => g.curriculumId));
+    const complete = curriculumIds.every((id) => filledIds.has(id));
+    if (!complete) return { complete, average: null as number | null };
+
+    const average =
+      studetGrades.reduce((acc, cur) => acc + Number(cur.grade), 0) / studetGrades.length;
+    return { complete, average };
+  }
+
+  /** True when every faculty curriculum has a filled grade for the term. not used now but might be need later to check i will keep it*/
+  async areGradesComplete(
+    uniNo: string,
+    academicYear: string,
+    semester: '1' | '2',
+  ): Promise<boolean> {
+    const student = await this.db.query.students.findFirst({
+      where: eq(students.uniNumber, uniNo.trim()),
+      columns: { id: true },
+    });
+
+    if (!student) throw new NotFoundException();
+    const { complete } = await this.termCoverage(student.id, academicYear, semester);
+    return complete;
+  }
+
+  /**
+   * Recomputes and stores the term result: upserts results when complete,
+   * removes any stale row when incomplete.
+   */
+  private async refreshTermResult(
+    studentId: string,
+    academicYear: string,
+    semester: '1' | '2',
+  ): Promise<void> {
+    const { complete, average } = await this.termCoverage(studentId, academicYear, semester);
+    if (!complete || average === null) {
+      await this.db
+        .delete(results)
+        .where(
+          and(
+            eq(results.studentId, studentId),
+            eq(results.academicYear, academicYear),
+            eq(results.semester, semester),
+          ),
+        );
+      return;
+    }
+    const result = average.toFixed(2);
+    const gpa = Math.min(average / 25, 4).toFixed(2);
+    await this.db
+      .insert(results)
+      .values({
+        studentId,
+        academicYear,
+        semester,
+        result,
+        gpa,
+        status: average >= 50 ? 'pass' : 'fail',
+      })
+      .onConflictDoUpdate({
+        target: [results.studentId, results.academicYear, results.semester],
+        set: {
+          result,
+          gpa,
+          status: average >= 50 ? 'pass' : 'fail',
+        },
+      });
+  }
+
+
   /** Lists grades: all for admin, own faculty's students' for data-entry. */
   async listGrades(caller: GrCaller) {
     try {
@@ -130,6 +223,8 @@ export class GradesService {
         academicYear: dto.year.trim(),
         semester,
       });
+
+      await this.refreshTermResult(student.id, dto.year.trim(), semester);
 
       this.logger.log(`Created grade for student: ${dto.uniNo}`);
       return { status: 'Ok' };
@@ -197,6 +292,11 @@ export class GradesService {
         })
         .where(eq(grades.id, row.id));
 
+      await this.refreshTermResult(student.id, academicYear, semester);
+      if (row.academicYear !== academicYear || row.semester !== semester) {
+        await this.refreshTermResult(student.id, row.academicYear, row.semester);
+      }
+
       this.logger.log(`Updated grade for student: ${uniNo}`);
       return { status: 'Ok' };
     } catch (error) {
@@ -231,6 +331,7 @@ export class GradesService {
 
       const row = await this.gradeOrThrow(student.id, ids, true);
       await this.db.delete(grades).where(eq(grades.id, row.id));
+      await this.refreshTermResult(student.id, row.academicYear, row.semester);
 
       this.logger.log(`Deleted grade for student: ${uniNo}`);
       return { status: 'Ok' };
@@ -257,6 +358,7 @@ export class GradesService {
       assertFaculty(caller, student.facultyId);
 
       await this.db.delete(grades).where(eq(grades.studentId, student.id));
+      await this.db.delete(results).where(eq(results.studentId, student.id));
       this.logger.log(`Deleted all grade for student: ${uniNo}`);
     } catch (error) {
       if (
