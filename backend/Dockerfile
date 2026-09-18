@@ -18,7 +18,10 @@ ENV NODE_ENV=production
 COPY package*.json ./
 COPY --from=builder /usr/src/app/node_modules ./node_modules
 COPY --from=builder /usr/src/app/dist ./dist
+COPY --from=builder /usr/src/app/schema.ts ./schema.ts
+COPY --from=builder /usr/src/app/config.ts ./config.ts
 COPY --from=builder /usr/src/app/drizzle.config.ts ./drizzle.config.ts
+COPY --from=builder /usr/src/app/drizzle ./drizzle
 COPY --from=builder /usr/src/app/docker-entrypoint.sh ./docker-entrypoint.sh
 
 RUN chmod +x docker-entrypoint.sh
@@ -28,4 +31,4 @@ USER node
 EXPOSE 4000
 
 
-ENTRYPOINT [ "node", "dist/src/main.js" ]
+ENTRYPOINT ["./docker-entrypoint.sh"]
