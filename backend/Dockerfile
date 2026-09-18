@@ -19,7 +19,7 @@ RUN bun run build
 FROM base AS migrate
 WORKDIR /usr/src/app
 COPY --from=deps /usr/src/app/node_modules ./node_modules
-COPY drizzle.config.ts schema.ts package.json bun.lock ./
+COPY drizzle.config.ts schema.ts config.ts package.json bun.lock ./
 ENTRYPOINT ["bunx", "drizzle-kit", "push", "--force"]
 
 FROM base AS runner
