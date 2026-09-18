@@ -12,12 +12,14 @@ WORKDIR /usr/src/app
 COPY --from=deps /usr/src/app/node_modules ./node_modules
 COPY package.json bun.lock tsconfig.json tsconfig.build.json nest-cli.json drizzle.config.ts schema.ts config.ts ./
 COPY src ./src
+COPY drizzle ./drizzle
+COPY seed_faculties.ts seed_gr_test.ts ./
 RUN bun run build
 
 FROM base AS migrate
 WORKDIR /usr/src/app
 COPY --from=deps /usr/src/app/node_modules ./node_modules
-COPY drizzle.config.ts schema.ts package.json bun.lock ./
+COPY drizzle.config.ts schema.ts config.ts package.json bun.lock ./
 ENTRYPOINT ["bunx", "drizzle-kit", "push", "--force"]
 
 FROM base AS runner
@@ -32,15 +34,11 @@ COPY --from=builder /usr/src/app/schema.ts ./schema.ts
 COPY --from=builder /usr/src/app/config.ts ./config.ts
 COPY --from=builder /usr/src/app/drizzle.config.ts ./drizzle.config.ts
 COPY --from=builder /usr/src/app/drizzle ./drizzle
-COPY --from=builder /usr/src/app/docker-entrypoint.sh ./docker-entrypoint.sh
-
-RUN chmod +x docker-entrypoint.sh
-
-USER node
+COPY --from=builder /usr/src/app/seed_faculties.ts ./seed_faculties.ts
+COPY --from=builder /usr/src/app/seed_gr_test.ts ./seed_gr_test.ts
+RUN apk add --no-cache wget
 
 USER bun
 EXPOSE 4000
 
 CMD ["bun", "dist/src/main.js"]
-
-ENTRYPOINT ["./docker-entrypoint.sh"]

@@ -15,6 +15,13 @@
       "when": 1789733228031,
       "tag": "0001_add-student-academic-year",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789735518272,
+      "tag": "0002_add-faculty-code",
+      "breakpoints": true
     }
   ]
 }

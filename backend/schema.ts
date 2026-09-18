@@ -46,6 +46,7 @@ const timestamps = () => ({
 export const faculties = pgTable('faculties', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull().unique(),
+  abbreviation: text('abbreviation').unique(),
   ...timestamps(),
 });
 
@@ -195,7 +196,6 @@ export const students = pgTable('students', {
   name: text('name').notNull(),
   acceptanceType: text('acceptance_type').notNull(),
   acceptanceYear: text('acceptance_year').notNull(),
-
   academicYear: text('academic_year').notNull(),
   facultyId: uuid('faculty_id')
     .notNull()
@@ -252,7 +252,6 @@ export const results = pgTable(
     ),
   ],
 );
-
 
 // ============================================== CMS ==============================================
 

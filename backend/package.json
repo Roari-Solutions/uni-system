@@ -13,8 +13,9 @@
     "start:prod": "bun dist/src/main.js",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
-    "start:prod": "node dist/src/main",
     "test": "jest",
+    "seed:faculties": "ts-node --transpile-only --compiler-options '{\"module\":\"commonjs\",\"moduleResolution\":\"node\",\"resolvePackageJsonExports\":false}' seed_faculties.ts",
+    "seed:gr-test": "ts-node --transpile-only --compiler-options '{\"module\":\"commonjs\",\"moduleResolution\":\"node\",\"resolvePackageJsonExports\":false}' seed_gr_test.ts",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix"
   },
   "dependencies": {

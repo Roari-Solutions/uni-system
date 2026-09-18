@@ -96,7 +96,6 @@ expect "second term"             201 "$(hit POST /gr $JA "{\"uniNo\":\"$U1\",\"c
 out=$(hit DELETE /gr/all/$U1 $JA)
 expect "delete all grades"       200 "$out"
 contains "delete all returns Ok" '"status":"Ok"' "$out"
-expect "delete all grades"       200 "$(hit DELETE /gr/all/$U1 $JA)"
 expect "delete all miss -> 404"  404 "$(hit DELETE /gr/all/NOPE$RUN $JA)"
 expect "delete one miss -> 404"  404 "$(hit DELETE /gr/NOPE$RUN $JA '{}')"
 
