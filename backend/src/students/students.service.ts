@@ -55,6 +55,7 @@ export class StudentsService {
         uniNumber: dto.uniNo.trim(),
         acceptanceType: dto.acceptanceType.trim(),
         acceptanceYear: dto.year.trim(),
+        academicYear: dto.year.trim(),
         facultyId,
       });
 

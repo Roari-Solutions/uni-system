@@ -184,6 +184,7 @@ export const students = pgTable('students', {
   name: text('name').notNull(),
   acceptanceType: text('acceptance_type').notNull(),
   acceptanceYear: text('acceptance_year').notNull(),
+  academicYear: text('academic_year'),
   facultyId: uuid('faculty_id')
     .notNull()
     .references(() => faculties.id),

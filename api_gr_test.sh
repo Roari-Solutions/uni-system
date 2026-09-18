@@ -69,6 +69,7 @@ expect "create dup -> 409"       409 "$(hit POST /gr/students $JA "{\"name\":\"S
 expect "missing field -> 400"    400 "$(hit POST /gr/students $JA "{\"year\":\"2024\",\"uniNo\":\"X$RUN\",\"acceptanceType\":\"general\",\"faculty\":\"Engineering\"}")"
 expect "unknown faculty -> 400"  400 "$(hit POST /gr/students $JA "{\"name\":\"S\",\"year\":\"2024\",\"uniNo\":\"X$RUN\",\"acceptanceType\":\"general\",\"faculty\":\"Nope\"}")"
 contains "list has $U1"          "$U1" "$(hit GET /gr/students $JA)"
+contains "student has academicYear" '"academicYear":"2024"' "$(hit GET /gr/students $JA)"
 expect "update student"          200 "$(hit PATCH /gr/students/$U1 $JA "{\"name\":\"S1b\"}")"
 expect "change uniNo -> 400"     400 "$(hit PATCH /gr/students/$U1 $JA "{\"uniNo\":\"OTHER\"}")"
 expect "update empty -> 400"     400 "$(hit PATCH /gr/students/$U1 $JA "{}")"
