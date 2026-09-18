@@ -7,13 +7,13 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { LoginDto } from './dto/login.dto';
-import { DATABASE, type Db } from '../database/database.module';
-import * as schema from '../../schema';
+import { DATABASE, type Db } from 'src/database/database.module';
+import * as schema from 'schema';
 import { eq } from 'drizzle-orm';
 
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
-import { config } from '../../config';
+import { config } from 'config';
 import ms, { StringValue } from 'ms';
 import { Response } from 'express';
 import { JwtPayload } from './auth.guard';

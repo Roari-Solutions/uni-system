@@ -1,6 +1,17 @@
 import { relations } from 'drizzle-orm';
 import { numeric, unique } from 'drizzle-orm/pg-core';
-import { integer, pgTable, pgEnum, uuid, text, timestamp, boolean } from 'drizzle-orm/pg-core';
+import {
+  integer,
+  pgTable,
+  pgEnum,
+  uuid,
+  text,
+  timestamp,
+  boolean,
+  jsonb,
+} from 'drizzle-orm/pg-core';
+import type { MainPageContent } from 'src/content/entities/main-page.entity';
+import type { FacultyPageContent } from 'src/content/entities/faculty-page.entity';
 
 /** Blood group values stored on users. */
 export const bloodTypeEnum = pgEnum('blood_type', [
@@ -184,7 +195,8 @@ export const students = pgTable('students', {
   name: text('name').notNull(),
   acceptanceType: text('acceptance_type').notNull(),
   acceptanceYear: text('acceptance_year').notNull(),
-  academicYear: text('academic_year'),
+
+  academicYear: text('academic_year').notNull(),
   facultyId: uuid('faculty_id')
     .notNull()
     .references(() => faculties.id),
@@ -240,6 +252,27 @@ export const results = pgTable(
     ),
   ],
 );
+
+
+// ============================================== CMS ==============================================
+
+/** Main page website content as a single JSON document. */
+export const mainPage = pgTable('main_page', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  content: jsonb('content').$type<MainPageContent>().notNull(),
+  ...timestamps(),
+});
+
+/** Faculty sub page content, one JSON document per faculty. */
+export const facultyPages = pgTable('faculty_pages', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  facultyId: uuid('faculty_id')
+    .notNull()
+    .references(() => faculties.id)
+    .unique(),
+  content: jsonb('content').$type<FacultyPageContent>().notNull(),
+  ...timestamps(),
+});
 
 // ==============================================relations=============================================================
 
@@ -315,9 +348,10 @@ export const rolePermissionRelations = relations(rolePermissions, ({ one }) => (
 
 /// academic relations
 
-/** Relations for faculties: users, students, curriculums. */
+/** Relations for faculties: users, students, curriculums, page. */
 export const facultiesRelations = relations(faculties, ({ many, one }) => ({
   user: one(users),
+  page: one(facultyPages),
   students: many(students),
   facultyCurriculums: many(facultyCurriculums),
 }));
@@ -367,5 +401,15 @@ export const resultsRelations = relations(results, ({ one }) => ({
   student: one(students, {
     fields: [results.studentId],
     references: [students.id],
+  }),
+}));
+
+/// cms relations
+
+/** Relations for faculty pages: faculty. */
+export const facultyPagesRelations = relations(facultyPages, ({ one }) => ({
+  faculty: one(faculties, {
+    fields: [facultyPages.facultyId],
+    references: [faculties.id],
   }),
 }));
