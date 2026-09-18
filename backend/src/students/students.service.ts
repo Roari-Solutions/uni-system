@@ -14,6 +14,7 @@ import { DATABASE, type Db } from 'src/database/database.module';
 import { GrCaller } from 'src/gr-gurd/gr-gurd.guard';
 import { assertFaculty, assertFacultyExists, scopeFacultyId } from 'src/gr-scope/gr-scope';
 import { academicYearToNumber } from 'src/common/academic-year';
+import { MISSING_NAME } from 'src/common/dto/localized-name.dto';
 import {
   CreateStudentDto,
   ListStudentsQueryDto,
@@ -27,6 +28,7 @@ export interface StudentView {
   id: string;
   name: { en: string; ar: string };
   uniNumber: string;
+  nationalId: string | null;
   acceptanceYear: string;
   acceptanceType: AcceptanceType;
   level: number;
@@ -49,6 +51,7 @@ export class StudentsService {
       id: row.id,
       name: { en: row.nameEn, ar: row.nameAr },
       uniNumber: row.uniNumber,
+      nationalId: row.nationalId,
       acceptanceYear: row.acceptanceYear,
       acceptanceType: row.acceptanceType as AcceptanceType,
       level: academicYearToNumber(row.academicYear),
@@ -91,7 +94,8 @@ export class StudentsService {
           (v) =>
             v.name.en.toLowerCase().includes(needle) ||
             v.name.ar.includes(needle) ||
-            v.uniNumber.includes(needle),
+            v.uniNumber.toLowerCase().includes(needle) ||
+            (v.nationalId?.includes(needle) ?? false),
         );
       }
 
@@ -117,12 +121,22 @@ export class StudentsService {
       });
       if (existing) throw new ConflictException();
 
+      const nationalId = dto.nationalId?.trim() || null;
+      if (nationalId) {
+        const clash = await this.db.query.students.findFirst({
+          where: eq(students.nationalId, nationalId),
+        });
+        if (clash) throw new ConflictException();
+      }
+
       const [created] = await this.db
         .insert(students)
         .values({
-          nameEn: dto.name.en.trim(),
+          // an omitted English name is recorded as a dash, not as a copy of the Arabic
+          nameEn: dto.name.en?.trim() || MISSING_NAME,
           nameAr: dto.name.ar.trim(),
           uniNumber,
+          nationalId,
           acceptanceType: dto.acceptanceType,
           acceptanceYear: dto.acceptanceYear.trim(),
           academicYear: dto.level,
@@ -173,12 +187,27 @@ export class StudentsService {
         assertFaculty(caller, facultyId);
       }
 
+      let nationalId = row.nationalId;
+      if (dto.nationalId !== undefined) {
+        nationalId = dto.nationalId.trim() || null;
+        if (nationalId && nationalId !== row.nationalId) {
+          const clash = await this.db.query.students.findFirst({
+            where: eq(students.nationalId, nationalId),
+          });
+          if (clash) throw new ConflictException();
+        }
+      }
+
       const [updated] = await this.db
         .update(students)
         .set({
           ...(dto.name !== undefined
-            ? { nameEn: dto.name.en.trim(), nameAr: dto.name.ar.trim() }
+            ? {
+                nameEn: dto.name.en?.trim() || MISSING_NAME,
+                nameAr: dto.name.ar.trim(),
+              }
             : {}),
+          ...(dto.nationalId !== undefined ? { nationalId } : {}),
           ...(dto.acceptanceType !== undefined ? { acceptanceType: dto.acceptanceType } : {}),
           ...(dto.acceptanceYear !== undefined
             ? { acceptanceYear: dto.acceptanceYear.trim() }
@@ -195,6 +224,7 @@ export class StudentsService {
     } catch (error) {
       if (
         error instanceof BadRequestException ||
+        error instanceof ConflictException ||
         error instanceof NotFoundException ||
         error instanceof UnauthorizedException
       ) {

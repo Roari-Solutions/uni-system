@@ -169,7 +169,7 @@ const GradeEntry = () => {
 
 	return (
 		<div className="mx-auto max-w-xl">
-			<h1 className="mb-6 text-2xl font-semibold text-palette-6">
+			<h1 className="mb-8 border-s-3 border-primary ps-4 text-heading-3 text-accent-deep">
 				{t("gradeEntry.title")}
 			</h1>
 
@@ -200,7 +200,7 @@ const GradeEntry = () => {
 					</select>
 				</FormField>
 
-				{!scoped && <p className="text-sm text-palette-5">{t("gradeEntry.chooseScope")}</p>}
+				{!scoped && <p className="text-body-sm text-primary-hover">{t("gradeEntry.chooseScope")}</p>}
 
 				<FormField id="student" label={t("gradeEntry.student")} error={errors.studentId?.[0]}>
 					<SearchSelect
@@ -256,12 +256,12 @@ const GradeEntry = () => {
 				</FormField>
 
 				{saved && (
-					<p role="status" className="text-sm text-palette-5">
+					<p role="status" className="text-body-sm text-primary-hover">
 						{t("common.saved")}
 					</p>
 				)}
 				{failed && (
-					<p role="alert" className="text-sm text-red-600">
+					<p role="alert" className="text-body-sm text-error">
 						{t("common.saveFailed")}
 					</p>
 				)}

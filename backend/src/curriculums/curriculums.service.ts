@@ -14,6 +14,7 @@ import { DATABASE, type Db } from 'src/database/database.module';
 import { GrCaller } from 'src/gr-gurd/gr-gurd.guard';
 import { assertFaculty, assertFacultyExists, scopeFacultyId } from 'src/gr-scope/gr-scope';
 import { academicYearToNumber } from 'src/common/academic-year';
+import { MISSING_NAME } from 'src/common/dto/localized-name.dto';
 import {
   CreateCurriculumDto,
   ListCurriculumsQueryDto,
@@ -117,25 +118,27 @@ export class CurriculumsService {
       const facultyId = await assertFacultyExists(this.db, dto.facultyId);
       assertFaculty(caller, facultyId);
 
-      const nameEn = dto.name.en.trim();
+      // the abbreviation is the identifier; names are free text
+      const abbreviation = dto.abbreviation.trim();
       const existing = await this.db.query.curriculums.findFirst({
-        where: eq(curriculums.nameEn, nameEn),
+        where: eq(curriculums.abbreviation, abbreviation),
       });
       if (existing) throw new ConflictException();
 
       const [created] = await this.db
         .insert(curriculums)
         .values({
-          nameEn,
+          // an omitted English name is recorded as a dash, not as a copy of the Arabic
+          nameEn: dto.name.en?.trim() || MISSING_NAME,
           nameAr: dto.name.ar.trim(),
           academicYear: dto.academicYear,
-          abbreviation: dto.abbreviation.trim(),
+          abbreviation,
         })
         .returning();
 
       await this.db.insert(facultyCurriculums).values({ facultyId, curriculumId: created.id });
 
-      this.logger.log(`Created curriculum: ${nameEn}`);
+      this.logger.log(`Created curriculum: ${abbreviation}`);
       return {
         id: created.id,
         name: { en: created.nameEn, ar: created.nameAr },
@@ -169,10 +172,10 @@ export class CurriculumsService {
       const { row, link } = await this.offeringOrThrow(id);
       assertFaculty(caller, link.facultyId);
 
-      const nameEn = dto.name?.en.trim();
-      if (nameEn !== undefined && nameEn !== row.nameEn) {
+      const abbreviation = dto.abbreviation?.trim();
+      if (abbreviation !== undefined && abbreviation !== row.abbreviation) {
         const clash = await this.db.query.curriculums.findFirst({
-          where: eq(curriculums.nameEn, nameEn),
+          where: eq(curriculums.abbreviation, abbreviation),
         });
         if (clash) throw new ConflictException();
       }
@@ -181,10 +184,13 @@ export class CurriculumsService {
         .update(curriculums)
         .set({
           ...(dto.name !== undefined
-            ? { nameEn: dto.name.en.trim(), nameAr: dto.name.ar.trim() }
+            ? {
+                nameEn: dto.name.en?.trim() || MISSING_NAME,
+                nameAr: dto.name.ar.trim(),
+              }
             : {}),
           ...(dto.academicYear !== undefined ? { academicYear: dto.academicYear } : {}),
-          ...(dto.abbreviation !== undefined ? { abbreviation: dto.abbreviation.trim() } : {}),
+          ...(abbreviation !== undefined ? { abbreviation } : {}),
         })
         .where(eq(curriculums.id, row.id))
         .returning();

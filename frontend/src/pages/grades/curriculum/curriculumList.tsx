@@ -81,11 +81,11 @@ const CurriculumList = () => {
 
 	return (
 		<div>
-			<h1 className="mb-6 text-2xl font-semibold text-palette-6">
+			<h1 className="mb-8 border-s-3 border-primary ps-4 text-heading-3 text-accent-deep">
 				{t("curriculumList.title")}
 			</h1>
 
-			<div className="mb-4 flex flex-wrap gap-4">
+			<div className="mb-6 flex flex-wrap gap-6">
 				<FilterSelect
 					id="facultyFilter"
 					label={t("curriculumList.faculty")}
@@ -106,7 +106,7 @@ const CurriculumList = () => {
 			</div>
 
 			{failed && (
-				<p role="alert" className="mb-4 text-sm text-red-600">
+				<p role="alert" className="mb-6 text-body-sm text-error">
 					{t("common.loadFailed")}
 				</p>
 			)}

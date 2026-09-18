@@ -50,9 +50,9 @@ const FacultyField = ({
 					readOnly
 					disabled
 					value={lockedFaculty ? lockedFaculty.name[lang] : t("common.loading")}
-					className={`${inputClass(false)} disabled:bg-palette-1 disabled:text-palette-5`}
+					className={`${inputClass(false)} disabled:bg-background disabled:text-primary-hover`}
 				/>
-				<p className="text-sm text-palette-5">{t("common.facultyLocked")}</p>
+				<p className="text-body-sm text-primary-hover">{t("common.facultyLocked")}</p>
 			</FormField>
 		);
 	}

@@ -77,7 +77,14 @@ const StudentList = () => {
 
 	const columns: Column<Student>[] = [
 		{ key: "name", header: t("studentList.columns.name"), render: (s) => s.name[lang] },
+		{
+			key: "nameEn",
+			header: t("studentList.columns.nameEn"),
+			// Latin text needs its own direction inside the RTL table
+			render: (s) => <span dir="ltr">{s.name.en}</span>,
+		},
 		{ key: "uniNumber", header: t("studentList.columns.uniNumber"), render: (s) => s.uniNumber },
+		{ key: "nationalId", header: t("studentList.columns.nationalId"), render: (s) => s.nationalId || "—" },
 		{ key: "acceptanceYear", header: t("studentList.columns.acceptanceYear"), render: (s) => s.acceptanceYear },
 		{ key: "acceptanceType", header: t("studentList.columns.acceptanceType"), render: (s) => t(`student.acceptanceTypes.${s.acceptanceType}`) },
 		{ key: "level", header: t("studentList.columns.level"), render: (s) => t(`student.levels.${s.level}`) },
@@ -97,11 +104,11 @@ const StudentList = () => {
 
 	return (
 		<div>
-			<h1 className="mb-6 text-2xl font-semibold text-palette-6">
+			<h1 className="mb-8 border-s-3 border-primary ps-4 text-heading-3 text-accent-deep">
 				{t("studentList.title")}
 			</h1>
 
-			<div className="mb-4 flex flex-wrap items-end gap-4">
+			<div className="mb-6 flex flex-wrap items-end gap-6">
 				<FilterSelect
 					id="levelFilter"
 					label={t("studentList.filters.level")}
@@ -139,7 +146,7 @@ const StudentList = () => {
 			</div>
 
 			{failed && (
-				<p role="alert" className="mb-4 text-sm text-red-600">
+				<p role="alert" className="mb-6 text-body-sm text-error">
 					{t("common.loadFailed")}
 				</p>
 			)}

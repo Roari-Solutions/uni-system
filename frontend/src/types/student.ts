@@ -12,6 +12,8 @@ export type Student = {
 	id: string;
 	name: Localized;
 	uniNumber: string;
+	// optional; "-" is written to the English name when none is given
+	nationalId: string | null;
 	acceptanceYear: string;
 	acceptanceType: AcceptanceType;
 	level: (typeof STUDY_LEVELS)[number];

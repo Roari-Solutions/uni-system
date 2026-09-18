@@ -25,8 +25,8 @@ const FilterSelect = ({
 	disabled,
 }: FilterSelectProps) => {
 	return (
-		<div className="flex w-full flex-col gap-1.5 sm:w-64">
-			<label htmlFor={id} className="font-medium text-palette-6">
+		<div className="flex w-full flex-col gap-2 sm:w-64">
+			<label htmlFor={id} className="text-body-sm font-medium text-accent-deep">
 				{label}
 			</label>
 			<select
@@ -34,7 +34,7 @@ const FilterSelect = ({
 				value={value}
 				disabled={disabled}
 				onChange={(e) => onChange(e.target.value)}
-				className="w-full rounded-md border border-palette-2 bg-white px-3 py-2 text-palette-6 outline-none focus:ring-2 focus:ring-palette-4 disabled:bg-palette-1 disabled:text-palette-5"
+				className="h-12 w-full rounded-sm border border-border bg-surface px-4 text-body-md text-foreground outline-none focus:border-primary focus:ring-3 focus:ring-primary/25 disabled:bg-background disabled:text-primary-hover"
 			>
 				{!disabled && <option value="">{allLabel}</option>}
 				{options.map((option) => (

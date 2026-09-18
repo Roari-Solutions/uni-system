@@ -9,7 +9,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { PartialType } from '@nestjs/mapped-types';
-import { LocalizedNameDto } from 'src/common/dto/localized-name.dto';
+import { OptionalEnglishNameDto } from 'src/common/dto/localized-name.dto';
 import {
   ACADEMIC_YEARS,
   NormaliseAcademicYear,
@@ -27,13 +27,20 @@ export type StudentStatus = (typeof STUDENT_STATUSES)[number];
 /** Body for creating a student. */
 export class CreateStudentDto {
   @ValidateNested()
-  @Type(() => LocalizedNameDto)
-  name!: LocalizedNameDto;
+  @Type(() => OptionalEnglishNameDto)
+  name!: OptionalEnglishNameDto;
 
+  /** Letters, digits and dashes, e.g. "lw-26-9879698". */
   @IsString()
-  @Matches(/^\d+$/)
+  @Matches(/^[A-Za-z0-9-]+$/)
   @MaxLength(32)
   uniNumber!: string;
+
+  /** Optional, but unique across students when supplied. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  nationalId?: string;
 
   @IsUUID()
   facultyId!: string;

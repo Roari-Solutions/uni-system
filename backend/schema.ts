@@ -170,8 +170,9 @@ export const news = pgTable('news', {
 /** Course curriculums with credit weight. */
 export const curriculums = pgTable('curriculums', {
   id: uuid('id').primaryKey().defaultRandom(),
-  nameEn: text('name_en').notNull().unique(),
+  nameEn: text('name_en').notNull(),
   nameAr: text('name_ar').notNull(),
+  /** The curriculum's identifier; names are free text. */
   abbreviation: text('code').unique(),
   academicYear: studyLevelEnum('academic_year').notNull(),
   courseHours: integer('course_hours').notNull().default(1), // Course credit / weight
@@ -200,6 +201,8 @@ export const students = pgTable('students', {
   uniNumber: text('uni_number').notNull().unique(),
   nameEn: text('name_en').notNull(),
   nameAr: text('name_ar').notNull(),
+  /** Optional; unique across students when present. */
+  nationalId: text('national_id').unique(),
   acceptanceType: text('acceptance_type').notNull(),
   acceptanceYear: text('acceptance_year').notNull(),
   /** Academic year = study year 1-6. */

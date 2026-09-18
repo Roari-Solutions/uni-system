@@ -37,7 +37,7 @@ const ColumnToggle = ({ label, columns, hidden, onToggle }: ColumnToggleProps) =
 				type="button"
 				onClick={() => setOpen((prev) => !prev)}
 				aria-expanded={open}
-				className="flex items-center gap-2 rounded-md border border-palette-2 bg-white px-3 py-2 text-palette-6 outline-none hover:bg-palette-1 focus:ring-2 focus:ring-palette-4"
+				className="inline-flex h-12 items-center gap-2 rounded-sm border border-border bg-surface px-4 text-body-md text-foreground transition-colors duration-200 ease-out hover:bg-background"
 			>
 				<ViewColumnsIcon className="size-5" />
 				{label}
@@ -45,15 +45,15 @@ const ColumnToggle = ({ label, columns, hidden, onToggle }: ColumnToggleProps) =
 			</button>
 
 			{open && (
-				<ul className="absolute end-0 z-10 mt-1 w-56 rounded-md border border-palette-2 bg-white py-1 text-palette-6">
+				<ul className="absolute end-0 z-10 mt-2 w-56 rounded-sm border border-border bg-surface py-2 text-foreground shadow-lg">
 					{columns.map((col) => (
 						<li key={col.key}>
-							<label className="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-palette-1">
+							<label className="flex cursor-pointer items-center gap-3 px-4 py-2 transition-colors duration-150 ease-out hover:bg-background">
 								<input
 									type="checkbox"
 									checked={!hidden.includes(col.key)}
 									onChange={() => onToggle(col.key)}
-									className="size-4 accent-palette-6"
+									className="size-4 accent-primary"
 								/>
 								{col.header}
 							</label>

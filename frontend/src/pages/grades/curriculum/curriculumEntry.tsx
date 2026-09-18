@@ -9,7 +9,9 @@ import { STUDY_LEVELS } from "../../../utils/academicYears";
 
 // messages are i18n keys, translated when rendered
 const curriculumSchema = z.object({
-	name: z.string().trim().min(1, "curriculumEntry.errors.required"),
+	nameAr: z.string().trim().min(1, "curriculumEntry.errors.required"),
+	// optional: the API stores "-" when it is left blank
+	nameEn: z.string().trim(),
 	facultyId: z.string().min(1, "curriculumEntry.errors.required"),
 	abbreviation: z
 		.string()
@@ -24,7 +26,8 @@ type CurriculumForm = z.input<typeof curriculumSchema>;
 type FormErrors = Partial<Record<keyof CurriculumForm, string[]>>;
 
 const EMPTY_FORM: CurriculumForm = {
-	name: "",
+	nameAr: "",
+	nameEn: "",
 	facultyId: "",
 	abbreviation: "",
 	academicYear: "",
@@ -63,8 +66,8 @@ const CurriculumEntry = () => {
 		setSubmitting(true);
 		try {
 			await createCurriculum({
-				// one name, both languages — the API stores them separately
-				name: { en: result.data.name, ar: result.data.name },
+				// English is optional; omitting it makes the API store "-"
+				name: { ar: result.data.nameAr, en: result.data.nameEn || undefined },
 				facultyId: result.data.facultyId,
 				abbreviation: result.data.abbreviation,
 				academicYear: result.data.academicYear,
@@ -80,19 +83,30 @@ const CurriculumEntry = () => {
 
 	return (
 		<div className="mx-auto max-w-xl">
-			<h1 className="mb-6 text-2xl font-semibold text-palette-6">
+			<h1 className="mb-8 border-s-3 border-primary ps-4 text-heading-3 text-accent-deep">
 				{t("curriculumEntry.title")}
 			</h1>
 
 			<form noValidate onSubmit={(e) => void handleSubmit(e)} className={formCardClass}>
-				<FormField id="name" label={t("curriculumEntry.name")} error={errors.name?.[0]}>
+				<FormField id="nameAr" label={t("curriculumEntry.nameAr")} error={errors.nameAr?.[0]}>
 					<input
-						id="name"
+						id="nameAr"
 						type="text"
-						value={form.name}
-						onChange={(e) => setField("name", e.target.value)}
-						aria-invalid={!!errors.name}
-						className={inputClass(!!errors.name)}
+						value={form.nameAr}
+						onChange={(e) => setField("nameAr", e.target.value)}
+						aria-invalid={!!errors.nameAr}
+						className={inputClass(!!errors.nameAr)}
+					/>
+				</FormField>
+
+				<FormField id="nameEn" label={t("curriculumEntry.nameEn")} error={errors.nameEn?.[0]}>
+					<input
+						id="nameEn"
+						type="text"
+						dir="ltr"
+						value={form.nameEn}
+						onChange={(e) => setField("nameEn", e.target.value)}
+						className={inputClass(false)}
 					/>
 				</FormField>
 
@@ -144,12 +158,12 @@ const CurriculumEntry = () => {
 				</FormField>
 
 				{saved && (
-					<p role="status" className="text-sm text-palette-5">
+					<p role="status" className="text-body-sm text-primary-hover">
 						{t("common.saved")}
 					</p>
 				)}
 				{failed && (
-					<p role="alert" className="text-sm text-red-600">
+					<p role="alert" className="text-body-sm text-error">
 						{t("common.saveFailed")}
 					</p>
 				)}

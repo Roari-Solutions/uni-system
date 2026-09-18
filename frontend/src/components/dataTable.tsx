@@ -15,29 +15,29 @@ type DataTableProps<T> = {
 
 const DataTable = <T,>({ columns, rows, getRowId, emptyText }: DataTableProps<T>) => {
 	return (
-		<div className="overflow-x-auto rounded-lg border border-palette-2 bg-white">
-			<table className="w-full text-palette-6">
-				<thead className="bg-palette-6 text-palette-1">
+		<div className="overflow-x-auto rounded-md border border-border-subtle bg-surface shadow-md">
+			<table className="w-full text-body-md text-foreground">
+				<thead className="bg-accent-deep text-surface">
 					<tr>
 						{columns.map((col) => (
-							<th key={col.key} scope="col" className="whitespace-nowrap px-4 py-3 text-start font-semibold">
+							<th key={col.key} scope="col" className="whitespace-nowrap px-6 py-4 text-start text-body-sm font-semibold">
 								{col.header}
 							</th>
 						))}
 					</tr>
 				</thead>
-				<tbody className="divide-y divide-palette-2">
+				<tbody className="divide-y divide-border-subtle">
 					{rows.length === 0 ? (
 						<tr>
-							<td colSpan={columns.length} className="px-4 py-6 text-center">
+							<td colSpan={columns.length} className="px-6 py-8 text-center">
 								{emptyText}
 							</td>
 						</tr>
 					) : (
 						rows.map((row) => (
-							<tr key={getRowId(row)} className="hover:bg-palette-1">
+							<tr key={getRowId(row)} className="transition-colors duration-150 ease-out hover:bg-background">
 								{columns.map((col) => (
-									<td key={col.key} className="px-4 py-3">
+									<td key={col.key} className="px-6 py-4">
 										{col.render(row)}
 									</td>
 								))}

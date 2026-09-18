@@ -9,7 +9,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { PartialType } from '@nestjs/mapped-types';
-import { LocalizedNameDto } from 'src/common/dto/localized-name.dto';
+import { OptionalEnglishNameDto } from 'src/common/dto/localized-name.dto';
 import {
   ACADEMIC_YEARS,
   NormaliseAcademicYear,
@@ -19,8 +19,8 @@ import {
 /** Body for creating a curriculum. */
 export class CreateCurriculumDto {
   @ValidateNested()
-  @Type(() => LocalizedNameDto)
-  name!: LocalizedNameDto;
+  @Type(() => OptionalEnglishNameDto)
+  name!: OptionalEnglishNameDto;
 
   @IsUUID()
   facultyId!: string;

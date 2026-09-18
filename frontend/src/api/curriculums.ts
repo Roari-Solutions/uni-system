@@ -8,7 +8,8 @@ export type CurriculumFilters = {
 };
 
 export type CurriculumPayload = {
-	name: Curriculum["name"];
+	// English may be omitted; the API records "-" in its place
+	name: { ar: string; en?: string };
 	facultyId: string;
 	abbreviation: string;
 	academicYear: number;

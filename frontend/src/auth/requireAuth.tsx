@@ -12,7 +12,7 @@ const RequireAuth = () => {
 		return (
 			<div
 				role="status"
-				className="flex h-svh items-center justify-center bg-palette-1 text-palette-6"
+				className="flex h-svh items-center justify-center bg-background text-body-md text-foreground"
 			>
 				{t("common.loading")}
 			</div>

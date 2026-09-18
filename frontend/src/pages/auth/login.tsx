@@ -79,13 +79,17 @@ const Login = () => {
 	};
 
 	return (
-		<main className="flex min-h-svh flex-col items-center justify-center gap-6 bg-palette-1 px-4 py-12">
+		<main className="flex min-h-svh flex-col items-center justify-center gap-8 bg-background px-4 py-12">
 			<div className="flex w-full max-w-sm items-center justify-between">
-				<img src="/logo.svg" alt="" className="h-10" />
+				{/* the mark is a solid white shape, so it needs a dark surface to read
+				    against: §33's accent-deep, shaped as the §16 icon container */}
+				<span className="inline-flex size-14 shrink-0 items-center justify-center rounded-md bg-accent-deep shadow-sm">
+					<img src="/logo.svg" alt="" className="h-9" />
+				</span>
 				<button
 					type="button"
 					onClick={toggleLanguage}
-					className="flex items-center gap-2 rounded-md px-3 py-2 font-medium text-palette-6 hover:bg-palette-2"
+					className="inline-flex h-11 items-center gap-2 rounded-sm px-3 text-navigation text-accent-deep transition-colors duration-200 ease-out hover:bg-background-secondary"
 				>
 					<LanguageIcon className="size-5 shrink-0" />
 					{t("gradesNav.switchLanguage")}
@@ -93,8 +97,8 @@ const Login = () => {
 			</div>
 
 			<div className="w-full max-w-sm">
-				<h1 className="mb-2 text-2xl font-semibold text-palette-6">{t("login.title")}</h1>
-				<p className="mb-6 text-palette-5">{t("login.subtitle")}</p>
+				<h1 className="mb-2 text-heading-3 text-accent-deep">{t("login.title")}</h1>
+				<p className="mb-6 text-body-md text-primary-hover">{t("login.subtitle")}</p>
 
 				<form noValidate onSubmit={handleSubmit} className={formCardClass}>
 					<FormField id="email" label={t("login.email")} error={errors.email?.[0]}>
@@ -123,7 +127,7 @@ const Login = () => {
 					</FormField>
 
 					{failure && (
-						<p role="alert" className="text-sm text-red-600">
+						<p role="alert" className="text-body-sm text-error">
 							{t(`login.errors.${failure}`)}
 						</p>
 					)}

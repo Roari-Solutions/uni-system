@@ -9,22 +9,21 @@ import { config } from './config';
 const PASS = 'secret123';
 
 /**
- * Initial faculties, in both UI languages.
- *
- * REVIEW: the Arabic names are standard translations, not official institutional
- * names. Replace them with the university's own wording before this runs against
- * anything but a test database — they are what Arabic users actually see.
+ * The university's faculties, in both UI languages. This array is the source of
+ * truth: re-running the seed reconciles existing rows to match it.
  */
 const FACULTIES = [
-  { nameEn: 'Nursing', nameAr: 'كلية التمريض', abbreviation: 'NS' },
-  { nameEn: 'Law', nameAr: 'كلية الحقوق', abbreviation: 'LW' },
-  { nameEn: 'Information Systems', nameAr: 'كلية نظم المعلومات', abbreviation: 'IS' },
+  { nameEn: 'Engineering', nameAr: 'الهندسة', abbreviation: 'EN' },
+  { nameEn: 'Architecture', nameAr: 'العمارة', abbreviation: 'AR' },
+  { nameEn: 'Nursing', nameAr: 'التمريض', abbreviation: 'NS' },
+  { nameEn: 'Law', nameAr: 'القانون', abbreviation: 'LW' },
+  { nameEn: 'Information Systems', nameAr: 'نظم المعلومات', abbreviation: 'IS' },
   {
     nameEn: 'Computer and Information Technology',
-    nameAr: 'كلية الحاسوب وتقنية المعلومات',
+    nameAr: 'الحاسوب وتقانة المعلومات',
     abbreviation: 'IT',
   },
-  { nameEn: 'Business Studies', nameAr: 'كلية الدراسات التجارية', abbreviation: 'CS' },
+  { nameEn: 'Business Studies', nameAr: 'الدراسات التجارية', abbreviation: 'CS' },
 ];
 
 /** Opens a Drizzle handle using the central database URL. */
@@ -34,7 +33,7 @@ function getDb() {
 
 type Db = ReturnType<typeof getDb>;
 
-/** Ensures a faculty exists by its English name; fills in anything missing. */
+/** Ensures a faculty exists, keeping its names in step with FACULTIES. */
 async function ensureFaculty(
   db: Db,
   nameEn: string,
@@ -42,29 +41,25 @@ async function ensureFaculty(
   abbreviation: string,
 ): Promise<{ id: string; nameEn: string; abbreviation: string }> {
   const found = await db.query.faculties.findFirst({
-    where: eq(schema.faculties.nameEn, nameEn),
+    where: eq(schema.faculties.abbreviation, abbreviation),
   });
   if (found) {
-    // back-fill a row seeded before the column existed, but never overwrite
-    // an Arabic name someone has already corrected by hand
-    const patch = {
-      ...(found.abbreviation ? {} : { abbreviation }),
-      ...(found.nameAr ? {} : { nameAr }),
-    };
-    if (Object.keys(patch).length) {
-      await db.update(schema.faculties).set(patch).where(eq(schema.faculties.id, found.id));
+    // this file is authoritative, so correct anything that has drifted
+    if (found.nameEn !== nameEn || found.nameAr !== nameAr) {
+      await db
+        .update(schema.faculties)
+        .set({ nameEn, nameAr })
+        .where(eq(schema.faculties.id, found.id));
+      console.log(`faculty ${abbreviation} names updated`);
     }
-    return {
-      id: found.id,
-      nameEn: found.nameEn,
-      abbreviation: found.abbreviation ?? abbreviation,
-    };
+    return { id: found.id, nameEn, abbreviation };
   }
   const [row] = await db
     .insert(schema.faculties)
     .values({ nameEn, nameAr, abbreviation })
     .returning();
-  return { id: row.id, nameEn: row.nameEn, abbreviation: row.abbreviation ?? abbreviation };
+  console.log(`faculty ${abbreviation} created`);
+  return { id: row.id, nameEn: row.nameEn, abbreviation };
 }
 
 /** Ensures a department exists; returns its id. */

@@ -9,8 +9,10 @@ export type StudentFilters = {
 };
 
 export type StudentPayload = {
-	name: Student["name"];
+	// English may be omitted; the API records "-" in its place
+	name: { ar: string; en?: string };
 	uniNumber: string;
+	nationalId?: string;
 	facultyId: string;
 	acceptanceYear: string;
 	acceptanceType: Student["acceptanceType"];

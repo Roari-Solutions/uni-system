@@ -6,11 +6,11 @@
     "list": "List",
     "entry": "Entry",
     "switchLanguage": "العربية",
-    "logout": "Sign out"
+    "logout": "Sign out",
+    "toggleMenu": "Menu"
   },
   "curriculumEntry": {
     "title": "Add curriculum",
-    "name": "Curriculum name",
     "faculty": "Faculty",
     "facultyPlaceholder": "Search faculties...",
     "noResults": "No results",
@@ -21,7 +21,9 @@
     "errors": {
       "required": "This field is required",
       "abbreviationTooLong": "Abbreviation must be at most 10 characters"
-    }
+    },
+    "nameAr": "Curriculum name (Arabic)",
+    "nameEn": "Curriculum name (English)"
   },
   "curriculumList": {
     "title": "Curriculums",
@@ -45,12 +47,14 @@
     "empty": "No students match the selected filters",
     "columns": {
       "name": "Name",
+      "nameEn": "Name (English)",
       "uniNumber": "University number",
       "acceptanceYear": "Acceptance year",
       "acceptanceType": "Acceptance type",
       "level": "Current academic year",
       "faculty": "Faculty",
-      "status": "Status"
+      "status": "Status",
+      "nationalId": "National ID"
     },
     "filters": {
       "level": "Academic year",
@@ -97,7 +101,6 @@
   },
   "studentEntry": {
     "title": "Add student",
-    "name": "Student name",
     "uniNumber": "University number",
     "faculty": "Faculty",
     "facultyPlaceholder": "Search faculties...",
@@ -113,8 +116,11 @@
     "submit": "Save",
     "errors": {
       "required": "This field is required",
-      "uniNumberDigits": "University number must contain digits only"
-    }
+      "uniNumberFormat": "Use letters, digits and dashes only"
+    },
+    "nameAr": "Student name (Arabic)",
+    "nameEn": "Student name (English)",
+    "nationalId": "National ID"
   },
   "grade": {
     "statuses": {

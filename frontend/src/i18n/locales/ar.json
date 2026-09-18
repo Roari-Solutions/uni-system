@@ -6,11 +6,11 @@
     "list": "القائمة",
     "entry": "الإدخال",
     "switchLanguage": "English",
-    "logout": "تسجيل الخروج"
+    "logout": "تسجيل الخروج",
+    "toggleMenu": "القائمة"
   },
   "curriculumEntry": {
     "title": "إضافة منهج",
-    "name": "اسم المنهج",
     "faculty": "الكلية",
     "facultyPlaceholder": "ابحث عن كلية...",
     "noResults": "لا توجد نتائج",
@@ -21,7 +21,9 @@
     "errors": {
       "required": "هذا الحقل مطلوب",
       "abbreviationTooLong": "يجب ألا يتجاوز الاختصار 10 أحرف"
-    }
+    },
+    "nameAr": "اسم المقرر بالعربية",
+    "nameEn": "اسم المقرر بالإنجليزية"
   },
   "curriculumList": {
     "title": "المناهج",
@@ -45,12 +47,14 @@
     "empty": "لا يوجد طلاب يطابقون عوامل التصفية المحددة",
     "columns": {
       "name": "الاسم",
+      "nameEn": "الاسم بالإنجليزية",
       "uniNumber": "الرقم الجامعي",
       "acceptanceYear": "سنة القبول",
       "acceptanceType": "نوع القبول",
       "level": "السنة الدراسية الحالية",
       "faculty": "الكلية",
-      "status": "الحالة"
+      "status": "الحالة",
+      "nationalId": "الرقم الوطني"
     },
     "filters": {
       "level": "السنة الدراسية",
@@ -97,7 +101,6 @@
   },
   "studentEntry": {
     "title": "إضافة طالب",
-    "name": "اسم الطالب",
     "uniNumber": "الرقم الجامعي",
     "faculty": "الكلية",
     "facultyPlaceholder": "ابحث عن كلية...",
@@ -113,8 +116,11 @@
     "submit": "حفظ",
     "errors": {
       "required": "هذا الحقل مطلوب",
-      "uniNumberDigits": "يجب أن يحتوي الرقم الجامعي على أرقام فقط"
-    }
+      "uniNumberFormat": "يجب أن يحتوي الرقم الجامعي على حروف وأرقام وشرطات فقط"
+    },
+    "nameAr": "اسم الطالب بالعربية",
+    "nameEn": "اسم الطالب بالإنجليزية",
+    "nationalId": "الرقم الوطني"
   },
   "grade": {
     "statuses": {

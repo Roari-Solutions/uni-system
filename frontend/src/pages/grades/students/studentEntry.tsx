@@ -12,12 +12,15 @@ const REQUIRED = "studentEntry.errors.required";
 
 // messages are i18n keys, translated when rendered
 const studentSchema = z.object({
-	name: z.string().trim().min(1, REQUIRED),
+	nameAr: z.string().trim().min(1, REQUIRED),
+	// optional: the API stores "-" when it is left blank
+	nameEn: z.string().trim(),
 	uniNumber: z
 		.string()
 		.trim()
 		.min(1, REQUIRED)
-		.regex(/^\d+$/, "studentEntry.errors.uniNumberDigits"),
+		.regex(/^[A-Za-z0-9-]+$/, "studentEntry.errors.uniNumberFormat"),
+	nationalId: z.string().trim(),
 	acceptanceYear: z.string().min(1, REQUIRED),
 	acceptanceType: z.enum(ACCEPTANCE_TYPES, { error: REQUIRED }),
 	level: z.string().min(1, REQUIRED).transform(Number),
@@ -30,8 +33,10 @@ type StudentForm = z.input<typeof studentSchema>;
 type FormErrors = Partial<Record<keyof StudentForm, string[]>>;
 
 const EMPTY_FORM: StudentForm = {
-	name: "",
+	nameAr: "",
+	nameEn: "",
 	uniNumber: "",
+	nationalId: "",
 	acceptanceYear: "",
 	acceptanceType: "" as StudentForm["acceptanceType"],
 	level: "",
@@ -72,9 +77,10 @@ const StudentEntry = () => {
 		setSubmitting(true);
 		try {
 			await createStudent({
-				// one name, both languages — the API stores them separately
-				name: { en: result.data.name, ar: result.data.name },
+				// English is optional; omitting it makes the API store "-"
+				name: { ar: result.data.nameAr, en: result.data.nameEn || undefined },
 				uniNumber: result.data.uniNumber,
+				nationalId: result.data.nationalId || undefined,
 				facultyId: result.data.facultyId,
 				acceptanceYear: result.data.acceptanceYear,
 				acceptanceType: result.data.acceptanceType,
@@ -92,19 +98,30 @@ const StudentEntry = () => {
 
 	return (
 		<div className="mx-auto max-w-xl">
-			<h1 className="mb-6 text-2xl font-semibold text-palette-6">
+			<h1 className="mb-8 border-s-3 border-primary ps-4 text-heading-3 text-accent-deep">
 				{t("studentEntry.title")}
 			</h1>
 
 			<form noValidate onSubmit={(e) => void handleSubmit(e)} className={formCardClass}>
-				<FormField id="name" label={t("studentEntry.name")} error={errors.name?.[0]}>
+				<FormField id="nameAr" label={t("studentEntry.nameAr")} error={errors.nameAr?.[0]}>
 					<input
-						id="name"
+						id="nameAr"
 						type="text"
-						value={form.name}
-						onChange={(e) => setField("name", e.target.value)}
-						aria-invalid={!!errors.name}
-						className={inputClass(!!errors.name)}
+						value={form.nameAr}
+						onChange={(e) => setField("nameAr", e.target.value)}
+						aria-invalid={!!errors.nameAr}
+						className={inputClass(!!errors.nameAr)}
+					/>
+				</FormField>
+
+				<FormField id="nameEn" label={t("studentEntry.nameEn")} error={errors.nameEn?.[0]}>
+					<input
+						id="nameEn"
+						type="text"
+						dir="ltr"
+						value={form.nameEn}
+						onChange={(e) => setField("nameEn", e.target.value)}
+						className={inputClass(false)}
 					/>
 				</FormField>
 
@@ -117,6 +134,21 @@ const StudentEntry = () => {
 						onChange={(e) => setField("uniNumber", e.target.value)}
 						aria-invalid={!!errors.uniNumber}
 						className={inputClass(!!errors.uniNumber)}
+					/>
+				</FormField>
+
+				<FormField
+					id="nationalId"
+					label={t("studentEntry.nationalId")}
+					error={errors.nationalId?.[0]}
+				>
+					<input
+						id="nationalId"
+						type="text"
+						inputMode="numeric"
+						value={form.nationalId}
+						onChange={(e) => setField("nationalId", e.target.value)}
+						className={inputClass(false)}
 					/>
 				</FormField>
 
@@ -211,12 +243,12 @@ const StudentEntry = () => {
 				</FormField>
 
 				{saved && (
-					<p role="status" className="text-sm text-palette-5">
+					<p role="status" className="text-body-sm text-primary-hover">
 						{t("common.saved")}
 					</p>
 				)}
 				{failed && (
-					<p role="alert" className="text-sm text-red-600">
+					<p role="alert" className="text-body-sm text-error">
 						{t("common.saveFailed")}
 					</p>
 				)}
