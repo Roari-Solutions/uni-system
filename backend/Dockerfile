@@ -28,10 +28,19 @@ COPY package.json bun.lock ./
 RUN bun install  --production
 
 COPY --from=builder /usr/src/app/dist ./dist
-RUN apk add --no-cache wget
+COPY --from=builder /usr/src/app/schema.ts ./schema.ts
+COPY --from=builder /usr/src/app/config.ts ./config.ts
+COPY --from=builder /usr/src/app/drizzle.config.ts ./drizzle.config.ts
+COPY --from=builder /usr/src/app/drizzle ./drizzle
+COPY --from=builder /usr/src/app/docker-entrypoint.sh ./docker-entrypoint.sh
+
+RUN chmod +x docker-entrypoint.sh
+
+USER node
 
 USER bun
 EXPOSE 4000
 
 CMD ["bun", "dist/src/main.js"]
 
+ENTRYPOINT ["./docker-entrypoint.sh"]

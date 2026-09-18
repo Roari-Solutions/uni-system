@@ -26,4 +26,15 @@ export const config = {
   get jwtRefreshTtl() {
     return process.env.JWT_REFRESH_TTL ?? '7d';
   },
+  /**
+   * Whether auth cookies carry the Secure flag. Defaults to true in
+   * production; override with COOKIE_SECURE=false for plain-http deploys
+   * (browsers and curl refuse Secure cookies over http).
+   */
+  get cookieSecure() {
+    if (process.env.COOKIE_SECURE !== undefined) {
+      return process.env.COOKIE_SECURE === 'true';
+    }
+    return this.nodeEnv === 'production';
+  },
 };
