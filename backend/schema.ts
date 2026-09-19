@@ -214,7 +214,9 @@ export const grades = pgTable(
     curriculumId: uuid('curriculum_id')
       .notNull()
       .references(() => curriculums.id),
-    grade: numeric('grade', { precision: 5, scale: 2 }),
+    score: numeric({ precision: 5, scale: 2 }),
+    letterGrade: text().notNull(),
+    grade: numeric().notNull(),
     academicYear: text('academic_year').notNull(),
     semester: semesterEnum('semester').notNull(),
     ...timestamps(),
@@ -241,6 +243,7 @@ export const results = pgTable(
     semester: semesterEnum('semester').notNull(),
     result: numeric('result', { precision: 6, scale: 2 }).notNull(),
     gpa: numeric('gpa', { precision: 3, scale: 2 }).notNull(),
+    cgpa: numeric('gpa', { precision: 3, scale: 2 }).notNull(),
     status: studentStatusEnum('status'),
     ...timestamps(),
   },
