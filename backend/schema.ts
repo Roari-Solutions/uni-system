@@ -167,7 +167,7 @@ export const news = pgTable('news', {
 export const curriculums = pgTable('curriculums', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull().unique(),
-  abbreviation: text('code').unique(),
+  abbreviation: text().unique(),
   academicYear: text('academic_year').notNull(),
   courseHours: integer('course_hours').notNull().default(1), // Course credit / weight
   ...timestamps(),
@@ -243,7 +243,7 @@ export const results = pgTable(
     semester: semesterEnum('semester').notNull(),
     result: numeric('result', { precision: 6, scale: 2 }).notNull(),
     gpa: numeric('gpa', { precision: 3, scale: 2 }).notNull(),
-    cgpa: numeric('gpa', { precision: 3, scale: 2 }).notNull(),
+    cgpa: numeric('cgpa', { precision: 3, scale: 2 }).notNull(),
     status: studentStatusEnum('status'),
     ...timestamps(),
   },
