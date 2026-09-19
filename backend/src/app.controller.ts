@@ -1,7 +1,5 @@
-import { Controller, Get, Inject, UseGuards } from '@nestjs/common';
+import { Controller, Get, Inject } from '@nestjs/common';
 import { AppService } from './app.service';
-import { AuthGuard } from './auth/auth.guard';
-import { GrGurdGuard } from './gr-gurd/gr-gurd.guard';
 
 /** Default root controller (health-check greeting). */
 @Controller()
