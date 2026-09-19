@@ -18,6 +18,8 @@
     "abbreviation": "الاختصار",
     "academicYear": "السنة الدراسية",
     "selectYear": "اختر السنة الدراسية",
+    "semester": "الفصل الدراسي",
+    "selectSemester": "اختر الفصل الدراسي",
     "submit": "حفظ",
     "errors": {
       "required": "هذا الحقل مطلوب",
@@ -32,12 +34,15 @@
     "allFaculties": "جميع الكليات",
     "academicYear": "السنة الدراسية",
     "allYears": "كل السنوات الدراسية",
+    "semester": "الفصل الدراسي",
+    "allSemesters": "جميع الفصول الدراسية",
     "empty": "لا توجد مناهج تطابق عوامل التصفية المحددة",
     "columns": {
       "name": "الاسم",
       "faculty": "الكلية",
       "abbreviation": "الاختصار",
-      "academicYear": "السنة الدراسية"
+      "academicYear": "السنة الدراسية",
+      "semester": "الفصل الدراسي"
     },
     "deleteTitle": "حذف المنهج",
     "deleteMessage": "هل أنت متأكد من حذف \"{{name}}\"؟ لا يمكن التراجع عن هذا الإجراء."
@@ -87,6 +92,10 @@
       "success": "ناجح",
       "repeat": "معيد"
     }
+  },
+  "semesters": {
+    "1": "الفصل الدراسي الأول",
+    "2": "الفصل الدراسي الثاني"
   },
   "common": {
     "actions": "الإجراءات",

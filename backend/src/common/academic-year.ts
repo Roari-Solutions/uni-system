@@ -16,3 +16,13 @@ export const NormaliseAcademicYear = () =>
 
 /** Reads an academic year back out as the number the views bind to. */
 export const academicYearToNumber = (value: AcademicYear): number => Number(value);
+
+/** Semester within an academic year. A curriculum runs in exactly one. */
+export const SEMESTERS = ['1', '2'] as const;
+export type Semester = (typeof SEMESTERS)[number];
+
+/** Same number-or-string normalisation as the academic year. */
+export const NormaliseSemester = NormaliseAcademicYear;
+
+/** Reads a semester back out as the number the views bind to. */
+export const semesterToNumber = (value: Semester): number => Number(value);

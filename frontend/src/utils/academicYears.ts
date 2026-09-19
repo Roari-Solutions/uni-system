@@ -7,3 +7,6 @@ export const ACCEPTANCE_YEARS = Array.from({ length: 7 }, (_, i) => String(curre
 // (6 covers the longest programs such as medicine). Calendar years are only
 // ever used for acceptance years.
 export const STUDY_LEVELS = [1, 2, 3, 4, 5, 6] as const;
+
+// each academic year splits into two semesters; a curriculum runs in one
+export const SEMESTERS = [1, 2] as const;

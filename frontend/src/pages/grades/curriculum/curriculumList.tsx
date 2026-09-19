@@ -7,7 +7,7 @@ import FilterSelect from "../../../components/filterSelect";
 import useFaculties from "../../../hooks/useFaculties";
 import { deleteCurriculum, fetchCurriculums } from "../../../api/curriculums";
 import type { Curriculum } from "../../../types/curriculum";
-import { STUDY_LEVELS } from "../../../utils/academicYears";
+import { SEMESTERS, STUDY_LEVELS } from "../../../utils/academicYears";
 
 const CurriculumList = () => {
 	const { t, i18n } = useTranslation();
@@ -19,6 +19,7 @@ const CurriculumList = () => {
 	const [failed, setFailed] = useState(false);
 	const [facultyId, setFacultyId] = useState("");
 	const [academicYear, setAcademicYear] = useState("");
+	const [semester, setSemester] = useState("");
 	const [pendingDelete, setPendingDelete] = useState<Curriculum | null>(null);
 
 	// a locked caller only ever sees their own faculty
@@ -30,6 +31,7 @@ const CurriculumList = () => {
 		fetchCurriculums({
 			facultyId: effectiveFacultyId || undefined,
 			academicYear: academicYear ? Number(academicYear) : undefined,
+			semester: semester ? Number(semester) : undefined,
 		})
 			.then((rows) => {
 				if (cancelled) return;
@@ -46,7 +48,7 @@ const CurriculumList = () => {
 		return () => {
 			cancelled = true;
 		};
-	}, [effectiveFacultyId, academicYear]);
+	}, [effectiveFacultyId, academicYear, semester]);
 
 	const facultyName = (id: string) => faculties.find((f) => f.id === id)?.name[lang] ?? "";
 
@@ -67,6 +69,7 @@ const CurriculumList = () => {
 		{ key: "faculty", header: t("curriculumList.columns.faculty"), render: (c) => facultyName(c.facultyId) },
 		{ key: "abbreviation", header: t("curriculumList.columns.abbreviation"), render: (c) => c.abbreviation },
 		{ key: "academicYear", header: t("curriculumList.columns.academicYear"), render: (c) => t(`student.levels.${c.academicYear}`) },
+		{ key: "semester", header: t("curriculumList.columns.semester"), render: (c) => t(`semesters.${c.semester}`) },
 		{
 			key: "actions",
 			header: t("common.actions"),
@@ -102,6 +105,14 @@ const CurriculumList = () => {
 					onChange={setAcademicYear}
 					allLabel={t("curriculumList.allYears")}
 					options={STUDY_LEVELS.map((l) => ({ value: String(l), label: t(`student.levels.${l}`) }))}
+				/>
+				<FilterSelect
+					id="semesterFilter"
+					label={t("curriculumList.semester")}
+					value={semester}
+					onChange={setSemester}
+					allLabel={t("curriculumList.allSemesters")}
+					options={SEMESTERS.map((s) => ({ value: String(s), label: t(`semesters.${s}`) }))}
 				/>
 			</div>
 

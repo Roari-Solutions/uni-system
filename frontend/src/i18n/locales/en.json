@@ -18,6 +18,8 @@
     "abbreviation": "Abbreviation",
     "academicYear": "Academic year",
     "selectYear": "Select academic year",
+    "semester": "Semester",
+    "selectSemester": "Select semester",
     "submit": "Save",
     "errors": {
       "required": "This field is required",
@@ -32,12 +34,15 @@
     "allFaculties": "All faculties",
     "academicYear": "Academic year",
     "allYears": "All academic years",
+    "semester": "Semester",
+    "allSemesters": "All semesters",
     "empty": "No curriculums match the selected filters",
     "columns": {
       "name": "Name",
       "faculty": "Faculty",
       "abbreviation": "Abbreviation",
-      "academicYear": "Academic year"
+      "academicYear": "Academic year",
+      "semester": "Semester"
     },
     "deleteTitle": "Delete curriculum",
     "deleteMessage": "Are you sure you want to delete \"{{name}}\"? This can't be undone."
@@ -87,6 +92,10 @@
       "success": "Success",
       "repeat": "Repeat"
     }
+  },
+  "semesters": {
+    "1": "First semester",
+    "2": "Second semester"
   },
   "common": {
     "actions": "Actions",

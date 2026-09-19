@@ -13,7 +13,7 @@ import { curriculums, facultyCurriculums, grades } from 'schema';
 import { DATABASE, type Db } from 'src/database/database.module';
 import { GrCaller } from 'src/gr-gurd/gr-gurd.guard';
 import { assertFaculty, assertFacultyExists, scopeFacultyId } from 'src/gr-scope/gr-scope';
-import { academicYearToNumber } from 'src/common/academic-year';
+import { academicYearToNumber, semesterToNumber } from 'src/common/academic-year';
 import { MISSING_NAME } from 'src/common/dto/localized-name.dto';
 import {
   CreateCurriculumDto,
@@ -21,13 +21,14 @@ import {
   UpdateCurriculumDto,
 } from './dto/curriculums.dto';
 
-/** A curriculum as the views consume it: one faculty, one study year. */
+/** A curriculum as the views consume it: one faculty, one study year, one semester. */
 export interface CurriculumView {
   id: string;
   name: { en: string; ar: string };
   facultyId: string;
   abbreviation: string | null;
   academicYear: number;
+  semester: number;
 }
 
 /** CRUD for curriculums with faculty scoping. */
@@ -85,12 +86,17 @@ export class CurriculumsService {
           facultyId: link.facultyId,
           abbreviation: link.curriculum.abbreviation,
           academicYear: academicYearToNumber(link.curriculum.academicYear),
+          semester: semesterToNumber(link.curriculum.semester),
         });
       }
 
       if (query.academicYear) {
         const year = academicYearToNumber(query.academicYear);
         views = views.filter((v) => v.academicYear === year);
+      }
+      if (query.semester) {
+        const semester = semesterToNumber(query.semester);
+        views = views.filter((v) => v.semester === semester);
       }
       if (query.q?.trim()) {
         const needle = query.q.trim().toLowerCase();
@@ -132,6 +138,7 @@ export class CurriculumsService {
           nameEn: dto.name.en?.trim() || MISSING_NAME,
           nameAr: dto.name.ar.trim(),
           academicYear: dto.academicYear,
+          semester: dto.semester,
           abbreviation,
         })
         .returning();
@@ -145,6 +152,7 @@ export class CurriculumsService {
         facultyId,
         abbreviation: created.abbreviation,
         academicYear: academicYearToNumber(created.academicYear),
+        semester: semesterToNumber(created.semester),
       };
     } catch (error) {
       if (
@@ -190,6 +198,7 @@ export class CurriculumsService {
               }
             : {}),
           ...(dto.academicYear !== undefined ? { academicYear: dto.academicYear } : {}),
+          ...(dto.semester !== undefined ? { semester: dto.semester } : {}),
           ...(abbreviation !== undefined ? { abbreviation } : {}),
         })
         .where(eq(curriculums.id, row.id))
@@ -229,6 +238,7 @@ export class CurriculumsService {
         facultyId,
         abbreviation: updated.abbreviation,
         academicYear: academicYearToNumber(updated.academicYear),
+        semester: semesterToNumber(updated.semester),
       };
     } catch (error) {
       if (

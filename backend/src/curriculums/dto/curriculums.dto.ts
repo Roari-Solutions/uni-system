@@ -13,7 +13,10 @@ import { OptionalEnglishNameDto } from 'src/common/dto/localized-name.dto';
 import {
   ACADEMIC_YEARS,
   NormaliseAcademicYear,
+  NormaliseSemester,
+  SEMESTERS,
   type AcademicYear,
+  type Semester,
 } from 'src/common/academic-year';
 
 /** Body for creating a curriculum. */
@@ -34,6 +37,11 @@ export class CreateCurriculumDto {
   @NormaliseAcademicYear()
   @IsIn(ACADEMIC_YEARS)
   academicYear!: AcademicYear;
+
+  /** Semester 1 or 2 of that academic year. */
+  @NormaliseSemester()
+  @IsIn(SEMESTERS)
+  semester!: Semester;
 }
 
 /** Body for patching a curriculum (all fields optional). */
@@ -49,6 +57,11 @@ export class ListCurriculumsQueryDto {
   @NormaliseAcademicYear()
   @IsIn(ACADEMIC_YEARS)
   academicYear?: AcademicYear;
+
+  @IsOptional()
+  @NormaliseSemester()
+  @IsIn(SEMESTERS)
+  semester?: Semester;
 
   /** Free-text match against either language's name or the abbreviation. */
   @IsOptional()

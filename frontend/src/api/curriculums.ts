@@ -4,6 +4,7 @@ import type { Curriculum } from "../types/curriculum";
 export type CurriculumFilters = {
 	facultyId?: string;
 	academicYear?: number;
+	semester?: number;
 	q?: string;
 };
 
@@ -13,6 +14,7 @@ export type CurriculumPayload = {
 	facultyId: string;
 	abbreviation: string;
 	academicYear: number;
+	semester: number;
 };
 
 export const fetchCurriculums = async (

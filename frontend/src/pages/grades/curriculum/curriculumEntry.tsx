@@ -5,7 +5,7 @@ import FacultyField from "../../../components/facultyField";
 import FormField from "../../../components/formField";
 import { createCurriculum } from "../../../api/curriculums";
 import { formCardClass, inputClass, submitButtonClass } from "../../../styles/form";
-import { STUDY_LEVELS } from "../../../utils/academicYears";
+import { SEMESTERS, STUDY_LEVELS } from "../../../utils/academicYears";
 
 // messages are i18n keys, translated when rendered
 const curriculumSchema = z.object({
@@ -20,6 +20,7 @@ const curriculumSchema = z.object({
 		.max(10, "curriculumEntry.errors.abbreviationTooLong"),
 	// academic year = study year 1-6
 	academicYear: z.string().min(1, "curriculumEntry.errors.required").transform(Number),
+	semester: z.string().min(1, "curriculumEntry.errors.required").transform(Number),
 });
 
 type CurriculumForm = z.input<typeof curriculumSchema>;
@@ -31,6 +32,7 @@ const EMPTY_FORM: CurriculumForm = {
 	facultyId: "",
 	abbreviation: "",
 	academicYear: "",
+	semester: "",
 };
 
 const CurriculumEntry = () => {
@@ -71,6 +73,7 @@ const CurriculumEntry = () => {
 				facultyId: result.data.facultyId,
 				abbreviation: result.data.abbreviation,
 				academicYear: result.data.academicYear,
+				semester: result.data.semester,
 			});
 			setForm({ ...EMPTY_FORM, facultyId: form.facultyId });
 			setSaved(true);
@@ -152,6 +155,29 @@ const CurriculumEntry = () => {
 						{STUDY_LEVELS.map((level) => (
 							<option key={level} value={level}>
 								{t(`student.levels.${level}`)}
+							</option>
+						))}
+					</select>
+				</FormField>
+
+				<FormField
+					id="semester"
+					label={t("curriculumEntry.semester")}
+					error={errors.semester?.[0]}
+				>
+					<select
+						id="semester"
+						value={form.semester}
+						onChange={(e) => setField("semester", e.target.value)}
+						aria-invalid={!!errors.semester}
+						className={inputClass(!!errors.semester)}
+					>
+						<option value="" disabled>
+							{t("curriculumEntry.selectSemester")}
+						</option>
+						{SEMESTERS.map((semester) => (
+							<option key={semester} value={semester}>
+								{t(`semesters.${semester}`)}
 							</option>
 						))}
 					</select>

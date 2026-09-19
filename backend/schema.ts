@@ -28,6 +28,9 @@ export const bloodTypeEnum = pgEnum('blood_type', [
 /** Academic year = study year (1-6), the level a student or curriculum sits in. */
 export const studyLevelEnum = pgEnum('study_level', ['1', '2', '3', '4', '5', '6']);
 
+/** Semester within an academic year; every curriculum runs in exactly one. */
+export const semesterEnum = pgEnum('semester', ['1', '2']);
+
 /** Per-year student outcome. */
 export const studentStatusEnum = pgEnum('student_status_enum', ['pass', 'fail']);
 
@@ -174,6 +177,8 @@ export const curriculums = pgTable('curriculums', {
   /** The curriculum's identifier; names are free text. */
   abbreviation: text('code').unique(),
   academicYear: studyLevelEnum('academic_year').notNull(),
+  /** Defaults to 1 only so rows that predate semesters get one; the API requires it. */
+  semester: semesterEnum('semester').notNull().default('1'),
   courseHours: integer('course_hours').notNull().default(1), // Course credit / weight
   ...timestamps(),
 });
