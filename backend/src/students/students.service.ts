@@ -109,6 +109,24 @@ export class StudentsService {
     }
   }
 
+  /** The student with this id, for the details page. */
+  async getStudent(id: string, caller: GrCaller): Promise<StudentView> {
+    try {
+      const row = await this.db.query.students.findFirst({ where: eq(students.id, id) });
+      if (!row) throw new NotFoundException();
+      assertFaculty(caller, row.facultyId);
+      return this.toView(row);
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof UnauthorizedException) {
+        throw error;
+      }
+      this.logger.error(`Failed to get student: ${id}`, error);
+      throw new InternalServerErrorException('Grades operation failed', {
+        cause: error,
+      });
+    }
+  }
+
   /** Creates a student in the given faculty. */
   async createStudent(dto: CreateStudentDto, caller: GrCaller): Promise<StudentView> {
     try {

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import ColumnToggle from "../../../components/columnToggle";
 import ConfirmDialog from "../../../components/confirmDialog";
@@ -73,10 +74,23 @@ const StudentList = () => {
 		}
 	};
 
+	const navigate = useNavigate();
 	const facultyName = (id: string) => faculties.find((f) => f.id === id)?.name[lang] ?? "";
 
 	const columns: Column<Student>[] = [
-		{ key: "name", header: t("studentList.columns.name"), render: (s) => s.name[lang] },
+		{
+			key: "name",
+			header: t("studentList.columns.name"),
+			// the row is clickable; the link is the keyboard and screen-reader way in
+			render: (s) => (
+				<Link
+					to={`../${s.id}`}
+					className="font-medium text-accent-deep underline-offset-4 transition-colors duration-150 ease-out hover:text-primary-hover hover:underline"
+				>
+					{s.name[lang]}
+				</Link>
+			),
+		},
 		{
 			key: "nameEn",
 			header: t("studentList.columns.nameEn"),
@@ -155,6 +169,7 @@ const StudentList = () => {
 				columns={columns.filter((col) => !hiddenColumns.includes(col.key))}
 				rows={students}
 				getRowId={(s) => s.id}
+				onRowClick={(s) => void navigate(`../${s.id}`)}
 				emptyText={loading ? t("common.loading") : t("studentList.empty")}
 			/>
 

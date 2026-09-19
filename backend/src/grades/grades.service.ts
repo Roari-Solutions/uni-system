@@ -19,6 +19,7 @@ import {
   type GradeStatus,
 } from './dto/grades.dto';
 import { assertFaculty, scopeFacultyId } from 'src/gr-scope/gr-scope';
+import type { RequirementType } from 'src/common/requirement-type';
 import {
   academicYearToNumber,
   semesterToNumber,
@@ -45,6 +46,17 @@ export interface PendingGradesView {
     semester: number;
   };
   students: { id: string; name: { en: string; ar: string }; uniNumber: string }[];
+}
+
+/** One curriculum of a student's current year, with the mark if one is entered. */
+export interface StudentYearGradeView {
+  curriculumId: string;
+  name: { en: string; ar: string };
+  abbreviation: string | null;
+  semester: number;
+  requirementType: RequirementType | null;
+  grade: number | null;
+  status: GradeStatus | null;
 }
 
 /** CRUD for grades and per-academic-year results, with faculty scoping. */
@@ -247,6 +259,69 @@ export class GradesService {
         throw error;
       }
       this.logger.error(`Failed to list pending grades: ${curriculumId}`, error);
+      throw new InternalServerErrorException('Grades operation failed', {
+        cause: error,
+      });
+    }
+  }
+
+  /**
+   * Every curriculum the student's faculty offers in the student's current
+   * academic year, each with its mark (null until entered), for the details page.
+   */
+  async studentYearGrades(studentId: string, caller: GrCaller): Promise<StudentYearGradeView[]> {
+    try {
+      const student = await this.db.query.students.findFirst({
+        where: eq(students.id, studentId),
+        columns: { id: true, facultyId: true, academicYear: true },
+      });
+      if (!student) throw new NotFoundException();
+      assertFaculty(caller, student.facultyId);
+
+      const links = await this.db.query.facultyCurriculums.findMany({
+        where: eq(facultyCurriculums.facultyId, student.facultyId),
+        with: { curriculum: true },
+      });
+      const yearCurriculums = links
+        .map((link) => link.curriculum)
+        .filter((c) => c.academicYear === student.academicYear);
+      if (!yearCurriculums.length) return [];
+
+      const marks = await this.db.query.grades.findMany({
+        where: and(
+          eq(grades.studentId, student.id),
+          inArray(
+            grades.curriculumId,
+            yearCurriculums.map((c) => c.id),
+          ),
+        ),
+        columns: { curriculumId: true, grade: true },
+      });
+      const markOf = new Map(marks.map((m) => [m.curriculumId, m.grade]));
+
+      return yearCurriculums
+        .map((c) => {
+          const raw = markOf.get(c.id);
+          const grade = raw === undefined || raw === null ? null : Number(raw);
+          return {
+            curriculumId: c.id,
+            name: { en: c.nameEn, ar: c.nameAr },
+            abbreviation: c.abbreviation,
+            semester: semesterToNumber(c.semester),
+            requirementType: c.requirementType,
+            grade,
+            status: grade === null ? null : GradesService.statusOf(grade),
+          };
+        })
+        .sort(
+          (a, b) =>
+            a.semester - b.semester || (a.abbreviation ?? '').localeCompare(b.abbreviation ?? ''),
+        );
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof UnauthorizedException) {
+        throw error;
+      }
+      this.logger.error(`Failed to list year grades: ${studentId}`, error);
       throw new InternalServerErrorException('Grades operation failed', {
         cause: error,
       });

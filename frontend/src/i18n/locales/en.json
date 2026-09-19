@@ -79,6 +79,32 @@
     "deleteTitle": "Delete student",
     "deleteMessage": "Are you sure you want to delete \"{{name}}\"? This can't be undone."
   },
+  "studentDetails": {
+    "title": "Student details",
+    "back": "Back to students",
+    "registeredData": "Registered data",
+    "yearGrades": "{{year}} grades",
+    "notEntered": "Not entered",
+    "noCurriculums": "No curriculums in this semester",
+    "fields": {
+      "nameAr": "Name (Arabic)",
+      "nameEn": "Name (English)",
+      "uniNumber": "University number",
+      "nationalId": "National ID",
+      "faculty": "Faculty",
+      "level": "Current academic year",
+      "acceptanceYear": "Acceptance year",
+      "acceptanceType": "Acceptance type",
+      "status": "Year outcome"
+    },
+    "columns": {
+      "curriculum": "Curriculum",
+      "abbreviation": "Abbreviation",
+      "requirementType": "Requirement type",
+      "grade": "Grade",
+      "status": "Status"
+    }
+  },
   "student": {
     "acceptanceTypes": {
       "general": "General admission",

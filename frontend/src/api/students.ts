@@ -25,6 +25,11 @@ export const fetchStudents = async (filters: StudentFilters = {}): Promise<Stude
 	return data;
 };
 
+export const fetchStudent = async (id: string): Promise<Student> => {
+	const { data } = await api.get<Student>(`/gr/students/${id}`);
+	return data;
+};
+
 export const createStudent = async (payload: StudentPayload): Promise<Student> => {
 	const { data } = await api.post<Student>("/gr/students", payload);
 	return data;

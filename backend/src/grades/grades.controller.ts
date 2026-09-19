@@ -38,6 +38,15 @@ export class GradesController {
     return await this.gradesService.pendingGrades(curriculumId, req.grCaller);
   }
 
+  /** GET /gr/grades/student/:studentId — the student's current-year curriculums and marks. */
+  @Get('student/:studentId')
+  async GetStudentYearGrades(
+    @Req() req: GrRequest,
+    @Param('studentId', ParseUUIDPipe) studentId: string,
+  ) {
+    return await this.gradesService.studentYearGrades(studentId, req.grCaller);
+  }
+
   @Post()
   async CreateGrade(@Req() req: GrRequest, @Body() dto: CreateGradeDto) {
     return await this.gradesService.createGrade(dto, req.grCaller);

@@ -79,6 +79,32 @@
     "deleteTitle": "حذف الطالب",
     "deleteMessage": "هل أنت متأكد من حذف \"{{name}}\"؟ لا يمكن التراجع عن هذا الإجراء."
   },
+  "studentDetails": {
+    "title": "بيانات الطالب",
+    "back": "العودة إلى الطلاب",
+    "registeredData": "البيانات المسجلة",
+    "yearGrades": "درجات {{year}}",
+    "notEntered": "لم تُدخل",
+    "noCurriculums": "لا توجد مناهج في هذا الفصل الدراسي",
+    "fields": {
+      "nameAr": "الاسم (بالعربية)",
+      "nameEn": "الاسم (بالإنجليزية)",
+      "uniNumber": "الرقم الجامعي",
+      "nationalId": "الرقم الوطني",
+      "faculty": "الكلية",
+      "level": "السنة الدراسية الحالية",
+      "acceptanceYear": "سنة القبول",
+      "acceptanceType": "نوع القبول",
+      "status": "نتيجة السنة"
+    },
+    "columns": {
+      "curriculum": "المنهج",
+      "abbreviation": "الاختصار",
+      "requirementType": "نوع المتطلب",
+      "grade": "الدرجة",
+      "status": "الحالة"
+    }
+  },
   "student": {
     "acceptanceTypes": {
       "general": "قبول عام",

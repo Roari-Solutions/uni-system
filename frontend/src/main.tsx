@@ -12,6 +12,7 @@ import CurriculumEntry from './pages/grades/curriculum/curriculumEntry';
 import CurriculumList from './pages/grades/curriculum/curriculumList';
 import StudentList from './pages/grades/students/studentList';
 import StudentEntry from './pages/grades/students/studentEntry';
+import StudentDetails from './pages/grades/students/studentDetails';
 import GradeList from './pages/grades/grades/gradeList';
 import GradeEntry from './pages/grades/grades/gradeEntry';
 import GradeSheet from './pages/grades/grades/gradeSheet';
@@ -44,6 +45,7 @@ const router = createBrowserRouter([
 								children: [
 									{ path: "list", element: <StudentList /> },
 									{ path: "entry", element: <StudentEntry /> },
+									{ path: ":studentId", element: <StudentDetails /> },
 								],
 							},
 							{

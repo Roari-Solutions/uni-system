@@ -29,6 +29,12 @@ export class StudentsController {
     return await this.studentsService.listStudents(req.grCaller, query);
   }
 
+  /** GET /gr/students/:id — the details page's registered data. */
+  @Get(':id')
+  async GetStudent(@Param('id', ParseUUIDPipe) id: string, @Req() req: GrRequest) {
+    return await this.studentsService.getStudent(id, req.grCaller);
+  }
+
   @Post()
   async CreateStudent(@Body() dto: CreateStudentDto, @Req() req: GrRequest) {
     return await this.studentsService.createStudent(dto, req.grCaller);
