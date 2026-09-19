@@ -8,6 +8,7 @@ import useFaculties from "../../../hooks/useFaculties";
 import { deleteCurriculum, fetchCurriculums } from "../../../api/curriculums";
 import type { Curriculum } from "../../../types/curriculum";
 import { SEMESTERS, STUDY_LEVELS } from "../../../utils/academicYears";
+import { REQUIREMENT_TYPES, type RequirementType } from "../../../types/requirementType";
 
 const CurriculumList = () => {
 	const { t, i18n } = useTranslation();
@@ -20,6 +21,7 @@ const CurriculumList = () => {
 	const [facultyId, setFacultyId] = useState("");
 	const [academicYear, setAcademicYear] = useState("");
 	const [semester, setSemester] = useState("");
+	const [requirementType, setRequirementType] = useState<RequirementType | "">("");
 	const [pendingDelete, setPendingDelete] = useState<Curriculum | null>(null);
 
 	// a locked caller only ever sees their own faculty
@@ -32,6 +34,7 @@ const CurriculumList = () => {
 			facultyId: effectiveFacultyId || undefined,
 			academicYear: academicYear ? Number(academicYear) : undefined,
 			semester: semester ? Number(semester) : undefined,
+			requirementType: requirementType || undefined,
 		})
 			.then((rows) => {
 				if (cancelled) return;
@@ -48,7 +51,7 @@ const CurriculumList = () => {
 		return () => {
 			cancelled = true;
 		};
-	}, [effectiveFacultyId, academicYear, semester]);
+	}, [effectiveFacultyId, academicYear, semester, requirementType]);
 
 	const facultyName = (id: string) => faculties.find((f) => f.id === id)?.name[lang] ?? "";
 
@@ -70,6 +73,12 @@ const CurriculumList = () => {
 		{ key: "abbreviation", header: t("curriculumList.columns.abbreviation"), render: (c) => c.abbreviation },
 		{ key: "academicYear", header: t("curriculumList.columns.academicYear"), render: (c) => t(`student.levels.${c.academicYear}`) },
 		{ key: "semester", header: t("curriculumList.columns.semester"), render: (c) => t(`semesters.${c.semester}`) },
+		{
+			key: "requirementType",
+			header: t("curriculumList.columns.requirementType"),
+			// curriculums from before requirement types have none recorded
+			render: (c) => (c.requirementType ? t(`requirementTypes.${c.requirementType}`) : t("curriculumList.notSet")),
+		},
 		{
 			key: "actions",
 			header: t("common.actions"),
@@ -113,6 +122,14 @@ const CurriculumList = () => {
 					onChange={setSemester}
 					allLabel={t("curriculumList.allSemesters")}
 					options={SEMESTERS.map((s) => ({ value: String(s), label: t(`semesters.${s}`) }))}
+				/>
+				<FilterSelect
+					id="requirementTypeFilter"
+					label={t("curriculumList.requirementType")}
+					value={requirementType}
+					onChange={(v) => setRequirementType(v as RequirementType | "")}
+					allLabel={t("curriculumList.allRequirementTypes")}
+					options={REQUIREMENT_TYPES.map((r) => ({ value: r, label: t(`requirementTypes.${r}`) }))}
 				/>
 			</div>
 

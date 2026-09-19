@@ -20,10 +20,12 @@
     "selectYear": "Select academic year",
     "semester": "Semester",
     "selectSemester": "Select semester",
+    "requirementType": "Requirement type",
+    "selectRequirementType": "Select requirement type",
     "submit": "Save",
     "errors": {
       "required": "This field is required",
-      "abbreviationTooLong": "Abbreviation must be at most 10 characters"
+      "abbreviationFormat": "Use the format XXXX-0000, e.g. ENCR-1101"
     },
     "nameAr": "Curriculum name (Arabic)",
     "nameEn": "Curriculum name (English)"
@@ -36,13 +38,17 @@
     "allYears": "All academic years",
     "semester": "Semester",
     "allSemesters": "All semesters",
+    "requirementType": "Requirement type",
+    "allRequirementTypes": "All requirement types",
+    "notSet": "Not set",
     "empty": "No curriculums match the selected filters",
     "columns": {
       "name": "Name",
       "faculty": "Faculty",
       "abbreviation": "Abbreviation",
       "academicYear": "Academic year",
-      "semester": "Semester"
+      "semester": "Semester",
+      "requirementType": "Requirement type"
     },
     "deleteTitle": "Delete curriculum",
     "deleteMessage": "Are you sure you want to delete \"{{name}}\"? This can't be undone."
@@ -96,6 +102,11 @@
   "semesters": {
     "1": "First semester",
     "2": "Second semester"
+  },
+  "requirementTypes": {
+    "university": "University requirement",
+    "faculty": "Faculty requirement",
+    "major": "Major requirement"
   },
   "common": {
     "actions": "Actions",

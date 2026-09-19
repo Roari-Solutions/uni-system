@@ -31,6 +31,9 @@ export const studyLevelEnum = pgEnum('study_level', ['1', '2', '3', '4', '5', '6
 /** Semester within an academic year; every curriculum runs in exactly one. */
 export const semesterEnum = pgEnum('semester', ['1', '2']);
 
+/** Which body requires a curriculum: the university, the faculty, or the major. */
+export const requirementTypeEnum = pgEnum('requirement_type', ['university', 'faculty', 'major']);
+
 /** Per-year student outcome. */
 export const studentStatusEnum = pgEnum('student_status_enum', ['pass', 'fail']);
 
@@ -179,6 +182,8 @@ export const curriculums = pgTable('curriculums', {
   academicYear: studyLevelEnum('academic_year').notNull(),
   /** Defaults to 1 only so rows that predate semesters get one; the API requires it. */
   semester: semesterEnum('semester').notNull().default('1'),
+  /** Null only on rows that predate requirement types; the API requires it. */
+  requirementType: requirementTypeEnum('requirement_type'),
   courseHours: integer('course_hours').notNull().default(1), // Course credit / weight
   ...timestamps(),
 });

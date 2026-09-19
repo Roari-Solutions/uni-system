@@ -20,10 +20,12 @@
     "selectYear": "اختر السنة الدراسية",
     "semester": "الفصل الدراسي",
     "selectSemester": "اختر الفصل الدراسي",
+    "requirementType": "نوع المتطلب",
+    "selectRequirementType": "اختر نوع المتطلب",
     "submit": "حفظ",
     "errors": {
       "required": "هذا الحقل مطلوب",
-      "abbreviationTooLong": "يجب ألا يتجاوز الاختصار 10 أحرف"
+      "abbreviationFormat": "استخدم الصيغة XXXX-0000، مثل ENCR-1101"
     },
     "nameAr": "اسم المقرر بالعربية",
     "nameEn": "اسم المقرر بالإنجليزية"
@@ -36,13 +38,17 @@
     "allYears": "كل السنوات الدراسية",
     "semester": "الفصل الدراسي",
     "allSemesters": "جميع الفصول الدراسية",
+    "requirementType": "نوع المتطلب",
+    "allRequirementTypes": "جميع أنواع المتطلبات",
+    "notSet": "غير محدد",
     "empty": "لا توجد مناهج تطابق عوامل التصفية المحددة",
     "columns": {
       "name": "الاسم",
       "faculty": "الكلية",
       "abbreviation": "الاختصار",
       "academicYear": "السنة الدراسية",
-      "semester": "الفصل الدراسي"
+      "semester": "الفصل الدراسي",
+      "requirementType": "نوع المتطلب"
     },
     "deleteTitle": "حذف المنهج",
     "deleteMessage": "هل أنت متأكد من حذف \"{{name}}\"؟ لا يمكن التراجع عن هذا الإجراء."
@@ -96,6 +102,11 @@
   "semesters": {
     "1": "الفصل الدراسي الأول",
     "2": "الفصل الدراسي الثاني"
+  },
+  "requirementTypes": {
+    "university": "متطلب جامعة",
+    "faculty": "متطلب كلية",
+    "major": "متطلب تخصص"
   },
   "common": {
     "actions": "الإجراءات",

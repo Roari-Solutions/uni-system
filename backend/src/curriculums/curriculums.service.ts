@@ -8,18 +8,21 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { and, eq } from 'drizzle-orm';
-import { curriculums, facultyCurriculums, grades } from 'schema';
+import { and, eq, like } from 'drizzle-orm';
+import { curriculums, faculties, facultyCurriculums, grades } from 'schema';
 import { DATABASE, type Db } from 'src/database/database.module';
 import { GrCaller } from 'src/gr-gurd/gr-gurd.guard';
 import { assertFaculty, assertFacultyExists, scopeFacultyId } from 'src/gr-scope/gr-scope';
 import { academicYearToNumber, semesterToNumber } from 'src/common/academic-year';
 import { MISSING_NAME } from 'src/common/dto/localized-name.dto';
+import type { RequirementType } from 'src/common/requirement-type';
 import {
   CreateCurriculumDto,
   ListCurriculumsQueryDto,
+  SuggestAbbreviationQueryDto,
   UpdateCurriculumDto,
 } from './dto/curriculums.dto';
+import { abbreviationLetters, buildAbbreviation, serialOf } from './abbreviation';
 
 /** A curriculum as the views consume it: one faculty, one study year, one semester. */
 export interface CurriculumView {
@@ -29,6 +32,8 @@ export interface CurriculumView {
   abbreviation: string | null;
   academicYear: number;
   semester: number;
+  /** Null only on curriculums created before requirement types existed. */
+  requirementType: RequirementType | null;
 }
 
 /** CRUD for curriculums with faculty scoping. */
@@ -87,6 +92,7 @@ export class CurriculumsService {
           abbreviation: link.curriculum.abbreviation,
           academicYear: academicYearToNumber(link.curriculum.academicYear),
           semester: semesterToNumber(link.curriculum.semester),
+          requirementType: link.curriculum.requirementType,
         });
       }
 
@@ -97,6 +103,9 @@ export class CurriculumsService {
       if (query.semester) {
         const semester = semesterToNumber(query.semester);
         views = views.filter((v) => v.semester === semester);
+      }
+      if (query.requirementType) {
+        views = views.filter((v) => v.requirementType === query.requirementType);
       }
       if (query.q?.trim()) {
         const needle = query.q.trim().toLowerCase();
@@ -112,6 +121,75 @@ export class CurriculumsService {
     } catch (error) {
       if (error instanceof UnauthorizedException) throw error;
       this.logger.error('Failed to list curriculums', error);
+      throw new InternalServerErrorException('Grades operation failed', {
+        cause: error,
+      });
+    }
+  }
+
+  /**
+   * Suggests the next XXXX-0000 code: the first serial free within the
+   * faculty -> year -> semester that also yields a code no other curriculum
+   * holds. Null when an input the letters need is missing or all 99 are used.
+   */
+  async suggestAbbreviation(
+    query: SuggestAbbreviationQueryDto,
+    caller: GrCaller,
+  ): Promise<{ abbreviation: string | null }> {
+    try {
+      const facultyId = await assertFacultyExists(this.db, query.facultyId);
+      assertFaculty(caller, facultyId);
+
+      const faculty = await this.db.query.faculties.findFirst({
+        where: eq(faculties.id, facultyId),
+        columns: { abbreviation: true },
+      });
+      const letters = abbreviationLetters(
+        query.requirementType,
+        faculty?.abbreviation ?? null,
+        query.nameEn,
+      );
+      if (!letters) return { abbreviation: null };
+
+      const taken = new Set<number>();
+
+      // serials this faculty already uses in the same year and semester
+      const links = await this.db.query.facultyCurriculums.findMany({
+        where: eq(facultyCurriculums.facultyId, facultyId),
+        with: {
+          curriculum: { columns: { abbreviation: true, academicYear: true, semester: true } },
+        },
+      });
+      for (const { curriculum } of links) {
+        if (curriculum.academicYear !== query.academicYear) continue;
+        if (curriculum.semester !== query.semester) continue;
+        const serial = serialOf(curriculum.abbreviation);
+        if (serial !== null) taken.add(serial);
+      }
+
+      // codes are unique university-wide; UT codes from other faculties can collide
+      const sameStem = await this.db.query.curriculums.findMany({
+        where: like(curriculums.abbreviation, `${letters}-${query.academicYear}${query.semester}%`),
+        columns: { abbreviation: true },
+      });
+      for (const row of sameStem) {
+        const serial = serialOf(row.abbreviation);
+        if (serial !== null) taken.add(serial);
+      }
+
+      for (let serial = 1; serial <= 99; serial++) {
+        if (!taken.has(serial)) {
+          return {
+            abbreviation: buildAbbreviation(letters, query.academicYear, query.semester, serial),
+          };
+        }
+      }
+      return { abbreviation: null };
+    } catch (error) {
+      if (error instanceof BadRequestException || error instanceof UnauthorizedException) {
+        throw error;
+      }
+      this.logger.error('Failed to suggest curriculum abbreviation', error);
       throw new InternalServerErrorException('Grades operation failed', {
         cause: error,
       });
@@ -139,6 +217,7 @@ export class CurriculumsService {
           nameAr: dto.name.ar.trim(),
           academicYear: dto.academicYear,
           semester: dto.semester,
+          requirementType: dto.requirementType,
           abbreviation,
         })
         .returning();
@@ -153,6 +232,7 @@ export class CurriculumsService {
         abbreviation: created.abbreviation,
         academicYear: academicYearToNumber(created.academicYear),
         semester: semesterToNumber(created.semester),
+        requirementType: created.requirementType,
       };
     } catch (error) {
       if (
@@ -199,6 +279,7 @@ export class CurriculumsService {
             : {}),
           ...(dto.academicYear !== undefined ? { academicYear: dto.academicYear } : {}),
           ...(dto.semester !== undefined ? { semester: dto.semester } : {}),
+          ...(dto.requirementType !== undefined ? { requirementType: dto.requirementType } : {}),
           ...(abbreviation !== undefined ? { abbreviation } : {}),
         })
         .where(eq(curriculums.id, row.id))
@@ -239,6 +320,7 @@ export class CurriculumsService {
         abbreviation: updated.abbreviation,
         academicYear: academicYearToNumber(updated.academicYear),
         semester: semesterToNumber(updated.semester),
+        requirementType: updated.requirementType,
       };
     } catch (error) {
       if (

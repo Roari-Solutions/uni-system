@@ -1,15 +1,17 @@
 import { Type } from 'class-transformer';
 import {
   IsIn,
-  IsNotEmpty,
   IsOptional,
   IsString,
   IsUUID,
+  Matches,
   MaxLength,
   ValidateNested,
 } from 'class-validator';
 import { PartialType } from '@nestjs/mapped-types';
 import { OptionalEnglishNameDto } from 'src/common/dto/localized-name.dto';
+import { REQUIREMENT_TYPES, type RequirementType } from 'src/common/requirement-type';
+import { ABBREVIATION_PATTERN } from '../abbreviation';
 import {
   ACADEMIC_YEARS,
   NormaliseAcademicYear,
@@ -28,9 +30,9 @@ export class CreateCurriculumDto {
   @IsUUID()
   facultyId!: string;
 
+  /** XXXX-0000; see ABBREVIATION_PATTERN. */
   @IsString()
-  @IsNotEmpty()
-  @MaxLength(10)
+  @Matches(ABBREVIATION_PATTERN)
   abbreviation!: string;
 
   /** Study year 1-6, not a calendar year. */
@@ -42,6 +44,10 @@ export class CreateCurriculumDto {
   @NormaliseSemester()
   @IsIn(SEMESTERS)
   semester!: Semester;
+
+  /** University, faculty or major requirement. */
+  @IsIn(REQUIREMENT_TYPES)
+  requirementType!: RequirementType;
 }
 
 /** Body for patching a curriculum (all fields optional). */
@@ -63,9 +69,36 @@ export class ListCurriculumsQueryDto {
   @IsIn(SEMESTERS)
   semester?: Semester;
 
+  @IsOptional()
+  @IsIn(REQUIREMENT_TYPES)
+  requirementType?: RequirementType;
+
   /** Free-text match against either language's name or the abbreviation. */
   @IsOptional()
   @IsString()
   @MaxLength(200)
   q?: string;
+}
+
+/** Query for GET /gr/curriculum/suggest-abbreviation: the inputs the code is built from. */
+export class SuggestAbbreviationQueryDto {
+  @IsUUID()
+  facultyId!: string;
+
+  @NormaliseAcademicYear()
+  @IsIn(ACADEMIC_YEARS)
+  academicYear!: AcademicYear;
+
+  @NormaliseSemester()
+  @IsIn(SEMESTERS)
+  semester!: Semester;
+
+  @IsIn(REQUIREMENT_TYPES)
+  requirementType!: RequirementType;
+
+  /** Supplies the course letters for university and major requirements. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  nameEn?: string;
 }

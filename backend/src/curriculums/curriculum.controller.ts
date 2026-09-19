@@ -18,6 +18,7 @@ import { GrGurdGuard, type GrRequest } from 'src/gr-gurd/gr-gurd.guard';
 import {
   CreateCurriculumDto,
   ListCurriculumsQueryDto,
+  SuggestAbbreviationQueryDto,
   UpdateCurriculumDto,
 } from './dto/curriculums.dto';
 
@@ -31,6 +32,12 @@ export class CurriculumController {
   @Get()
   async getAllCurriculums(@Req() req: GrRequest, @Query() query: ListCurriculumsQueryDto) {
     return await this.curriculumsService.listCurriculums(req.grCaller, query);
+  }
+
+  /** GET /gr/curriculum/suggest-abbreviation — the entry form's XXXX-0000 suggestion. */
+  @Get('suggest-abbreviation')
+  async suggestAbbreviation(@Req() req: GrRequest, @Query() query: SuggestAbbreviationQueryDto) {
+    return await this.curriculumsService.suggestAbbreviation(query, req.grCaller);
   }
 
   @Post()

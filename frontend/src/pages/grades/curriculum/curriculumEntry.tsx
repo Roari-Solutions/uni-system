@@ -1,11 +1,13 @@
-import { useCallback, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import FacultyField from "../../../components/facultyField";
 import FormField from "../../../components/formField";
-import { createCurriculum } from "../../../api/curriculums";
+import { createCurriculum, suggestAbbreviation } from "../../../api/curriculums";
 import { formCardClass, inputClass, submitButtonClass } from "../../../styles/form";
 import { SEMESTERS, STUDY_LEVELS } from "../../../utils/academicYears";
+import { REQUIREMENT_TYPES, type RequirementType } from "../../../types/requirementType";
+import { ABBREVIATION_PATTERN } from "../../../types/curriculum";
 
 // messages are i18n keys, translated when rendered
 const curriculumSchema = z.object({
@@ -17,10 +19,14 @@ const curriculumSchema = z.object({
 		.string()
 		.trim()
 		.min(1, "curriculumEntry.errors.required")
-		.max(10, "curriculumEntry.errors.abbreviationTooLong"),
+		.regex(ABBREVIATION_PATTERN, "curriculumEntry.errors.abbreviationFormat"),
 	// academic year = study year 1-6
 	academicYear: z.string().min(1, "curriculumEntry.errors.required").transform(Number),
 	semester: z.string().min(1, "curriculumEntry.errors.required").transform(Number),
+	requirementType: z
+		.string()
+		.min(1, "curriculumEntry.errors.required")
+		.pipe(z.enum(REQUIREMENT_TYPES)),
 });
 
 type CurriculumForm = z.input<typeof curriculumSchema>;
@@ -33,6 +39,7 @@ const EMPTY_FORM: CurriculumForm = {
 	abbreviation: "",
 	academicYear: "",
 	semester: "",
+	requirementType: "",
 };
 
 const CurriculumEntry = () => {
@@ -43,6 +50,41 @@ const CurriculumEntry = () => {
 	const [submitting, setSubmitting] = useState(false);
 	const [saved, setSaved] = useState(false);
 	const [failed, setFailed] = useState(false);
+	// the abbreviation follows the suggestion until the user types their own
+	const [abbreviationEdited, setAbbreviationEdited] = useState(false);
+	const [suggestion, setSuggestion] = useState<{ key: string; value: string } | null>(null);
+
+	const { facultyId, requirementType, academicYear, semester, nameEn } = form;
+	const suggestReady = !!(facultyId && requirementType && academicYear && semester);
+	// identifies the inputs a suggestion was made for, so a stale one is never shown
+	const suggestKey = suggestReady
+		? [facultyId, requirementType, academicYear, semester, nameEn.trim()].join("|")
+		: "";
+	const suggested = suggestion?.key === suggestKey ? suggestion.value : "";
+	const abbreviation = abbreviationEdited ? form.abbreviation : suggested;
+
+	useEffect(() => {
+		if (!suggestReady) return;
+
+		let cancelled = false;
+		suggestAbbreviation({
+			facultyId,
+			academicYear: Number(academicYear),
+			semester: Number(semester),
+			requirementType: requirementType as RequirementType,
+			nameEn: nameEn.trim() || undefined,
+		})
+			.then((value) => {
+				if (!cancelled) setSuggestion({ key: suggestKey, value: value ?? "" });
+			})
+			.catch(() => {
+				if (!cancelled) setSuggestion({ key: suggestKey, value: "" });
+			});
+
+		return () => {
+			cancelled = true;
+		};
+	}, [suggestReady, suggestKey, facultyId, academicYear, semester, requirementType, nameEn]);
 
 	const setField = <K extends keyof CurriculumForm>(key: K, value: CurriculumForm[K]) => {
 		setForm((prev) => ({ ...prev, [key]: value }));
@@ -56,7 +98,7 @@ const CurriculumEntry = () => {
 	const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 
-		const result = curriculumSchema.safeParse(form);
+		const result = curriculumSchema.safeParse({ ...form, abbreviation });
 		if (!result.success) {
 			setErrors(z.flattenError(result.error).fieldErrors);
 			return;
@@ -74,8 +116,11 @@ const CurriculumEntry = () => {
 				abbreviation: result.data.abbreviation,
 				academicYear: result.data.academicYear,
 				semester: result.data.semester,
+				requirementType: result.data.requirementType,
 			});
 			setForm({ ...EMPTY_FORM, facultyId: form.facultyId });
+			setAbbreviationEdited(false);
+			setSuggestion(null);
 			setSaved(true);
 		} catch {
 			setFailed(true);
@@ -113,6 +158,29 @@ const CurriculumEntry = () => {
 					/>
 				</FormField>
 
+				<FormField
+					id="requirementType"
+					label={t("curriculumEntry.requirementType")}
+					error={errors.requirementType?.[0]}
+				>
+					<select
+						id="requirementType"
+						value={form.requirementType}
+						onChange={(e) => setField("requirementType", e.target.value)}
+						aria-invalid={!!errors.requirementType}
+						className={inputClass(!!errors.requirementType)}
+					>
+						<option value="" disabled>
+							{t("curriculumEntry.selectRequirementType")}
+						</option>
+						{REQUIREMENT_TYPES.map((type) => (
+							<option key={type} value={type}>
+								{t(`requirementTypes.${type}`)}
+							</option>
+						))}
+					</select>
+				</FormField>
+
 				<FacultyField
 					label={t("curriculumEntry.faculty")}
 					placeholder={t("curriculumEntry.facultyPlaceholder")}
@@ -121,21 +189,6 @@ const CurriculumEntry = () => {
 					onChange={setFacultyId}
 					error={errors.facultyId?.[0]}
 				/>
-
-				<FormField
-					id="abbreviation"
-					label={t("curriculumEntry.abbreviation")}
-					error={errors.abbreviation?.[0]}
-				>
-					<input
-						id="abbreviation"
-						type="text"
-						value={form.abbreviation}
-						onChange={(e) => setField("abbreviation", e.target.value)}
-						aria-invalid={!!errors.abbreviation}
-						className={inputClass(!!errors.abbreviation)}
-					/>
-				</FormField>
 
 				<FormField
 					id="academicYear"
@@ -181,6 +234,28 @@ const CurriculumEntry = () => {
 							</option>
 						))}
 					</select>
+				</FormField>
+
+				<FormField
+					id="abbreviation"
+					label={t("curriculumEntry.abbreviation")}
+					error={errors.abbreviation?.[0]}
+				>
+					<input
+						id="abbreviation"
+						type="text"
+						dir="ltr"
+						placeholder="XXXX-0000"
+						value={abbreviation}
+						onChange={(e) => {
+							const value = e.target.value.toUpperCase();
+							// clearing the field hands it back to the suggestion
+							setAbbreviationEdited(value !== "");
+							setField("abbreviation", value);
+						}}
+						aria-invalid={!!errors.abbreviation}
+						className={inputClass(!!errors.abbreviation)}
+					/>
 				</FormField>
 
 				{saved && (
