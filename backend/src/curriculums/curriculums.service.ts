@@ -58,6 +58,7 @@ export class CurriculumsService {
           name: dto.name.trim(),
           academicYear: dto.year.trim(),
           abbreviation: dto.abbreviation.trim(),
+          ...(dto.courseHours !== undefined ? { courseHours: dto.courseHours } : {}),
         })
         .returning({ id: curriculums.id });
 
@@ -115,6 +116,7 @@ export class CurriculumsService {
           ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
           ...(dto.year !== undefined ? { academicYear: dto.year.trim() } : {}),
           ...(dto.abbreviation !== undefined ? { abbreviation: dto.abbreviation.trim() } : {}),
+          ...(dto.courseHours !== undefined ? { courseHours: dto.courseHours } : {}),
         })
         .where(eq(curriculums.id, row.id));
 
