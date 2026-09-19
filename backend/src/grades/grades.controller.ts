@@ -15,7 +15,7 @@ import { GrGurdGuard, type GrRequest } from 'src/gr-gurd/gr-gurd.guard';
 import { GradesService } from './grades.service';
 import { CreateGradeDto, GradeIdentifiersDto, UpdateGradeDto } from './dto/grades.dto';
 /** Grades/curriculums/students endpoints (auth + faculty-scope guarded). */
-@Controller('gr')
+@Controller('gr/grades')
 @UseGuards(AuthGuard, GrGurdGuard)
 export class GradesController {
   constructor(@Inject() private readonly gradesService: GradesService) {}
