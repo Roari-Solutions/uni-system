@@ -84,7 +84,9 @@
       "general": "قبول عام",
       "special": "قبول خاص",
       "vacancies": "قبول شواغر",
-      "teachersChildren": "قبول أبناء معلمين"
+      "teachersChildren": "قبول أبناء معلمين",
+      "international": "قبول وافدين",
+      "arabCertificate": "قبول شهادة عربية"
     },
     "levels": {
       "1": "السنة الأولى",

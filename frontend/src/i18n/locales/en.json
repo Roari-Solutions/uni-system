@@ -84,7 +84,9 @@
       "general": "General admission",
       "special": "Special admission",
       "vacancies": "Vacancy admission",
-      "teachersChildren": "Teachers' children admission"
+      "teachersChildren": "Teachers' children admission",
+      "international": "International students admission",
+      "arabCertificate": "Arab certificate admission"
     },
     "levels": {
       "1": "First year",

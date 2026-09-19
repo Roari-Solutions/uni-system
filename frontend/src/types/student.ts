@@ -1,7 +1,14 @@
 import type { Localized } from "./localized";
 import type { STUDY_LEVELS } from "../utils/academicYears";
 
-export const ACCEPTANCE_TYPES = ["general", "special", "vacancies", "teachersChildren"] as const;
+export const ACCEPTANCE_TYPES = [
+	"general",
+	"special",
+	"vacancies",
+	"teachersChildren",
+	"international",
+	"arabCertificate",
+] as const;
 export type AcceptanceType = (typeof ACCEPTANCE_TYPES)[number];
 
 export const STUDENT_STATUSES = ["success", "repeat"] as const;

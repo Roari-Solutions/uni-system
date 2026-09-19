@@ -17,7 +17,14 @@ import {
 } from 'src/common/academic-year';
 
 /** Admission routes offered to students; mirrors ACCEPTANCE_TYPES in the views. */
-export const ACCEPTANCE_TYPES = ['general', 'special', 'vacancies', 'teachersChildren'] as const;
+export const ACCEPTANCE_TYPES = [
+  'general',
+  'special',
+  'vacancies',
+  'teachersChildren',
+  'international',
+  'arabCertificate',
+] as const;
 export type AcceptanceType = (typeof ACCEPTANCE_TYPES)[number];
 
 /** Outcome of a student's academic year; null until it is determined. */
