@@ -68,36 +68,91 @@ export class GradesService {
     return matches[0];
   }
 
-  async termCoverage(studentId: string, academicYear: string, semester: '1' | '2') {
-    const student = await this.db.query.students.findFirst({
-      where: eq(students.id, studentId),
-      columns: { facultyId: true },
-    });
-    if (!student) throw new NotFoundException();
-
-    const facultyId = student.facultyId;
-    const facultyRequiredCurriculums = await this.db.query.facultyCurriculums.findMany({
+  /** Curriculum ids the faculty requires (completeness baseline). */
+  private async requiredIds(facultyId: string) {
+    const rows = await this.db.query.facultyCurriculums.findMany({
       where: eq(facultyCurriculums.facultyId, facultyId),
     });
+    return rows.map((r) => r.curriculumId);
+  }
 
-    const curriculumIds = facultyRequiredCurriculums.map((obj) => obj.curriculumId);
-
-    const studetGrades = await this.db.query.grades.findMany({
+  /** Term grades with credit weight attached. */
+  private async termGrades(studentId: string, academicYear: string, semester: '1' | '2') {
+    return await this.db.query.grades.findMany({
       where: and(
         eq(grades.studentId, studentId),
         eq(grades.academicYear, academicYear),
         eq(grades.semester, semester),
         isNotNull(grades.grade),
       ),
+      columns: { curriculumId: true, grade: true, score: true },
+      with: { curriculum: { columns: { courseHours: true } } },
     });
+  }
 
-    const filledIds = new Set(studetGrades.map((g) => g.curriculumId));
-    const complete = curriculumIds.every((id) => filledIds.has(id));
-    if (!complete) return { complete, average: null as number | null };
+  /** All graded rows with credit weight (for CGPA). */
+  private async allGrades(studentId: string) {
+    return await this.db.query.grades.findMany({
+      where: and(eq(grades.studentId, studentId), isNotNull(grades.grade)),
+      columns: { grade: true },
+      with: { curriculum: { columns: { courseHours: true } } },
+    });
+  }
 
-    const average =
-      studetGrades.reduce((acc, cur) => acc + Number(cur.grade), 0) / studetGrades.length;
-    return { complete, average };
+  /** Weighted avg: gpa from grade-points, result from scores. tch=0 → zeros. */
+  private weighted(
+    rows: {
+      grade: string | number | null;
+      score?: string | number | null;
+      curriculum: { courseHours: number | null };
+    }[],
+  ): { gpa: number; result: number; tch: number } {
+    let tch = 0,
+      tgp = 0,
+      tsp = 0;
+    for (const g of rows) {
+      const ch = g.curriculum.courseHours ?? 1;
+      tch += ch;
+      tgp += Number(g.grade) * ch;
+      tsp += Number(g.score ?? 0) * ch;
+    }
+    if (!tch) return { gpa: 0, result: 0, tch: 0 };
+    return { gpa: tgp / tch, result: tsp / tch, tch };
+  }
+
+  async termCoverage(
+    studentId: string,
+    academicYear: string,
+    semester: '1' | '2',
+  ): Promise<{ complete: boolean; gpa: number; cgpa: number; result: number }> {
+    const student = await this.db.query.students.findFirst({
+      where: eq(students.id, studentId),
+      columns: { facultyId: true },
+    });
+    if (!student) throw new NotFoundException();
+
+    const [required, studetGrades] = await Promise.all([
+      this.requiredIds(student.facultyId),
+      this.termGrades(studentId, academicYear, semester),
+    ]);
+
+    // when all required curriculums ids exisit in student gradeed curriculums
+    const complete = required.every((id) => studetGrades.some((g) => g.curriculumId === id));
+    // if not completed we dont calculate the gpa
+    if (!complete) return { complete, gpa: 0, cgpa: 0, result: 0 };
+
+    const { gpa, result, tch } = this.weighted(studetGrades);
+    if (!tch) {
+      this.logger.warn('devision by zero skipped');
+      return { complete, gpa: 0, cgpa: 0, result: 0 };
+    }
+
+    // calculating the CGPA — reuse weighted(); its `gpa` field is the cumulative avg here
+    const all = await this.allGrades(studentId);
+    const { gpa: cgpaRaw } = this.weighted(all);
+    const cgpa = Number(cgpaRaw.toFixed(2));
+
+    return { complete, gpa, cgpa, result };
   }
 
   /** True when every faculty curriculum has a filled grade for the term. not used now but might be need later to check i will keep it*/
@@ -125,8 +180,12 @@ export class GradesService {
     academicYear: string,
     semester: '1' | '2',
   ): Promise<void> {
-    const { complete, average } = await this.termCoverage(studentId, academicYear, semester);
-    if (!complete || average === null) {
+    const { complete, gpa, cgpa, result } = await this.termCoverage(
+      studentId,
+      academicYear,
+      semester,
+    );
+    if (!complete) {
       await this.db
         .delete(results)
         .where(
@@ -138,28 +197,31 @@ export class GradesService {
         );
       return;
     }
-    const result = average.toFixed(2);
-    const gpa = Math.min(average / 25, 4).toFixed(2);
+    const resultStr = result.toFixed(2);
+    const gpaStr = gpa.toFixed(2);
+    const cgpaStr = cgpa.toFixed(2);
+    const status = result >= 50 ? 'pass' : 'fail';
     await this.db
       .insert(results)
       .values({
         studentId,
         academicYear,
         semester,
-        result,
-        gpa,
-        status: average >= 50 ? 'pass' : 'fail',
+        result: resultStr,
+        gpa: gpaStr,
+        cgpa: cgpaStr,
+        status,
       })
       .onConflictDoUpdate({
         target: [results.studentId, results.academicYear, results.semester],
         set: {
-          result,
-          gpa,
-          status: average >= 50 ? 'pass' : 'fail',
+          result: resultStr,
+          gpa: gpaStr,
+          cgpa: cgpaStr,
+          status,
         },
       });
   }
-
 
   /** Lists grades: all for admin, own faculty's students' for data-entry. */
   async listGrades(caller: GrCaller) {
@@ -192,6 +254,19 @@ export class GradesService {
     }
   }
 
+  CompleteGradeFromScore(score: number): {
+    letterGrade: string;
+    grade: number;
+  } {
+    if (score >= 80) return { letterGrade: 'A', grade: 4.0 };
+    if (score >= 70) return { letterGrade: 'B+', grade: 3.5 };
+    if (score >= 60) return { letterGrade: 'B', grade: 3.0 };
+    if (score >= 55) return { letterGrade: 'C+', grade: 2.5 };
+    if (score >= 50) return { letterGrade: 'C', grade: 2.0 };
+    if (score >= 40) return { letterGrade: 'D', grade: 1.0 };
+    return { letterGrade: 'F', grade: 0.0 };
+  }
+
   /** Creates a grade for a student; the student's faculty governs access. */
   async createGrade(dto: CreateGradeDto, caller: GrCaller): Promise<{ status: string }> {
     try {
@@ -216,10 +291,14 @@ export class GradesService {
       });
       if (existing) throw new ConflictException();
 
+      const completeGradeFromScore = this.CompleteGradeFromScore(dto.score);
+
       await this.db.insert(grades).values({
         studentId: student.id,
         curriculumId: curriculum.id,
-        grade: String(dto.grade),
+        score: dto.score.toFixed(2),
+        grade: completeGradeFromScore.grade.toFixed(2),
+        letterGrade: completeGradeFromScore.letterGrade,
         academicYear: dto.year.trim(),
         semester,
       });
@@ -281,12 +360,20 @@ export class GradesService {
         columns: { id: true },
       });
       if (clash && clash.id !== row.id) throw new ConflictException();
+      let completeGradeFromScore;
+      if (dto.score !== undefined) completeGradeFromScore = this.CompleteGradeFromScore(dto.score);
 
       await this.db
         .update(grades)
         .set({
           curriculumId,
-          ...(dto.grade !== undefined ? { grade: String(dto.grade) } : {}),
+          ...(completeGradeFromScore
+            ? {
+                grade: completeGradeFromScore.grade.toFixed(2),
+                letterGrade: completeGradeFromScore.letterGrade,
+                score: dto.score!.toFixed(2),
+              }
+            : {}),
           academicYear,
           semester,
         })

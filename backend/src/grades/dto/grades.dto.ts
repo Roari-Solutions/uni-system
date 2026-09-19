@@ -1,4 +1,4 @@
-import { IsIn, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsIn, IsNotEmpty, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
 import { PartialType } from '@nestjs/mapped-types';
 
 /** Body for creating a grade. */
@@ -12,7 +12,9 @@ export class CreateGradeDto {
   curriculum!: string;
 
   @IsNumber()
-  grade!: number;
+  @Min(0)
+  @Max(100)
+  score!: number;
 
   @IsString()
   @IsNotEmpty()
