@@ -172,24 +172,46 @@
     }
   },
   "gradeEntry": {
-    "title": "Add grade",
-    "student": "Student",
-    "studentPlaceholder": "Search by name or university number...",
-    "curriculum": "Curriculum",
-    "curriculumPlaceholder": "Search curriculums...",
-    "noResults": "No results",
-    "grade": "Grade",
-    "submit": "Save",
-    "errors": {
-      "required": "This field is required",
-      "gradeNumber": "Grade must be a number",
-      "gradeRange": "Grade must be between 0 and 100"
-    },
+    "title": "Enter grades",
     "faculty": "Faculty",
-    "facultyPlaceholder": "Search faculties...",
+    "allFaculties": "All faculties",
     "academicYear": "Academic year",
-    "selectAcademicYear": "Select academic year",
-    "chooseScope": "Choose a faculty and an academic year to search students and curriculums."
+    "allYears": "All academic years",
+    "semester": "Semester",
+    "allSemesters": "All semesters",
+    "empty": "No curriculums match the selected filters",
+    "enterGrades": "Enter grades",
+    "enterGradesFor": "Enter grades for {{name}}",
+    "columns": {
+      "name": "Curriculum",
+      "abbreviation": "Abbreviation",
+      "faculty": "Faculty",
+      "academicYear": "Academic year",
+      "semester": "Semester"
+    }
+  },
+  "gradeSheet": {
+    "title": "Enter grades",
+    "back": "Back to curriculums",
+    "empty": "Every student in this curriculum's year already has a grade",
+    "notEntered": "Not entered",
+    "enterGrade": "Enter grade",
+    "enterGradeFor": "Enter grade for {{name}}",
+    "gradeFor": "Grade for {{name}}",
+    "save": "Save",
+    "saveFor": "Save grade for {{name}}",
+    "cancelFor": "Cancel grade for {{name}}",
+    "columns": {
+      "uniNumber": "University number",
+      "name": "Student",
+      "grade": "Grade"
+    },
+    "errors": {
+      "required": "Enter a grade",
+      "gradeNumber": "Grade must be a number",
+      "gradeRange": "Grade must be between 0 and 100",
+      "alreadyGraded": "This student already has a grade for this curriculum"
+    }
   },
   "roles": {
     "admin": "Administrator",

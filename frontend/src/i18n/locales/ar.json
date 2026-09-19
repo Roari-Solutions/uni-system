@@ -172,24 +172,46 @@
     }
   },
   "gradeEntry": {
-    "title": "إضافة درجة",
-    "student": "الطالب",
-    "studentPlaceholder": "ابحث بالاسم أو الرقم الجامعي...",
-    "curriculum": "المنهج",
-    "curriculumPlaceholder": "ابحث عن منهج...",
-    "noResults": "لا توجد نتائج",
-    "grade": "الدرجة",
-    "submit": "حفظ",
-    "errors": {
-      "required": "هذا الحقل مطلوب",
-      "gradeNumber": "يجب أن تكون الدرجة رقمًا",
-      "gradeRange": "يجب أن تكون الدرجة بين 0 و 100"
-    },
+    "title": "إدخال الدرجات",
     "faculty": "الكلية",
-    "facultyPlaceholder": "ابحث عن الكليات...",
+    "allFaculties": "جميع الكليات",
     "academicYear": "السنة الدراسية",
-    "selectAcademicYear": "اختر السنة الدراسية",
-    "chooseScope": "اختر الكلية والسنة الدراسية للبحث عن الطلاب والمقررات."
+    "allYears": "كل السنوات الدراسية",
+    "semester": "الفصل الدراسي",
+    "allSemesters": "جميع الفصول الدراسية",
+    "empty": "لا توجد مناهج تطابق عوامل التصفية المحددة",
+    "enterGrades": "إدخال الدرجات",
+    "enterGradesFor": "إدخال درجات {{name}}",
+    "columns": {
+      "name": "المنهج",
+      "abbreviation": "الاختصار",
+      "faculty": "الكلية",
+      "academicYear": "السنة الدراسية",
+      "semester": "الفصل الدراسي"
+    }
+  },
+  "gradeSheet": {
+    "title": "إدخال الدرجات",
+    "back": "العودة إلى المناهج",
+    "empty": "جميع طلاب سنة هذا المنهج لديهم درجات مسجلة",
+    "notEntered": "لم تُدخل",
+    "enterGrade": "إدخال الدرجة",
+    "enterGradeFor": "إدخال درجة {{name}}",
+    "gradeFor": "درجة {{name}}",
+    "save": "حفظ",
+    "saveFor": "حفظ درجة {{name}}",
+    "cancelFor": "إلغاء درجة {{name}}",
+    "columns": {
+      "uniNumber": "الرقم الجامعي",
+      "name": "الطالب",
+      "grade": "الدرجة"
+    },
+    "errors": {
+      "required": "أدخل الدرجة",
+      "gradeNumber": "يجب أن تكون الدرجة رقمًا",
+      "gradeRange": "يجب أن تكون الدرجة بين 0 و 100",
+      "alreadyGraded": "هذا الطالب لديه درجة مسجلة في هذا المنهج"
+    }
   },
   "roles": {
     "admin": "مسؤول",

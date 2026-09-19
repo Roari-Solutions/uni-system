@@ -19,7 +19,11 @@ import {
   type GradeStatus,
 } from './dto/grades.dto';
 import { assertFaculty, scopeFacultyId } from 'src/gr-scope/gr-scope';
-import { type AcademicYear } from 'src/common/academic-year';
+import {
+  academicYearToNumber,
+  semesterToNumber,
+  type AcademicYear,
+} from 'src/common/academic-year';
 
 /** A grade as the views consume it; `status` is derived, never stored. */
 export interface GradeView {
@@ -28,6 +32,19 @@ export interface GradeView {
   curriculumId: string;
   grade: number;
   status: GradeStatus;
+}
+
+/** A curriculum's entry sheet: the curriculum and the students still without a grade for it. */
+export interface PendingGradesView {
+  curriculum: {
+    id: string;
+    name: { en: string; ar: string };
+    abbreviation: string | null;
+    facultyId: string;
+    academicYear: number;
+    semester: number;
+  };
+  students: { id: string; name: { en: string; ar: string }; uniNumber: string }[];
 }
 
 /** CRUD for grades and per-academic-year results, with faculty scoping. */
@@ -171,6 +188,65 @@ export class GradesService {
     } catch (error) {
       if (error instanceof UnauthorizedException) throw error;
       this.logger.error('Failed to list grades', error);
+      throw new InternalServerErrorException('Grades operation failed', {
+        cause: error,
+      });
+    }
+  }
+
+  /**
+   * The students of the curriculum's faculty and academic year who hold no
+   * grade row for it yet, for the entry sheet.
+   */
+  async pendingGrades(curriculumId: string, caller: GrCaller): Promise<PendingGradesView> {
+    try {
+      const curriculum = await this.db.query.curriculums.findFirst({
+        where: eq(curriculums.id, curriculumId),
+        with: { facultyCurriculums: { columns: { facultyId: true } } },
+      });
+      // a curriculum belongs to one faculty; older rows with several use the first
+      const facultyId = curriculum?.facultyCurriculums[0]?.facultyId;
+      if (!curriculum || !facultyId) throw new NotFoundException();
+      assertFaculty(caller, facultyId);
+
+      const cohort = await this.db.query.students.findMany({
+        where: and(
+          eq(students.facultyId, facultyId),
+          eq(students.academicYear, curriculum.academicYear),
+        ),
+        columns: { id: true, nameEn: true, nameAr: true, uniNumber: true },
+      });
+
+      // any existing row blocks a new one (student_curriculum_unique), marked or not
+      const graded = await this.db.query.grades.findMany({
+        where: eq(grades.curriculumId, curriculum.id),
+        columns: { studentId: true },
+      });
+      const gradedIds = new Set(graded.map((g) => g.studentId));
+
+      return {
+        curriculum: {
+          id: curriculum.id,
+          name: { en: curriculum.nameEn, ar: curriculum.nameAr },
+          abbreviation: curriculum.abbreviation,
+          facultyId,
+          academicYear: academicYearToNumber(curriculum.academicYear),
+          semester: semesterToNumber(curriculum.semester),
+        },
+        students: cohort
+          .filter((s) => !gradedIds.has(s.id))
+          .sort((a, b) => a.uniNumber.localeCompare(b.uniNumber))
+          .map((s) => ({
+            id: s.id,
+            name: { en: s.nameEn, ar: s.nameAr },
+            uniNumber: s.uniNumber,
+          })),
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof UnauthorizedException) {
+        throw error;
+      }
+      this.logger.error(`Failed to list pending grades: ${curriculumId}`, error);
       throw new InternalServerErrorException('Grades operation failed', {
         cause: error,
       });

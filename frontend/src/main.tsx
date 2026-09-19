@@ -14,6 +14,7 @@ import StudentList from './pages/grades/students/studentList';
 import StudentEntry from './pages/grades/students/studentEntry';
 import GradeList from './pages/grades/grades/gradeList';
 import GradeEntry from './pages/grades/grades/gradeEntry';
+import GradeSheet from './pages/grades/grades/gradeSheet';
 import UserList from './pages/admin/userList';
 import UserEntry from './pages/admin/userEntry';
 
@@ -50,6 +51,7 @@ const router = createBrowserRouter([
 								children: [
 									{ path: "list", element: <GradeList /> },
 									{ path: "entry", element: <GradeEntry /> },
+									{ path: "entry/:curriculumId", element: <GradeSheet /> },
 								],
 							},
 							{

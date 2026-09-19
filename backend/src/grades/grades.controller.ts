@@ -29,6 +29,15 @@ export class GradesController {
     return await this.gradesService.listGrades(req.grCaller, query);
   }
 
+  /** GET /gr/grades/pending/:curriculumId — the entry sheet for one curriculum. */
+  @Get('pending/:curriculumId')
+  async GetPendingGrades(
+    @Req() req: GrRequest,
+    @Param('curriculumId', ParseUUIDPipe) curriculumId: string,
+  ) {
+    return await this.gradesService.pendingGrades(curriculumId, req.grCaller);
+  }
+
   @Post()
   async CreateGrade(@Req() req: GrRequest, @Body() dto: CreateGradeDto) {
     return await this.gradesService.createGrade(dto, req.grCaller);
