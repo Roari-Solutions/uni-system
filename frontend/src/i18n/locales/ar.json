@@ -106,7 +106,7 @@
       "abbreviation": "الاختصار",
       "requirementType": "نوع المتطلب",
       "grade": "الدرجة",
-      "status": "الحالة"
+      "letter": "التقدير"
     }
   },
   "student": {
@@ -181,12 +181,6 @@
     "nationalId": "الرقم الوطني",
     "passportNumber": "رقم الجواز"
   },
-  "grade": {
-    "statuses": {
-      "pass": "ناجح",
-      "fail": "راسب"
-    }
-  },
   "gradeList": {
     "title": "الدرجات",
     "empty": "لا توجد درجات تطابق عوامل التصفية المحددة",
@@ -196,15 +190,15 @@
       "faculty": "الكلية",
       "curriculum": "المنهج",
       "grade": "الدرجة",
-      "status": "الحالة"
+      "letter": "التقدير"
     },
     "filters": {
       "faculty": "الكلية",
       "allFaculties": "جميع الكليات",
       "curriculum": "المنهج",
       "allCurriculums": "جميع المناهج",
-      "status": "الحالة",
-      "allStatuses": "جميع الحالات"
+      "letter": "التقدير",
+      "allLetters": "جميع التقديرات"
     }
   },
   "gradeEntry": {
@@ -240,7 +234,8 @@
     "columns": {
       "uniNumber": "الرقم الجامعي",
       "name": "الطالب",
-      "grade": "الدرجة"
+      "grade": "الدرجة",
+      "letter": "التقدير"
     },
     "errors": {
       "required": "أدخل الدرجة",

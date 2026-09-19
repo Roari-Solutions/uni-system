@@ -5,10 +5,7 @@ import {
   NormaliseAcademicYear,
   type AcademicYear,
 } from 'src/common/academic-year';
-
-/** Outcome of a single grade; always derived from the mark, never stored. */
-export const GRADE_STATUSES = ['pass', 'fail'] as const;
-export type GradeStatus = (typeof GRADE_STATUSES)[number];
+import { LETTER_GRADES, type LetterGrade } from '../letter-grade';
 
 /** Body for creating a grade. */
 export class CreateGradeDto {
@@ -22,20 +19,12 @@ export class CreateGradeDto {
   @Min(0)
   @Max(100)
   grade!: number;
-
-  /**
-   * Accepted so the entry form's status select does not fail validation, but
-   * ignored: status is always derived from `grade`. See GradesService.PASS_MARK.
-   */
-  @IsOptional()
-  @IsIn(GRADE_STATUSES)
-  status?: GradeStatus;
 }
 
 /** Body for patching a grade (all fields optional). */
 export class UpdateGradeDto extends PartialType(CreateGradeDto) {}
 
-/** Query filters for GET /gr/grades, matching the list view's three filters. */
+/** Query filters for GET /gr/grades, matching the list view's filters. */
 export class ListGradesQueryDto {
   @IsOptional()
   @IsUUID()
@@ -50,7 +39,8 @@ export class ListGradesQueryDto {
   @IsIn(ACADEMIC_YEARS)
   academicYear?: AcademicYear;
 
+  /** A letter from the scale; see letterOf. */
   @IsOptional()
-  @IsIn(GRADE_STATUSES)
-  status?: GradeStatus;
+  @IsIn(LETTER_GRADES)
+  letter?: LetterGrade;
 }

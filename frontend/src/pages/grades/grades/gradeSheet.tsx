@@ -24,7 +24,7 @@ type PendingStudent = PendingGrades["students"][number];
 type RowState =
 	| { mode: "idle" }
 	| { mode: "editing" | "saving"; draft: string; error?: string }
-	| { mode: "saved"; grade: number };
+	| { mode: "saved"; grade: number; letter: string };
 
 const IDLE: RowState = { mode: "idle" };
 
@@ -75,8 +75,8 @@ const GradeSheet = () => {
 
 		setRow(student.id, { mode: "saving", draft: row.draft });
 		try {
-			await createGrade({ studentId: student.id, curriculumId, grade: result.data });
-			setRow(student.id, { mode: "saved", grade: result.data });
+			const created = await createGrade({ studentId: student.id, curriculumId, grade: result.data });
+			setRow(student.id, { mode: "saved", grade: created.grade, letter: created.letter });
 		} catch (error) {
 			// 409: someone else graded this student since the sheet loaded
 			const status = axios.isAxiosError(error) ? error.response?.status : undefined;
@@ -194,6 +194,20 @@ const GradeSheet = () => {
 		{ key: "uniNumber", header: t("gradeSheet.columns.uniNumber"), render: (s) => s.uniNumber },
 		{ key: "name", header: t("gradeSheet.columns.name"), render: (s) => s.name[lang] },
 		{ key: "grade", header: t("gradeSheet.columns.grade"), render: renderGrade },
+		{
+			key: "letter",
+			header: t("gradeSheet.columns.letter"),
+			render: (s) => {
+				const row = rowOf(s.id);
+				return row.mode === "saved" ? (
+					<span dir="ltr" className="font-semibold">
+						{row.letter}
+					</span>
+				) : (
+					"—"
+				);
+			},
+		},
 		{ key: "actions", header: t("common.actions"), render: renderActions },
 	];
 

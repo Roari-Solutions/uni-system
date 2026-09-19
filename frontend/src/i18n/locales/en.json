@@ -106,7 +106,7 @@
       "abbreviation": "Abbreviation",
       "requirementType": "Requirement type",
       "grade": "Grade",
-      "status": "Status"
+      "letter": "Letter grade"
     }
   },
   "student": {
@@ -181,12 +181,6 @@
     "nationalId": "National ID",
     "passportNumber": "Passport number"
   },
-  "grade": {
-    "statuses": {
-      "pass": "Pass",
-      "fail": "Fail"
-    }
-  },
   "gradeList": {
     "title": "Grades",
     "empty": "No grades match the selected filters",
@@ -196,15 +190,15 @@
       "faculty": "Faculty",
       "curriculum": "Curriculum",
       "grade": "Grade",
-      "status": "Status"
+      "letter": "Letter grade"
     },
     "filters": {
       "faculty": "Faculty",
       "allFaculties": "All faculties",
       "curriculum": "Curriculum",
       "allCurriculums": "All curriculums",
-      "status": "Status",
-      "allStatuses": "All statuses"
+      "letter": "Letter grade",
+      "allLetters": "All letter grades"
     }
   },
   "gradeEntry": {
@@ -240,7 +234,8 @@
     "columns": {
       "uniNumber": "University number",
       "name": "Student",
-      "grade": "Grade"
+      "grade": "Grade",
+      "letter": "Letter grade"
     },
     "errors": {
       "required": "Enter a grade",

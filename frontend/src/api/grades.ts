@@ -7,7 +7,7 @@ export type GradeFilters = {
 	facultyId?: string;
 	curriculumId?: string;
 	academicYear?: number;
-	status?: Grade["status"];
+	letter?: Grade["letter"];
 };
 
 export type GradePayload = {
@@ -32,7 +32,7 @@ export const fetchPendingGrades = async (curriculumId: string): Promise<PendingG
 	return data;
 };
 
-// one curriculum of the student's current year; grade and status are null until entered
+// one curriculum of the student's current year; grade and letter are null until entered
 export type StudentYearGrade = {
 	curriculumId: string;
 	name: Curriculum["name"];
@@ -40,7 +40,7 @@ export type StudentYearGrade = {
 	semester: Curriculum["semester"];
 	requirementType: Curriculum["requirementType"];
 	grade: number | null;
-	status: Grade["status"] | null;
+	letter: Grade["letter"] | null;
 };
 
 export const fetchStudentYearGrades = async (studentId: string): Promise<StudentYearGrade[]> => {

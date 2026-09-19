@@ -8,7 +8,7 @@ import { fetchCurriculums } from "../../../api/curriculums";
 import { fetchStudents } from "../../../api/students";
 import type { Curriculum } from "../../../types/curriculum";
 import type { Student } from "../../../types/student";
-import { GRADE_STATUSES, type Grade, type GradeStatus } from "../../../types/grade";
+import { LETTER_GRADES, type Grade, type LetterGrade } from "../../../types/grade";
 
 const GradeList = () => {
 	const { t, i18n } = useTranslation();
@@ -22,7 +22,7 @@ const GradeList = () => {
 	const [failed, setFailed] = useState(false);
 	const [facultyId, setFacultyId] = useState("");
 	const [curriculumId, setCurriculumId] = useState("");
-	const [status, setStatus] = useState("");
+	const [letter, setLetter] = useState("");
 
 	// a locked caller only ever sees their own faculty
 	const effectiveFacultyId = locked ? (lockedFacultyId ?? "") : facultyId;
@@ -35,7 +35,7 @@ const GradeList = () => {
 			fetchGrades({
 				facultyId: effectiveFacultyId || undefined,
 				curriculumId: curriculumId || undefined,
-				status: status ? (status as GradeStatus) : undefined,
+				letter: letter ? (letter as LetterGrade) : undefined,
 			}),
 			fetchStudents({ facultyId: effectiveFacultyId || undefined }),
 			fetchCurriculums({ facultyId: effectiveFacultyId || undefined }),
@@ -57,7 +57,7 @@ const GradeList = () => {
 		return () => {
 			cancelled = true;
 		};
-	}, [effectiveFacultyId, curriculumId, status]);
+	}, [effectiveFacultyId, curriculumId, letter]);
 
 	const student = (g: Grade) => students.find((s) => s.id === g.studentId);
 	const facultyName = (id?: string) => faculties.find((f) => f.id === id)?.name[lang] ?? "";
@@ -77,7 +77,7 @@ const GradeList = () => {
 		{ key: "faculty", header: t("gradeList.columns.faculty"), render: (g) => facultyName(student(g)?.facultyId) },
 		{ key: "curriculum", header: t("gradeList.columns.curriculum"), render: (g) => curriculumName(g.curriculumId) },
 		{ key: "grade", header: t("gradeList.columns.grade"), render: (g) => g.grade },
-		{ key: "status", header: t("gradeList.columns.status"), render: (g) => t(`grade.statuses.${g.status}`) },
+		{ key: "letter", header: t("gradeList.columns.letter"), render: (g) => <span dir="ltr" className="font-semibold">{g.letter}</span> },
 	];
 
 	return (
@@ -105,12 +105,13 @@ const GradeList = () => {
 					options={curriculums.map((c) => ({ value: c.id, label: c.name[lang] }))}
 				/>
 				<FilterSelect
-					id="statusFilter"
-					label={t("gradeList.filters.status")}
-					value={status}
-					onChange={setStatus}
-					allLabel={t("gradeList.filters.allStatuses")}
-					options={GRADE_STATUSES.map((s) => ({ value: s, label: t(`grade.statuses.${s}`) }))}
+					id="letterFilter"
+					label={t("gradeList.filters.letter")}
+					value={letter}
+					onChange={setLetter}
+					allLabel={t("gradeList.filters.allLetters")}
+					// an <option> can't take its own direction; the mark keeps "A+" from reading "+A" in Arabic
+					options={LETTER_GRADES.map((l) => ({ value: l, label: `${l}\u200E` }))}
 				/>
 			</div>
 

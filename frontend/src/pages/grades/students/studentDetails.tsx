@@ -75,9 +75,9 @@ const StudentDetails = () => {
 				),
 		},
 		{
-			key: "status",
-			header: t("studentDetails.columns.status"),
-			render: (g) => (g.status ? t(`grade.statuses.${g.status}`) : "—"),
+			key: "letter",
+			header: t("studentDetails.columns.letter"),
+			render: (g) => (g.letter ? <span dir="ltr" className="font-semibold">{g.letter}</span> : "—"),
 		},
 	];
 

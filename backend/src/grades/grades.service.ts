@@ -16,8 +16,8 @@ import {
   CreateGradeDto,
   ListGradesQueryDto,
   UpdateGradeDto,
-  type GradeStatus,
 } from './dto/grades.dto';
+import { letterOf, type LetterGrade } from './letter-grade';
 import { assertFaculty, scopeFacultyId } from 'src/gr-scope/gr-scope';
 import type { RequirementType } from 'src/common/requirement-type';
 import {
@@ -26,13 +26,13 @@ import {
   type AcademicYear,
 } from 'src/common/academic-year';
 
-/** A grade as the views consume it; `status` is derived, never stored. */
+/** A grade as the views consume it; `letter` is derived, never stored. */
 export interface GradeView {
   id: string;
   studentId: string;
   curriculumId: string;
   grade: number;
-  status: GradeStatus;
+  letter: LetterGrade;
 }
 
 /** A curriculum's entry sheet: the curriculum and the students still without a grade for it. */
@@ -56,7 +56,7 @@ export interface StudentYearGradeView {
   semester: number;
   requirementType: RequirementType | null;
   grade: number | null;
-  status: GradeStatus | null;
+  letter: LetterGrade | null;
 }
 
 /** CRUD for grades and per-academic-year results, with faculty scoping. */
@@ -64,15 +64,10 @@ export interface StudentYearGradeView {
 export class GradesService {
   private readonly logger = new Logger(GradesService.name);
 
-  /** The single pass threshold: a grade's status and a year's result both use it. */
+  /** The year result's pass threshold; single grades carry a letter instead (letterOf). */
   static readonly PASS_MARK = 50;
 
   constructor(@Inject(DATABASE) private readonly db: Db) {}
-
-  /** Derives pass/fail from a mark. The only place a grade's status comes from. */
-  private static statusOf(grade: number): GradeStatus {
-    return grade >= GradesService.PASS_MARK ? 'pass' : 'fail';
-  }
 
   /** Resolves a curriculum by id, with the academic year the grade inherits. */
   private async curriculumOrThrow(id: string, notFound: boolean) {
@@ -159,8 +154,7 @@ export class GradesService {
 
   /**
    * Lists grades, narrowed by the caller's faculty scope and the list view's
-   * filters. Rows with no mark yet are omitted: the views model status as
-   * pass/fail with no undetermined state.
+   * filters. Rows with no mark yet are omitted: every listed grade has a letter.
    */
   async listGrades(caller: GrCaller, query: ListGradesQueryDto = {}): Promise<GradeView[]> {
     try {
@@ -190,11 +184,11 @@ export class GradesService {
             studentId: row.studentId,
             curriculumId: row.curriculumId,
             grade,
-            status: GradesService.statusOf(grade),
+            letter: letterOf(grade),
           };
         });
 
-      if (query.status) views = views.filter((v) => v.status === query.status);
+      if (query.letter) views = views.filter((v) => v.letter === query.letter);
 
       return views;
     } catch (error) {
@@ -310,7 +304,7 @@ export class GradesService {
             semester: semesterToNumber(c.semester),
             requirementType: c.requirementType,
             grade,
-            status: grade === null ? null : GradesService.statusOf(grade),
+            letter: grade === null ? null : letterOf(grade),
           };
         })
         .sort(
@@ -363,7 +357,7 @@ export class GradesService {
         studentId: created.studentId,
         curriculumId: created.curriculumId,
         grade: dto.grade,
-        status: GradesService.statusOf(dto.grade),
+        letter: letterOf(dto.grade),
       };
     } catch (error) {
       if (
@@ -433,7 +427,7 @@ export class GradesService {
         studentId: updated.studentId,
         curriculumId: updated.curriculumId,
         grade,
-        status: GradesService.statusOf(grade),
+        letter: letterOf(grade),
       };
     } catch (error) {
       if (
