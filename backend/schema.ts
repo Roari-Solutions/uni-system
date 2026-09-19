@@ -34,6 +34,9 @@ export const semesterEnum = pgEnum('semester', ['1', '2']);
 /** Which body requires a curriculum: the university, the faculty, or the major. */
 export const requirementTypeEnum = pgEnum('requirement_type', ['university', 'faculty', 'major']);
 
+/** A student is Sudanese (identified by national ID) or foreign (by passport). */
+export const nationalityEnum = pgEnum('nationality', ['sudanese', 'foreign']);
+
 /** Per-year student outcome. */
 export const studentStatusEnum = pgEnum('student_status_enum', ['pass', 'fail']);
 
@@ -212,6 +215,10 @@ export const students = pgTable('students', {
   nameAr: text('name_ar').notNull(),
   /** Optional; unique across students when present. */
   nationalId: text('national_id').unique(),
+  /** Defaults only so rows that predate nationality get one; the API requires it. */
+  nationality: nationalityEnum('nationality').notNull().default('sudanese'),
+  /** Foreign students only; unique when present, like nationalId. */
+  passportNumber: text('passport_number').unique(),
   acceptanceType: text('acceptance_type').notNull(),
   acceptanceYear: text('acceptance_year').notNull(),
   /** Academic year = study year 1-6. */

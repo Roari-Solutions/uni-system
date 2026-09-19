@@ -62,6 +62,13 @@ const SideNav = () => {
 
 	useEffect(() => () => clearTimeout(timer.current), []);
 
+	// after choosing a page the nav steps aside; the pointer must leave and re-enter to reopen it
+	const collapse = () => {
+		clearTimeout(timer.current);
+		setHovered(false);
+		setPinned(false);
+	};
+
 	const scheduleHovered = (value: boolean) => {
 		clearTimeout(timer.current);
 		timer.current = setTimeout(() => setHovered(value), HOVER_DELAY);
@@ -88,8 +95,15 @@ const SideNav = () => {
 				dir={i18n.dir()}
 				onMouseEnter={() => scheduleHovered(true)}
 				onMouseLeave={() => scheduleHovered(false)}
-				// keyboard users get the same reveal as pointer users
-				onFocusCapture={() => setPinned(true)}
+				// keyboard users get the same reveal as pointer users; a mouse click
+				// also focuses its target, so only keyboard (focus-visible) focus pins
+				onFocusCapture={(e) => {
+					if (e.target.matches(":focus-visible")) setPinned(true);
+				}}
+				// focus moving out of the nav (tab away, click the page) closes it
+				onBlurCapture={(e) => {
+					if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setPinned(false);
+				}}
 				className={`absolute inset-y-0 start-0 z-20 flex flex-col overflow-hidden bg-accent-deep text-surface transition-[width] duration-200 ease-out ${
 					expanded ? "w-64" : "w-16"
 				}`}
@@ -162,6 +176,7 @@ const SideNav = () => {
 												{/* §32 — active item: light surface, deep accent text, heavier weight */}
 												<NavLink
 													to={`${BASE_PATH}/${id}/${option}`}
+													onClick={collapse}
 													className={({ isActive }) =>
 														`flex h-11 items-center truncate rounded-sm px-3 text-navigation transition-colors duration-200 ease-out ${
 															isActive

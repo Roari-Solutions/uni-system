@@ -61,12 +61,14 @@
       "name": "الاسم",
       "nameEn": "الاسم بالإنجليزية",
       "uniNumber": "الرقم الجامعي",
+      "nationality": "الجنسية",
       "acceptanceYear": "سنة القبول",
       "acceptanceType": "نوع القبول",
       "level": "السنة الدراسية الحالية",
       "faculty": "الكلية",
       "status": "الحالة",
-      "nationalId": "الرقم الوطني"
+      "nationalId": "الرقم الوطني",
+      "passportNumber": "رقم الجواز"
     },
     "filters": {
       "level": "السنة الدراسية",
@@ -90,7 +92,9 @@
       "nameAr": "الاسم (بالعربية)",
       "nameEn": "الاسم (بالإنجليزية)",
       "uniNumber": "الرقم الجامعي",
+      "nationality": "الجنسية",
       "nationalId": "الرقم الوطني",
+      "passportNumber": "رقم الجواز",
       "faculty": "الكلية",
       "level": "السنة الدراسية الحالية",
       "acceptanceYear": "سنة القبول",
@@ -113,6 +117,10 @@
       "teachersChildren": "قبول أبناء معلمين",
       "international": "قبول وافدين",
       "arabCertificate": "قبول شهادة عربية"
+    },
+    "nationalities": {
+      "sudanese": "سوداني",
+      "foreign": "أجنبي"
     },
     "levels": {
       "1": "السنة الأولى",
@@ -151,6 +159,7 @@
   "studentEntry": {
     "title": "إضافة طالب",
     "uniNumber": "الرقم الجامعي",
+    "nationality": "الجنسية",
     "faculty": "الكلية",
     "facultyPlaceholder": "ابحث عن كلية...",
     "noResults": "لا توجد نتائج",
@@ -169,7 +178,8 @@
     },
     "nameAr": "اسم الطالب بالعربية",
     "nameEn": "اسم الطالب بالإنجليزية",
-    "nationalId": "الرقم الوطني"
+    "nationalId": "الرقم الوطني",
+    "passportNumber": "رقم الجواز"
   },
   "grade": {
     "statuses": {

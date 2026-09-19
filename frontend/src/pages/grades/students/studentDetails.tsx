@@ -117,7 +117,14 @@ const StudentDetails = () => {
 								<span dir="ltr">{student.name.en}</span>
 							</Detail>
 							<Detail label={t("studentDetails.fields.uniNumber")}>{student.uniNumber}</Detail>
-							<Detail label={t("studentDetails.fields.nationalId")}>{student.nationalId || "—"}</Detail>
+							<Detail label={t("studentDetails.fields.nationality")}>
+								{t(`student.nationalities.${student.nationality}`)}
+							</Detail>
+							{student.nationality === "foreign" ? (
+								<Detail label={t("studentDetails.fields.passportNumber")}>{student.passportNumber || "—"}</Detail>
+							) : (
+								<Detail label={t("studentDetails.fields.nationalId")}>{student.nationalId || "—"}</Detail>
+							)}
 							<Detail label={t("studentDetails.fields.faculty")}>{facultyName(student.facultyId)}</Detail>
 							<Detail label={t("studentDetails.fields.level")}>{t(`student.levels.${student.level}`)}</Detail>
 							<Detail label={t("studentDetails.fields.acceptanceYear")}>{student.acceptanceYear}</Detail>

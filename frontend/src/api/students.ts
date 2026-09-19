@@ -12,7 +12,10 @@ export type StudentPayload = {
 	// English may be omitted; the API records "-" in its place
 	name: { ar: string; en?: string };
 	uniNumber: string;
+	nationality: Student["nationality"];
+	// send the one document that matches the nationality
 	nationalId?: string;
+	passportNumber?: string;
 	facultyId: string;
 	acceptanceYear: string;
 	acceptanceType: Student["acceptanceType"];

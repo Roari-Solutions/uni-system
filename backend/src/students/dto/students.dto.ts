@@ -27,6 +27,10 @@ export const ACCEPTANCE_TYPES = [
 ] as const;
 export type AcceptanceType = (typeof ACCEPTANCE_TYPES)[number];
 
+/** Sudanese students carry a national ID; foreign students a passport number. */
+export const NATIONALITIES = ['sudanese', 'foreign'] as const;
+export type Nationality = (typeof NATIONALITIES)[number];
+
 /** Outcome of a student's academic year; null until it is determined. */
 export const STUDENT_STATUSES = ['success', 'repeat'] as const;
 export type StudentStatus = (typeof STUDENT_STATUSES)[number];
@@ -43,11 +47,20 @@ export class CreateStudentDto {
   @MaxLength(32)
   uniNumber!: string;
 
-  /** Optional, but unique across students when supplied. */
+  @IsIn(NATIONALITIES)
+  nationality!: Nationality;
+
+  /** Sudanese students only. Optional, but unique across students when supplied. */
   @IsOptional()
   @IsString()
   @MaxLength(32)
   nationalId?: string;
+
+  /** Foreign students only. Optional, but unique across students when supplied. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  passportNumber?: string;
 
   @IsUUID()
   facultyId!: string;

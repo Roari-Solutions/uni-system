@@ -28,7 +28,8 @@ const DataTable = <T,>({ columns, rows, getRowId, emptyText, onRowClick }: DataT
 				<thead className="bg-accent-deep text-surface">
 					<tr>
 						{columns.map((col) => (
-							<th key={col.key} scope="col" className="whitespace-nowrap px-6 py-4 text-start text-body-sm font-semibold">
+							// headers may wrap, so the table fits its container instead of scrolling
+							<th key={col.key} scope="col" className="px-4 py-4 text-start align-bottom text-body-sm font-semibold">
 								{col.header}
 							</th>
 						))}
@@ -37,7 +38,7 @@ const DataTable = <T,>({ columns, rows, getRowId, emptyText, onRowClick }: DataT
 				<tbody className="divide-y divide-border-subtle">
 					{rows.length === 0 ? (
 						<tr>
-							<td colSpan={columns.length} className="px-6 py-8 text-center">
+							<td colSpan={columns.length} className="px-4 py-8 text-center">
 								{emptyText}
 							</td>
 						</tr>
@@ -49,7 +50,7 @@ const DataTable = <T,>({ columns, rows, getRowId, emptyText, onRowClick }: DataT
 								className={`transition-colors duration-150 ease-out hover:bg-background ${onRowClick ? "cursor-pointer" : ""}`}
 							>
 								{columns.map((col) => (
-									<td key={col.key} className="px-6 py-4">
+									<td key={col.key} className="px-4 py-4">
 										{col.render(row)}
 									</td>
 								))}

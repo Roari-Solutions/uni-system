@@ -20,6 +20,7 @@ import {
   ListStudentsQueryDto,
   UpdateStudentDto,
   type AcceptanceType,
+  type Nationality,
   type StudentStatus,
 } from './dto/students.dto';
 
@@ -29,6 +30,8 @@ export interface StudentView {
   name: { en: string; ar: string };
   uniNumber: string;
   nationalId: string | null;
+  nationality: Nationality;
+  passportNumber: string | null;
   acceptanceYear: string;
   acceptanceType: AcceptanceType;
   level: number;
@@ -45,6 +48,44 @@ export class StudentsService {
 
   constructor(@Inject(DATABASE) private readonly db: Db) {}
 
+  /**
+   * Resolves the identity document for a nationality: the matching number is
+   * kept (checked for uniqueness when it changes), the other one is cleared.
+   * Sending the document that doesn't match the nationality is a bad request.
+   */
+  private async identityDocuments(
+    nationality: Nationality,
+    nationalIdInput: string | undefined,
+    passportInput: string | undefined,
+    current: { id?: string; nationalId: string | null; passportNumber: string | null },
+  ): Promise<{ nationalId: string | null; passportNumber: string | null }> {
+    const sudanese = nationality === 'sudanese';
+    if (sudanese ? passportInput?.trim() : nationalIdInput?.trim()) {
+      throw new BadRequestException();
+    }
+
+    // an omitted field keeps what is stored; a blank one clears it
+    const resolve = (input: string | undefined, stored: string | null) =>
+      input !== undefined ? input.trim() || null : stored;
+    const nationalId = sudanese ? resolve(nationalIdInput, current.nationalId) : null;
+    const passportNumber = sudanese ? null : resolve(passportInput, current.passportNumber);
+
+    if (nationalId && nationalId !== current.nationalId) {
+      const clash = await this.db.query.students.findFirst({
+        where: eq(students.nationalId, nationalId),
+      });
+      if (clash && clash.id !== current.id) throw new ConflictException();
+    }
+    if (passportNumber && passportNumber !== current.passportNumber) {
+      const clash = await this.db.query.students.findFirst({
+        where: eq(students.passportNumber, passportNumber),
+      });
+      if (clash && clash.id !== current.id) throw new ConflictException();
+    }
+
+    return { nationalId, passportNumber };
+  }
+
   /** Maps a row to the shape the views bind to. */
   private toView(row: StudentRow): StudentView {
     return {
@@ -52,6 +93,8 @@ export class StudentsService {
       name: { en: row.nameEn, ar: row.nameAr },
       uniNumber: row.uniNumber,
       nationalId: row.nationalId,
+      nationality: row.nationality,
+      passportNumber: row.passportNumber,
       acceptanceYear: row.acceptanceYear,
       acceptanceType: row.acceptanceType as AcceptanceType,
       level: academicYearToNumber(row.academicYear),
@@ -95,7 +138,8 @@ export class StudentsService {
             v.name.en.toLowerCase().includes(needle) ||
             v.name.ar.includes(needle) ||
             v.uniNumber.toLowerCase().includes(needle) ||
-            (v.nationalId?.includes(needle) ?? false),
+            (v.nationalId?.includes(needle) ?? false) ||
+            (v.passportNumber?.toLowerCase().includes(needle) ?? false),
         );
       }
 
@@ -139,13 +183,12 @@ export class StudentsService {
       });
       if (existing) throw new ConflictException();
 
-      const nationalId = dto.nationalId?.trim() || null;
-      if (nationalId) {
-        const clash = await this.db.query.students.findFirst({
-          where: eq(students.nationalId, nationalId),
-        });
-        if (clash) throw new ConflictException();
-      }
+      const documents = await this.identityDocuments(
+        dto.nationality,
+        dto.nationalId,
+        dto.passportNumber,
+        { nationalId: null, passportNumber: null },
+      );
 
       const [created] = await this.db
         .insert(students)
@@ -154,7 +197,8 @@ export class StudentsService {
           nameEn: dto.name.en?.trim() || MISSING_NAME,
           nameAr: dto.name.ar.trim(),
           uniNumber,
-          nationalId,
+          nationality: dto.nationality,
+          ...documents,
           acceptanceType: dto.acceptanceType,
           acceptanceYear: dto.acceptanceYear.trim(),
           academicYear: dto.level,
@@ -205,16 +249,14 @@ export class StudentsService {
         assertFaculty(caller, facultyId);
       }
 
-      let nationalId = row.nationalId;
-      if (dto.nationalId !== undefined) {
-        nationalId = dto.nationalId.trim() || null;
-        if (nationalId && nationalId !== row.nationalId) {
-          const clash = await this.db.query.students.findFirst({
-            where: eq(students.nationalId, nationalId),
-          });
-          if (clash) throw new ConflictException();
-        }
-      }
+      // changing nationality clears the document that no longer applies
+      const nationality = dto.nationality ?? row.nationality;
+      const documents = await this.identityDocuments(
+        nationality,
+        dto.nationalId,
+        dto.passportNumber,
+        row,
+      );
 
       const [updated] = await this.db
         .update(students)
@@ -225,7 +267,8 @@ export class StudentsService {
                 nameAr: dto.name.ar.trim(),
               }
             : {}),
-          ...(dto.nationalId !== undefined ? { nationalId } : {}),
+          nationality,
+          ...documents,
           ...(dto.acceptanceType !== undefined ? { acceptanceType: dto.acceptanceType } : {}),
           ...(dto.acceptanceYear !== undefined
             ? { acceptanceYear: dto.acceptanceYear.trim() }

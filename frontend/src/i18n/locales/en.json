@@ -61,12 +61,14 @@
       "name": "Name",
       "nameEn": "Name (English)",
       "uniNumber": "University number",
+      "nationality": "Nationality",
       "acceptanceYear": "Acceptance year",
       "acceptanceType": "Acceptance type",
       "level": "Current academic year",
       "faculty": "Faculty",
       "status": "Status",
-      "nationalId": "National ID"
+      "nationalId": "National ID",
+      "passportNumber": "Passport number"
     },
     "filters": {
       "level": "Academic year",
@@ -90,7 +92,9 @@
       "nameAr": "Name (Arabic)",
       "nameEn": "Name (English)",
       "uniNumber": "University number",
+      "nationality": "Nationality",
       "nationalId": "National ID",
+      "passportNumber": "Passport number",
       "faculty": "Faculty",
       "level": "Current academic year",
       "acceptanceYear": "Acceptance year",
@@ -113,6 +117,10 @@
       "teachersChildren": "Teachers' children admission",
       "international": "International students admission",
       "arabCertificate": "Arab certificate admission"
+    },
+    "nationalities": {
+      "sudanese": "Sudanese",
+      "foreign": "Foreign"
     },
     "levels": {
       "1": "First year",
@@ -151,6 +159,7 @@
   "studentEntry": {
     "title": "Add student",
     "uniNumber": "University number",
+    "nationality": "Nationality",
     "faculty": "Faculty",
     "facultyPlaceholder": "Search faculties...",
     "noResults": "No results",
@@ -169,7 +178,8 @@
     },
     "nameAr": "Student name (Arabic)",
     "nameEn": "Student name (English)",
-    "nationalId": "National ID"
+    "nationalId": "National ID",
+    "passportNumber": "Passport number"
   },
   "grade": {
     "statuses": {
