@@ -10,7 +10,6 @@ export class AppController {
 
   /** GET / — returns the greeting. */
   @Get()
-  @UseGuards(AuthGuard, GrGurdGuard)
   getHello(): string {
     return this.appService.getHello();
   }
