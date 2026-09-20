@@ -225,12 +225,29 @@ export class GradesService {
 
   /** Lists grades: all for admin, own faculty's students' for data-entry. */
   async listGrades(caller: GrCaller) {
+    const cleanGrade = (
+      g: typeof grades.$inferSelect & {
+        student: typeof students.$inferSelect | null;
+        curriculum: typeof curriculums.$inferSelect | null;
+      },
+    ) => {
+      // ponytail: strip server ids/timestamps + foreign keys
+      const { id: _id, studentId: _sid, curriculumId: _cid, createdAt: _ca, updatedAt: _ua, student, curriculum, ...rest } = g;
+      const cleanStudent = student
+        ? (({ id: _a, facultyId: _b, createdAt: _c, updatedAt: _d, ...s }: typeof students.$inferSelect) => s)(student)
+        : student;
+      const cleanCurriculum = curriculum
+        ? (({ id: _a, createdAt: _c, updatedAt: _d, ...c }: typeof curriculums.$inferSelect) => c)(curriculum)
+        : curriculum;
+      return { ...rest, student: cleanStudent, curriculum: cleanCurriculum };
+    };
     try {
       const scope = scopeFacultyId(caller);
       if (!scope) {
-        return await this.db.query.grades.findMany({
+        const rows = await this.db.query.grades.findMany({
           with: { student: true, curriculum: true },
         });
+        return rows.map(cleanGrade);
       }
       const owned = await this.db.query.students.findMany({
         where: eq(students.facultyId, scope),
@@ -238,13 +255,14 @@ export class GradesService {
       });
       if (!owned.length) return [];
       // get all the grades of all the studens in the faculty
-      return await this.db.query.grades.findMany({
+      const rows = await this.db.query.grades.findMany({
         where: inArray(
           grades.studentId,
           owned.map((s) => s.id),
         ),
         with: { student: true, curriculum: true },
       });
+      return rows.map(cleanGrade);
     } catch (error) {
       if (error instanceof UnauthorizedException) throw error;
       this.logger.error('Failed to list grades', error);

@@ -140,7 +140,8 @@ export class AuthService {
       throw new ForbiddenException();
     }
 
-    const { password: _password, ...safe } = user;
+    const { password: _password, id: _id, facultyId: _fid, createdAt: _ca, updatedAt: _ua, ...safe } = user as typeof user & { createdAt: Date; updatedAt: Date; facultyId: string | null };
+    // ponytail: strip server ids/timestamps
     return safe;
   }
 

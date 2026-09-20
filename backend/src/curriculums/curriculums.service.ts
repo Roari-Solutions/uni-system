@@ -26,12 +26,20 @@ export class CurriculumsService {
   async listCurriculums(caller: GrCaller) {
     try {
       const scope = scopeFacultyId(caller);
-      if (!scope) return await this.db.query.curriculums.findMany();
+      if (!scope) {
+        const rows = await this.db.query.curriculums.findMany();
+        // ponytail: strip server ids/timestamps
+        return rows.map(({ id: _id, createdAt: _ca, updatedAt: _ua, ...rest }) => rest);
+      }
       const links = await this.db.query.facultyCurriculums.findMany({
         where: eq(facultyCurriculums.facultyId, scope),
         with: { curriculum: true },
       });
-      return links.map((l) => l.curriculum);
+      // ponytail: strip server ids/timestamps
+      return links.map((l) => {
+        const { id: _id, createdAt: _ca, updatedAt: _ua, ...rest } = l.curriculum as typeof l.curriculum & { createdAt: Date; updatedAt: Date; id: string };
+        return rest;
+      });
     } catch (error) {
       if (error instanceof UnauthorizedException) throw error;
       this.logger.error('Failed to list curriculums', error);

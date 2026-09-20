@@ -26,10 +26,16 @@ export class StudentsService {
   async listStudents(caller: GrCaller) {
     try {
       const scope = scopeFacultyId(caller);
-      if (!scope) return await this.db.query.students.findMany();
-      return await this.db.query.students.findMany({
-        where: eq(students.facultyId, scope),
-      });
+      // if the it returned a scope which is a faculty id returnt its students other return all students
+      const rows = scope
+        ? await this.db.query.students.findMany({
+            where: eq(students.facultyId, scope),
+          })
+        : await this.db.query.students.findMany();
+
+      return rows.map(
+        ({ id: _id, facultyId: _fid, createdAt: _ca, updatedAt: _ua, ...rest }) => rest,
+      );
     } catch (error) {
       if (error instanceof UnauthorizedException) throw error;
       this.logger.error('Failed to list students', error);
@@ -160,5 +166,4 @@ export class StudentsService {
       });
     }
   }
-
 }
