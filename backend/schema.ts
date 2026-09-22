@@ -28,6 +28,9 @@ export const bloodTypeEnum = pgEnum('blood_type', [
 /** Academic year = study year (1-6), the level a student or curriculum sits in. */
 export const studyLevelEnum = pgEnum('study_level', ['1', '2', '3', '4', '5', '6']);
 
+/** Exams seating status */
+export const seatingStatusEnum = pgEnum('seating_status', ['attended', 'absent', 'cheating']);
+
 /** Semester within an academic year; every curriculum runs in exactly one. */
 export const semesterEnum = pgEnum('semester', ['1', '2']);
 
@@ -243,6 +246,7 @@ export const grades = pgTable(
       .notNull()
       .references(() => curriculums.id),
     grade: numeric('grade', { precision: 5, scale: 2 }),
+    seatingStatus: seatingStatusEnum('seating_status'),
     ...timestamps(),
   },
   (t) => [unique('student_curriculum_unique').on(t.studentId, t.curriculumId)],

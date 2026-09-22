@@ -7,6 +7,10 @@ import {
 } from 'src/common/academic-year';
 import { LETTER_GRADES, type LetterGrade } from '../letter-grade';
 
+/** Mirrors seatingStatusEnum in the schema. */
+export const SEATING_STATUSES = ['attended', 'absent', 'cheating'] as const;
+export type SeatingStatus = (typeof SEATING_STATUSES)[number];
+
 /** Body for creating a grade. */
 export class CreateGradeDto {
   @IsUUID()
@@ -19,6 +23,9 @@ export class CreateGradeDto {
   @Min(0)
   @Max(100)
   grade!: number;
+
+  @IsIn(SEATING_STATUSES)
+  seatingStatus!: SeatingStatus;
 }
 
 /** Body for patching a grade (all fields optional). */
