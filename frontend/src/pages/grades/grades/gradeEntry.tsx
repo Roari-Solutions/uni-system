@@ -9,6 +9,7 @@ import { fetchCurriculums } from "../../../api/curriculums";
 import type { Curriculum } from "../../../types/curriculum";
 import { smallSecondaryButtonClass } from "../../../styles/form";
 import { SEMESTERS, STUDY_LEVELS } from "../../../utils/academicYears";
+import StatusButton from "../../../components/statusButton";
 
 // step one of grade entry: pick the curriculum whose grades are being entered
 const GradeEntry = () => {
@@ -59,6 +60,13 @@ const GradeEntry = () => {
 		{ key: "faculty", header: t("gradeEntry.columns.faculty"), render: (c) => facultyName(c.facultyId) },
 		{ key: "academicYear", header: t("gradeEntry.columns.academicYear"), render: (c) => t(`student.levels.${c.academicYear}`) },
 		{ key: "semester", header: t("gradeEntry.columns.semester"), render: (c) => t(`semesters.${c.semester}`) },
+		{
+	key: "status",
+	header: "Status",
+	render: (c) => (
+		<StatusButton status="attended" onChange={() => {}} />
+	),
+},
 		{
 			key: "actions",
 			header: t("common.actions"),
