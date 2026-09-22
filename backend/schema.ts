@@ -191,7 +191,7 @@ export const curriculums = pgTable('curriculums', {
   nameEn: text('name_en').notNull(),
   nameAr: text('name_ar').notNull(),
   /** The curriculum's identifier; names are free text. */
-  abbreviation: text('code').unique(),
+  abbreviation: text().unique(),
   academicYear: studyLevelEnum('academic_year').notNull(),
   /** Defaults to 1 only so rows that predate semesters get one; the API requires it. */
   semester: semesterEnum('semester').notNull().default('1'),
@@ -252,8 +252,11 @@ export const grades = pgTable(
     curriculumId: uuid('curriculum_id')
       .notNull()
       .references(() => curriculums.id),
-    grade: numeric('grade', { precision: 5, scale: 2 }),
-    seatingStatus: seatingStatusEnum('seating_status'),
+    score: numeric({ precision: 5, scale: 2 }),
+    letterGrade: text().notNull(),
+    grade: numeric().notNull(),
+    academicYear: text('academic_year').notNull(),
+    semester: semesterEnum('semester').notNull(),
     ...timestamps(),
   },
   (t) => [unique('student_curriculum_unique').on(t.studentId, t.curriculumId)],
@@ -270,6 +273,7 @@ export const results = pgTable(
     academicYear: studyLevelEnum('academic_year').notNull(),
     result: numeric('result', { precision: 6, scale: 2 }).notNull(),
     gpa: numeric('gpa', { precision: 3, scale: 2 }).notNull(),
+    cgpa: numeric('cgpa', { precision: 3, scale: 2 }).notNull(),
     status: studentStatusEnum('status'),
     ...timestamps(),
   },

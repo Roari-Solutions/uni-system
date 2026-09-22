@@ -68,8 +68,8 @@ export class AuthController {
   @UseGuards(AuthGuard)
   @Get('me')
   @HttpCode(HttpStatus.OK)
-  me(@CurrentUser() user: JwtPayload) {
+  async me(@CurrentUser() user: JwtPayload) {
     this.logger.log(`Fetching profile for user ${user.sub}`);
-    return this.authService.me(user.sub);
+    return await this.authService.me(user.sub);
   }
 }

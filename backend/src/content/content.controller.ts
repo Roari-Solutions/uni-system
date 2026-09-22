@@ -17,12 +17,8 @@ import {
   CreateNewsDto,
   UpdateNewsDto,
 } from './dto/content.dto';
-import type { contacts, news } from 'schema';
 import { DynamicContentGuard } from 'src/dynamic_content/dynamic_content.guard';
 import { AuthGuard } from 'src/auth/auth.guard';
-
-type News = typeof news.$inferSelect;
-type Contact = typeof contacts.$inferSelect;
 
 /** News/contact endpoints (auth + dynamic-content guarded). */
 @Controller('content')
@@ -33,12 +29,12 @@ export class ContentController {
   ) {}
   /** GET /content/news */
   @Get('news')
-  async news(): Promise<News[]> {
+  async news() {
     return await this.contentService.news();
   }
   /** GET /content/news/:title */
   @Get('news/:title')
-  async newsByTitle(@Param('title') title: string): Promise<News | null> {
+  async newsByTitle(@Param('title') title: string) {
     return await this.contentService.getNewsByTitle(title);
   }
 
@@ -67,7 +63,7 @@ export class ContentController {
 
   /** GET /content/contact */
   @Get('contact')
-  async contacts(): Promise<Contact[]> {
+  async contacts() {
     return await this.contentService.contacts();
   }
 

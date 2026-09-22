@@ -1,4 +1,4 @@
-import { IsIn, IsNumber, IsOptional, IsUUID, Max, Min } from 'class-validator';
+import { IsIn, IsNotEmpty, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
 import { PartialType } from '@nestjs/mapped-types';
 import {
   ACADEMIC_YEARS,
@@ -22,7 +22,7 @@ export class CreateGradeDto {
   @IsNumber()
   @Min(0)
   @Max(100)
-  grade!: number;
+  score!: number;
 
   @IsIn(SEATING_STATUSES)
   seatingStatus!: SeatingStatus;

@@ -69,12 +69,11 @@ export class CurriculumsService {
   ): Promise<CurriculumView[]> {
     try {
       const scope = scopeFacultyId(caller);
-      // data-entry may only ever see their own faculty, whatever they asked for
-      const facultyId = scope ?? query.facultyId;
-      if (scope && query.facultyId && query.facultyId !== scope) {
-        throw new UnauthorizedException();
+      if (!scope) {
+        const rows = await this.db.query.curriculums.findMany();
+        // ponytail: strip server ids/timestamps
+        return rows.map(({ id: _id, createdAt: _ca, updatedAt: _ua, ...rest }) => rest);
       }
-
       const links = await this.db.query.facultyCurriculums.findMany({
         where: facultyId ? eq(facultyCurriculums.facultyId, facultyId) : undefined,
         with: { curriculum: true },

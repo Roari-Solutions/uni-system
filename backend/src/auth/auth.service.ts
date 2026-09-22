@@ -142,14 +142,14 @@ export class AuthService {
       this.logger.warn(`me: forbidden for suspended user ${userId}`);
       throw new ForbiddenException();
     }
-
+    
+    const { password: _password, id: _id, createdAt: _ca, updatedAt: _ua, ...safe } = user as typeof user & { createdAt: Date; updatedAt: Date; facultyId: string | null };
+ 
     if (!user.employee?.role) {
       this.logger.warn(`me: user ${userId} has no employee role`);
       throw new ForbiddenException();
     }
 
-    const { password: _password, employee: _employee, ...safe } = user;
-    // the views branch on role, so it travels with the profile
     return { ...safe, role: user.employee.role.name };
   }
 
@@ -158,8 +158,7 @@ export class AuthService {
     const isSecure = config.cookieSecure;
     const options = { httpOnly: true, secure: isSecure, sameSite: 'strict' as const };
     res.clearCookie('access_token', options);
-    res.clearCookie('refresh_token', options);
-  }
+    res.clearCookie('refresh_token', options);  }
 
   /** Writes access/refresh tokens as HttpOnly cookies. */
   setAuthCookies(res: Response, { accessToken, refreshToken }: AuthTokens) {

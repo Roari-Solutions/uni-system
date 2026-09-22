@@ -25,7 +25,9 @@ export class ContentService {
   /** Lists all news items. */
   async news() {
     try {
-      return await this.db.query.news.findMany();
+      const rows = await this.db.query.news.findMany();
+      // ponytail: strip server ids/timestamps
+      return rows.map(({ id: _id, createdAt: _ca, updatedAt: _ua, ...rest }) => rest);
     } catch (error) {
       this.logger.error('Failed to fetch news', error);
       throw new InternalServerErrorException('Content operation failed', {
@@ -34,14 +36,15 @@ export class ContentService {
     }
   }
   /** Finds one news item by title, or null. */
-  async getNewsByTitle(
-    title: string,
-  ): Promise<typeof news.$inferSelect | null> {
+  async getNewsByTitle(title: string) {
     try {
       const result = await this.db.query.news.findFirst({
         where: eq(news.title, title),
       });
-      return result ?? null;
+      if (!result) return null;
+      // ponytail: strip server ids/timestamps
+      const { id: _id, createdAt: _ca, updatedAt: _ua, ...rest } = result;
+      return rest;
     } catch (error) {
       this.logger.error(`Failed to fetch news by title: ${title}`, error);
       throw new InternalServerErrorException('Content operation failed', {
@@ -115,9 +118,11 @@ export class ContentService {
   }
 
   /** Lists all contact entries. */
-  async contacts(): Promise<(typeof contacts.$inferSelect)[]> {
+  async contacts() {
     try {
-      return await this.db.query.contacts.findMany();
+      const rows = await this.db.query.contacts.findMany();
+      // ponytail: strip server ids/timestamps
+      return rows.map(({ id: _id, createdAt: _ca, updatedAt: _ua, ...rest }) => rest);
     } catch (error) {
       this.logger.error('Failed to fetch contacts', error);
       throw new InternalServerErrorException('Content operation failed', {

@@ -1,3 +1,4 @@
+import { IsInt, IsNotEmpty, IsOptional, IsString, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import {
   IsIn,
@@ -27,14 +28,20 @@ export class CreateCurriculumDto {
   @Type(() => OptionalEnglishNameDto)
   name!: OptionalEnglishNameDto;
 
-  @IsUUID()
-  facultyId!: string;
 
   /** XXXX-0000; see ABBREVIATION_PATTERN. */
   @IsString()
   @Matches(ABBREVIATION_PATTERN)
   abbreviation!: string;
 
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  courseHours?: number;
+
+  @IsString()
+  @IsNotEmpty()
+  faculty!: string;
   /** Study year 1-6, not a calendar year. */
   @NormaliseAcademicYear()
   @IsIn(ACADEMIC_YEARS)

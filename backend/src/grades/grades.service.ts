@@ -27,21 +27,27 @@ import {
   type AcademicYear,
 } from 'src/common/academic-year';
 
-/** Seating statuses that void the mark: the grade is stored as 0, so its letter is F. */
+export interface GradeIdentifiersDto {
+  curriculum?: string;
+  year?: string;
+  semester?: number;
+}
+
+/** Seating statuses that void the mark: grade point becomes 0.0 and letter becomes F. */
 const ZEROED_STATUSES: readonly SeatingStatus[] = ['absent', 'cheating'];
 
 function voidsMark(status: SeatingStatus | null): boolean {
   return status !== null && ZEROED_STATUSES.includes(status);
 }
 
-/** A grade as the views consume it; `letter` is derived, never stored. */
+/** A grade as views consume it. */
 export interface GradeView {
   id: string;
   studentId: string;
   curriculumId: string;
   grade: number;
+  score?: number | null;
   letter: LetterGrade;
-  // null only on rows saved before seating status existed
   seatingStatus: SeatingStatus | null;
 }
 
@@ -58,7 +64,7 @@ export interface PendingGradesView {
   students: { id: string; name: { en: string; ar: string }; uniNumber: string }[];
 }
 
-/** One curriculum of a student's current year, with the mark if one is entered. */
+/** One curriculum of a student's current year, with marks if entered. */
 export interface StudentYearGradeView {
   curriculumId: string;
   name: { en: string; ar: string };
@@ -66,22 +72,43 @@ export interface StudentYearGradeView {
   semester: number;
   requirementType: RequirementType | null;
   grade: number | null;
+  score: number | null;
   letter: LetterGrade | null;
-  // null when no grade row exists yet, or on rows saved before seating status existed
   seatingStatus: SeatingStatus | null;
 }
 
-/** CRUD for grades and per-academic-year results, with faculty scoping. */
+/** Summary for term-level calculations. */
+export interface TermCoverageResult {
+  complete: boolean;
+  gpa: number;
+  cgpa: number;
+  result: number;
+}
+
 @Injectable()
 export class GradesService {
   private readonly logger = new Logger(GradesService.name);
 
-  /** The year result's pass threshold; single grades carry a letter instead (letterOf). */
+  /** Pass threshold on percentage score (50/100). */
   static readonly PASS_MARK = 50;
 
   constructor(@Inject(DATABASE) private readonly db: Db) {}
 
-  /** Resolves a curriculum by id, with the academic year the grade inherits. */
+  /** Maps raw percentage score (0-100) to Letter Grade and 4.0 Scale Grade Points. */
+  completeGradeFromScore(score: number): {
+    letterGrade: LetterGrade;
+    grade: number;
+  } {
+    if (score >= 80) return { letterGrade: 'A', grade: 4.0 };
+    if (score >= 70) return { letterGrade: 'B+', grade: 3.5 };
+    if (score >= 60) return { letterGrade: 'B', grade: 3.0 };
+    if (score >= 55) return { letterGrade: 'C+', grade: 2.5 };
+    if (score >= 50) return { letterGrade: 'C', grade: 2.0 };
+    if (score >= 40) return { letterGrade: 'D', grade: 1.0 };
+    return { letterGrade: 'F', grade: 0.0 };
+  }
+
+  /** Resolves a curriculum by id. */
   private async curriculumOrThrow(id: string, notFound: boolean) {
     const row = await this.db.query.curriculums.findFirst({
       where: eq(curriculums.id, id),
@@ -93,10 +120,135 @@ export class GradesService {
     return row;
   }
 
+  /** Narrows a student's grades to exactly one row using fuzzy identifiers. */
+  private async gradeOrThrow(studentId: string, ids: GradeIdentifiersDto, notFound: boolean) {
+    const rows = await this.db.query.grades.findMany({
+      where: eq(grades.studentId, studentId),
+      with: { curriculum: { columns: { nameEn: true, abbreviation: true } } },
+    });
+    const clean = {
+      curriculum: ids.curriculum?.trim(),
+      year: ids.year?.trim(),
+      semester: ids.semester,
+    };
+
+    const matches = rows.filter(
+      (g) =>
+        (clean.curriculum === undefined ||
+          g.curriculum?.nameEn === clean.curriculum ||
+          g.curriculum?.abbreviation === clean.curriculum) &&
+        (clean.year === undefined || (g as any).academicYear === clean.year) &&
+        (clean.semester === undefined || (g as any).semester === clean.semester),
+    );
+
+    if (!matches.length) {
+      if (notFound) throw new NotFoundException();
+      throw new BadRequestException();
+    }
+    if (matches.length > 1) throw new BadRequestException();
+    return matches[0];
+  }
+
+  /** Curriculum ids the faculty requires (completeness baseline). */
+  private async requiredIds(facultyId: string) {
+    const rows = await this.db.query.facultyCurriculums.findMany({
+      where: eq(facultyCurriculums.facultyId, facultyId),
+    });
+    return rows.map((r) => r.curriculumId);
+  }
+
+  /** Graded term rows with course credit hours attached. */
+  private async termGrades(studentId: string, academicYear: string, semester: '1' | '2') {
+    return await this.db.query.grades.findMany({
+      where: and(
+        eq(grades.studentId, studentId),
+        eq((grades as any).academicYear, academicYear),
+        eq((grades as any).semester, semester),
+        isNotNull(grades.grade),
+      ),
+      columns: { curriculumId: true, grade: true, score: true },
+      with: { curriculum: { columns: { courseHours: true } } },
+    });
+  }
+
+  /** All completed course grades for cumulative CGPA calculation. */
+  private async allGrades(studentId: string) {
+    return await this.db.query.grades.findMany({
+      where: and(eq(grades.studentId, studentId), isNotNull(grades.grade)),
+      columns: { grade: true, score: true },
+      with: { curriculum: { columns: { courseHours: true } } },
+    });
+  }
+
   /**
-   * Coverage of one academic year: true once every curriculum the student's
-   * faculty offers for that year carries a mark, plus the average of those marks.
+   * Computes credit-hour weighted metrics:
+   * - gpa: weighted Grade Points (4.0 scale)
+   * - result: weighted raw percentage score
+   * - tch: total credit hours
    */
+  private weighted(
+    rows: {
+      grade: string | number | null;
+      score?: string | number | null;
+      curriculum: { courseHours: number | null };
+    }[],
+  ): { gpa: number; result: number; tch: number } {
+    let tch = 0;
+    let tgp = 0;
+    let tsp = 0;
+
+    for (const g of rows) {
+      const ch = g.curriculum?.courseHours ?? 1;
+      tch += ch;
+      tgp += Number(g.grade ?? 0) * ch;
+      tsp += Number(g.score ?? 0) * ch;
+    }
+
+    if (!tch) return { gpa: 0, result: 0, tch: 0 };
+    return { gpa: tgp / tch, result: tsp / tch, tch };
+  }
+
+  /** Evaluates term completeness and computes term GPA, CGPA, and weighted score. */
+  async termCoverage(
+    studentId: string,
+    academicYear: string,
+    semester: '1' | '2',
+  ): Promise<TermCoverageResult> {
+    const student = await this.db.query.students.findFirst({
+      where: eq(students.id, studentId),
+      columns: { facultyId: true },
+    });
+    if (!student) throw new NotFoundException();
+
+    const [required, studentGrades] = await Promise.all([
+      this.requiredIds(student.facultyId),
+      this.termGrades(studentId, academicYear, semester),
+    ]);
+
+    const complete = required.length > 0 && required.every((id) =>
+      studentGrades.some((g) => g.curriculumId === id),
+    );
+    if (!complete) return { complete: false, gpa: 0, cgpa: 0, result: 0 };
+
+    const { gpa, result, tch } = this.weighted(studentGrades);
+    if (!tch) {
+      this.logger.warn('Division by zero avoided: total credit hours is 0');
+      return { complete: true, gpa: 0, cgpa: 0, result: 0 };
+    }
+
+    const all = await this.allGrades(studentId);
+    const { gpa: cgpaRaw } = this.weighted(all);
+    const cgpa = Number(cgpaRaw.toFixed(2));
+
+    return {
+      complete,
+      gpa: Number(gpa.toFixed(2)),
+      cgpa,
+      result: Number(result.toFixed(2)),
+    };
+  }
+
+  /** Year-level completeness and weighted averages across the full academic year. */
   async yearCoverage(studentId: string, academicYear: AcademicYear) {
     const student = await this.db.query.students.findFirst({
       where: eq(students.id, studentId),
@@ -106,14 +258,16 @@ export class GradesService {
 
     const links = await this.db.query.facultyCurriculums.findMany({
       where: eq(facultyCurriculums.facultyId, student.facultyId),
-      with: { curriculum: { columns: { id: true, academicYear: true } } },
+      with: { curriculum: { columns: { id: true, academicYear: true, courseHours: true } } },
     });
-    // only the curriculums of this academic year count toward it
+
     const curriculumIds = links
       .filter((link) => link.curriculum.academicYear === academicYear)
       .map((link) => link.curriculumId);
 
-    if (!curriculumIds.length) return { complete: false, average: null as number | null };
+    if (!curriculumIds.length) {
+      return { complete: false, average: null, gpa: null, cgpa: null };
+    }
 
     const marked = await this.db.query.grades.findMany({
       where: and(
@@ -121,14 +275,26 @@ export class GradesService {
         inArray(grades.curriculumId, curriculumIds),
         isNotNull(grades.grade),
       ),
+      columns: { curriculumId: true, grade: true, score: true },
+      with: { curriculum: { columns: { courseHours: true } } },
     });
 
     const filledIds = new Set(marked.map((g) => g.curriculumId));
     const complete = curriculumIds.every((id) => filledIds.has(id));
-    if (!complete) return { complete, average: null as number | null };
+    if (!complete) {
+      return { complete: false, average: null, gpa: null, cgpa: null };
+    }
 
-    const average = marked.reduce((acc, cur) => acc + Number(cur.grade), 0) / marked.length;
-    return { complete, average };
+    const { gpa, result } = this.weighted(marked);
+    const all = await this.allGrades(studentId);
+    const { gpa: cgpa } = this.weighted(all);
+
+    return {
+      complete: true,
+      average: Number(result.toFixed(2)),
+      gpa: Number(gpa.toFixed(2)),
+      cgpa: Number(cgpa.toFixed(2)),
+    };
   }
 
   /** True when every curriculum of that academic year carries a mark. */
@@ -137,41 +303,49 @@ export class GradesService {
     return complete;
   }
 
-  /**
-   * Recomputes and stores the academic year's result: upserts when complete,
-   * removes any stale row when incomplete.
-   */
+  /** Recomputes and upserts the academic year result; purges stale record if incomplete. */
   private async refreshYearResult(
     studentId: string,
     academicYear: AcademicYear,
   ): Promise<void> {
-    const { complete, average } = await this.yearCoverage(studentId, academicYear);
-    if (!complete || average === null) {
+    const { complete, average, gpa, cgpa } = await this.yearCoverage(studentId, academicYear);
+    if (!complete || average === null || gpa === null) {
       await this.db
         .delete(results)
         .where(and(eq(results.studentId, studentId), eq(results.academicYear, academicYear)));
       return;
     }
-    const result = average.toFixed(2);
-    const gpa = Math.min(average / 25, 4).toFixed(2);
+
+    const resultStr = average.toFixed(2);
+    const gpaStr = gpa.toFixed(2);
+    const cgpaStr = (cgpa ?? gpa).toFixed(2);
     const status = average >= GradesService.PASS_MARK ? 'pass' : 'fail';
+
     await this.db
       .insert(results)
-      .values({ studentId, academicYear, result, gpa, status })
+      .values({
+        studentId,
+        academicYear,
+        result: resultStr,
+        gpa: gpaStr,
+        cgpa: cgpaStr,
+        status,
+      } as any)
       .onConflictDoUpdate({
         target: [results.studentId, results.academicYear],
-        set: { result, gpa, status },
+        set: {
+          result: resultStr,
+          gpa: gpaStr,
+          cgpa: cgpaStr,
+          status,
+        },
       });
   }
 
-  /**
-   * Lists grades, narrowed by the caller's faculty scope and the list view's
-   * filters. Rows with no mark yet are omitted: every listed grade has a letter.
-   */
+  /** Lists grades narrowed by faculty scoping and filter query. */
   async listGrades(caller: GrCaller, query: ListGradesQueryDto = {}): Promise<GradeView[]> {
     try {
       const scope = scopeFacultyId(caller);
-      // data-entry may only ever see their own faculty, whatever they asked for
       const facultyId = scope ?? query.facultyId;
       if (scope && query.facultyId && query.facultyId !== scope) {
         throw new UnauthorizedException();
@@ -186,17 +360,19 @@ export class GradesService {
       });
 
       let views = rows
-        .filter((row) => !facultyId || row.student.facultyId === facultyId)
+        .filter((row) => !facultyId || row.student?.facultyId === facultyId)
         .filter((row) => !query.curriculumId || row.curriculumId === query.curriculumId)
-        .filter((row) => !query.academicYear || row.curriculum.academicYear === query.academicYear)
+        .filter((row) => !query.academicYear || row.curriculum?.academicYear === query.academicYear)
         .map((row) => {
           const grade = Number(row.grade);
+          const score = row.score !== null ? Number(row.score) : null;
           return {
             id: row.id,
             studentId: row.studentId,
             curriculumId: row.curriculumId,
             grade,
-            letter: letterOf(grade),
+            score,
+            letter: ((row as any).letterGrade as LetterGrade) ?? letterOf(score ?? grade),
             seatingStatus: row.seatingStatus,
           };
         });
@@ -213,17 +389,13 @@ export class GradesService {
     }
   }
 
-  /**
-   * The students of the curriculum's faculty and academic year who hold no
-   * grade row for it yet, for the entry sheet.
-   */
+  /** Unentered grade sheet cohort view. */
   async pendingGrades(curriculumId: string, caller: GrCaller): Promise<PendingGradesView> {
     try {
       const curriculum = await this.db.query.curriculums.findFirst({
         where: eq(curriculums.id, curriculumId),
         with: { facultyCurriculums: { columns: { facultyId: true } } },
       });
-      // a curriculum belongs to one faculty; older rows with several use the first
       const facultyId = curriculum?.facultyCurriculums[0]?.facultyId;
       if (!curriculum || !facultyId) throw new NotFoundException();
       assertFaculty(caller, facultyId);
@@ -236,7 +408,6 @@ export class GradesService {
         columns: { id: true, nameEn: true, nameAr: true, uniNumber: true },
       });
 
-      // any existing row blocks a new one (student_curriculum_unique), marked or not
       const graded = await this.db.query.grades.findMany({
         where: eq(grades.curriculumId, curriculum.id),
         columns: { studentId: true },
@@ -272,10 +443,7 @@ export class GradesService {
     }
   }
 
-  /**
-   * Every curriculum the student's faculty offers in the student's current
-   * academic year, each with its mark (null until entered), for the details page.
-   */
+  /** Detailed list of current year's grades for a student. */
   async studentYearGrades(studentId: string, caller: GrCaller): Promise<StudentYearGradeView[]> {
     try {
       const student = await this.db.query.students.findFirst({
@@ -302,15 +470,24 @@ export class GradesService {
             yearCurriculums.map((c) => c.id),
           ),
         ),
-        columns: { curriculumId: true, grade: true, seatingStatus: true },
+        columns: { curriculumId: true, grade: true, score: true, seatingStatus: true },
       });
       const markOf = new Map(marks.map((m) => [m.curriculumId, m]));
 
       return yearCurriculums
         .map((c) => {
           const mark = markOf.get(c.id);
-          const grade =
-            mark === undefined || mark.grade === null ? null : Number(mark.grade);
+          const grade = mark === undefined || mark.grade === null ? null : Number(mark.grade);
+          const score = mark === undefined || mark.score === null ? null : Number(mark.score);
+          const letter =
+            mark && (mark as any).letterGrade
+              ? (mark as any).letterGrade
+              : score !== null
+                ? this.completeGradeFromScore(score).letterGrade
+                : grade !== null
+                  ? letterOf(grade)
+                  : null;
+
           return {
             curriculumId: c.id,
             name: { en: c.nameEn, ar: c.nameAr },
@@ -318,7 +495,8 @@ export class GradesService {
             semester: semesterToNumber(c.semester),
             requirementType: c.requirementType,
             grade,
-            letter: grade === null ? null : letterOf(grade),
+            score,
+            letter,
             seatingStatus: mark?.seatingStatus ?? null,
           };
         })
@@ -337,7 +515,10 @@ export class GradesService {
     }
   }
 
-  /** Creates a grade; the student's faculty governs access. */
+  /**
+   * Creates a grade row via score input:
+   * score -> letterGrade + grade points (4.0).
+   */
   async createGrade(dto: CreateGradeDto, caller: GrCaller): Promise<GradeView> {
     try {
       const student = await this.db.query.students.findFirst({
@@ -355,16 +536,25 @@ export class GradesService {
       });
       if (existing) throw new ConflictException();
 
-      // absent or cheating stores 0 whatever mark was sent
-      const grade = voidsMark(dto.seatingStatus) ? 0 : dto.grade;
+      const rawScore = (dto as any).score !== undefined ? Number((dto as any).score) : Number(dto.grade);
+      const { grade: mappedGrade, letterGrade: mappedLetter } = this.completeGradeFromScore(rawScore);
+
+      const isVoided = voidsMark(dto.seatingStatus);
+      const finalGrade = isVoided ? 0.0 : mappedGrade;
+      const finalLetter = isVoided ? 'F' : mappedLetter;
+
       const [created] = await this.db
         .insert(grades)
         .values({
           studentId: student.id,
           curriculumId: curriculum.id,
-          grade: String(grade),
+          score: rawScore.toFixed(2),
+          grade: finalGrade.toFixed(2),
+          letterGrade: finalLetter,
           seatingStatus: dto.seatingStatus,
-        })
+          academicYear: (dto as any).year?.trim() ?? curriculum.academicYear,
+          semester: (dto as any).semester ?? curriculum.semester,
+        } as any)
         .returning();
 
       await this.refreshYearResult(student.id, curriculum.academicYear);
@@ -374,8 +564,9 @@ export class GradesService {
         id: created.id,
         studentId: created.studentId,
         curriculumId: created.curriculumId,
-        grade,
-        letter: letterOf(grade),
+        grade: finalGrade,
+        score: rawScore,
+        letter: finalLetter,
         seatingStatus: created.seatingStatus,
       };
     } catch (error) {
@@ -393,7 +584,10 @@ export class GradesService {
     }
   }
 
-  /** Updates the grade with this id. */
+  /**
+   * Updates an existing grade row with score/status adjustments
+   * and recalculates academic year results.
+   */
   async updateGrade(id: string, dto: UpdateGradeDto, caller: GrCaller): Promise<GradeView> {
     if (!dto || !Object.keys(dto).length) throw new BadRequestException();
     try {
@@ -401,7 +595,7 @@ export class GradesService {
         where: eq(grades.id, id),
         with: {
           student: { columns: { id: true, facultyId: true } },
-          curriculum: { columns: { id: true, academicYear: true } },
+          curriculum: { columns: { id: true, academicYear: true, semester: true } },
         },
       });
       if (!row) throw new NotFoundException();
@@ -425,17 +619,47 @@ export class GradesService {
         if (clash && clash.id !== row.id) throw new ConflictException();
       }
 
-      // judge the status the row ends up with: a PATCH may send only one of grade and status.
-      // Absent or cheating stores 0; switching back to attended keeps 0 until a new mark is sent.
-      const nextGrade = voidsMark(dto.seatingStatus ?? row.seatingStatus) ? 0 : dto.grade;
+      const effectiveStatus = dto.seatingStatus ?? row.seatingStatus;
+      const isVoided = voidsMark(effectiveStatus);
+
+      const rawScore =
+        (dto as any).score !== undefined
+          ? Number((dto as any).score)
+          : dto.grade !== undefined
+            ? Number(dto.grade)
+            : row.score !== null
+              ? Number(row.score)
+              : null;
+
+      const updateValues: Record<string, any> = {
+        curriculumId,
+      };
+
+      let finalGrade = Number(row.grade);
+      let finalLetter = ((row as any).letterGrade as LetterGrade) ?? letterOf(finalGrade);
+
+      if (rawScore !== null) {
+        const computed = this.completeGradeFromScore(rawScore);
+        finalGrade = isVoided ? 0.0 : computed.grade;
+        finalLetter = isVoided ? 'F' : computed.letterGrade;
+
+        updateValues.score = rawScore.toFixed(2);
+        updateValues.grade = finalGrade.toFixed(2);
+        updateValues.letterGrade = finalLetter;
+      } else if (isVoided) {
+        finalGrade = 0.0;
+        finalLetter = 'F';
+        updateValues.grade = '0.00';
+        updateValues.letterGrade = 'F';
+      }
+
+      if (dto.seatingStatus !== undefined) {
+        updateValues.seatingStatus = dto.seatingStatus;
+      }
 
       const [updated] = await this.db
         .update(grades)
-        .set({
-          curriculumId,
-          ...(nextGrade !== undefined ? { grade: String(nextGrade) } : {}),
-          ...(dto.seatingStatus !== undefined ? { seatingStatus: dto.seatingStatus } : {}),
-        })
+        .set(updateValues)
         .where(eq(grades.id, row.id))
         .returning();
 
@@ -444,14 +668,14 @@ export class GradesService {
         await this.refreshYearResult(row.studentId, row.curriculum.academicYear);
       }
 
-      const grade = Number(updated.grade);
       this.logger.log(`Updated grade: ${row.id}`);
       return {
         id: updated.id,
         studentId: updated.studentId,
         curriculumId: updated.curriculumId,
-        grade,
-        letter: letterOf(grade),
+        grade: finalGrade,
+        score: rawScore,
+        letter: finalLetter,
         seatingStatus: updated.seatingStatus,
       };
     } catch (error) {
