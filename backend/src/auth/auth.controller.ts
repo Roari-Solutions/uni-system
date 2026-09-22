@@ -56,6 +56,14 @@ export class AuthController {
     this.authService.setAuthCookies(res, tokens);
   }
 
+  /** POST /auth/logout — clears the auth cookies. */
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  logout(@Res({ passthrough: true }) res: Response) {
+    this.authService.clearAuthCookies(res);
+    return { status: 'Ok' };
+  }
+
   /** GET /auth/me — returns the current user's safe profile. */
   @UseGuards(AuthGuard)
   @Get('me')

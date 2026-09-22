@@ -5,22 +5,30 @@
     "grades": "Grades",
     "list": "List",
     "entry": "Entry",
-    "switchLanguage": "العربية"
+    "switchLanguage": "العربية",
+    "logout": "Sign out",
+    "toggleMenu": "Menu",
+    "users": "Users"
   },
   "curriculumEntry": {
     "title": "Add curriculum",
-    "name": "Curriculum name",
     "faculty": "Faculty",
     "facultyPlaceholder": "Search faculties...",
     "noResults": "No results",
     "abbreviation": "Abbreviation",
     "academicYear": "Academic year",
     "selectYear": "Select academic year",
+    "semester": "Semester",
+    "selectSemester": "Select semester",
+    "requirementType": "Requirement type",
+    "selectRequirementType": "Select requirement type",
     "submit": "Save",
     "errors": {
       "required": "This field is required",
-      "abbreviationTooLong": "Abbreviation must be at most 10 characters"
-    }
+      "abbreviationFormat": "Use the format XXXX-0000, e.g. ENCR-1101"
+    },
+    "nameAr": "Curriculum name (Arabic)",
+    "nameEn": "Curriculum name (English)"
   },
   "curriculumList": {
     "title": "Curriculums",
@@ -28,12 +36,19 @@
     "allFaculties": "All faculties",
     "academicYear": "Academic year",
     "allYears": "All academic years",
+    "semester": "Semester",
+    "allSemesters": "All semesters",
+    "requirementType": "Requirement type",
+    "allRequirementTypes": "All requirement types",
+    "notSet": "Not set",
     "empty": "No curriculums match the selected filters",
     "columns": {
       "name": "Name",
       "faculty": "Faculty",
       "abbreviation": "Abbreviation",
-      "academicYear": "Academic year"
+      "academicYear": "Academic year",
+      "semester": "Semester",
+      "requirementType": "Requirement type"
     },
     "deleteTitle": "Delete curriculum",
     "deleteMessage": "Are you sure you want to delete \"{{name}}\"? This can't be undone."
@@ -44,12 +59,16 @@
     "empty": "No students match the selected filters",
     "columns": {
       "name": "Name",
+      "nameEn": "Name (English)",
       "uniNumber": "University number",
+      "nationality": "Nationality",
       "acceptanceYear": "Acceptance year",
       "acceptanceType": "Acceptance type",
       "level": "Current academic year",
       "faculty": "Faculty",
-      "status": "Status"
+      "status": "Status",
+      "nationalId": "National ID",
+      "passportNumber": "Passport number"
     },
     "filters": {
       "level": "Academic year",
@@ -62,12 +81,46 @@
     "deleteTitle": "Delete student",
     "deleteMessage": "Are you sure you want to delete \"{{name}}\"? This can't be undone."
   },
+  "studentDetails": {
+    "title": "Student details",
+    "back": "Back to students",
+    "registeredData": "Registered data",
+    "yearGrades": "{{year}} grades",
+    "notEntered": "Not entered",
+    "noCurriculums": "No curriculums in this semester",
+    "fields": {
+      "nameAr": "Name (Arabic)",
+      "nameEn": "Name (English)",
+      "uniNumber": "University number",
+      "nationality": "Nationality",
+      "nationalId": "National ID",
+      "passportNumber": "Passport number",
+      "faculty": "Faculty",
+      "level": "Current academic year",
+      "acceptanceYear": "Acceptance year",
+      "acceptanceType": "Acceptance type",
+      "status": "Year outcome"
+    },
+    "columns": {
+      "curriculum": "Curriculum",
+      "abbreviation": "Abbreviation",
+      "requirementType": "Requirement type",
+      "grade": "Grade",
+      "letter": "Letter grade"
+    }
+  },
   "student": {
     "acceptanceTypes": {
       "general": "General admission",
       "special": "Special admission",
       "vacancies": "Vacancy admission",
-      "teachersChildren": "Teachers' children admission"
+      "teachersChildren": "Teachers' children admission",
+      "international": "International students admission",
+      "arabCertificate": "Arab certificate admission"
+    },
+    "nationalities": {
+      "sudanese": "Sudanese",
+      "foreign": "Foreign"
     },
     "levels": {
       "1": "First year",
@@ -82,16 +135,31 @@
       "repeat": "Repeat"
     }
   },
+  "semesters": {
+    "1": "First semester",
+    "2": "Second semester"
+  },
+  "requirementTypes": {
+    "university": "University requirement",
+    "faculty": "Faculty requirement",
+    "major": "Major requirement"
+  },
   "common": {
     "actions": "Actions",
     "delete": "Delete",
     "cancel": "Cancel",
-    "deleteItem": "Delete {{name}}"
+    "deleteItem": "Delete {{name}}",
+    "loading": "Loading…",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "saveFailed": "Couldn't save. Please try again.",
+    "loadFailed": "Couldn't load the data. Please try again.",
+    "facultyLocked": "Set from your account and cannot be changed."
   },
   "studentEntry": {
     "title": "Add student",
-    "name": "Student name",
     "uniNumber": "University number",
+    "nationality": "Nationality",
     "faculty": "Faculty",
     "facultyPlaceholder": "Search faculties...",
     "noResults": "No results",
@@ -106,14 +174,12 @@
     "submit": "Save",
     "errors": {
       "required": "This field is required",
-      "uniNumberDigits": "University number must contain digits only"
-    }
-  },
-  "grade": {
-    "statuses": {
-      "pass": "Pass",
-      "fail": "Fail"
-    }
+      "uniNumberFormat": "Use letters, digits and dashes only"
+    },
+    "nameAr": "Student name (Arabic)",
+    "nameEn": "Student name (English)",
+    "nationalId": "National ID",
+    "passportNumber": "Passport number"
   },
   "gradeList": {
     "title": "Grades",
@@ -124,32 +190,125 @@
       "faculty": "Faculty",
       "curriculum": "Curriculum",
       "grade": "Grade",
-      "status": "Status"
+      "letter": "Letter grade"
     },
     "filters": {
       "faculty": "Faculty",
       "allFaculties": "All faculties",
       "curriculum": "Curriculum",
       "allCurriculums": "All curriculums",
-      "status": "Status",
-      "allStatuses": "All statuses"
+      "letter": "Letter grade",
+      "allLetters": "All letter grades"
     }
   },
   "gradeEntry": {
-    "title": "Add grade",
-    "student": "Student",
-    "studentPlaceholder": "Search by name or university number...",
-    "curriculum": "Curriculum",
-    "curriculumPlaceholder": "Search curriculums...",
-    "noResults": "No results",
-    "grade": "Grade",
-    "status": "Status",
-    "selectStatus": "Select status",
-    "submit": "Save",
+    "title": "Enter grades",
+    "faculty": "Faculty",
+    "allFaculties": "All faculties",
+    "academicYear": "Academic year",
+    "allYears": "All academic years",
+    "semester": "Semester",
+    "allSemesters": "All semesters",
+    "empty": "No curriculums match the selected filters",
+    "enterGrades": "Enter grades",
+    "enterGradesFor": "Enter grades for {{name}}",
+    "columns": {
+      "name": "Curriculum",
+      "abbreviation": "Abbreviation",
+      "faculty": "Faculty",
+      "academicYear": "Academic year",
+      "semester": "Semester"
+    }
+  },
+  "gradeSheet": {
+    "title": "Enter grades",
+    "back": "Back to curriculums",
+    "empty": "Every student in this curriculum's year already has a grade",
+    "notEntered": "Not entered",
+    "enterGrade": "Enter grade",
+    "enterGradeFor": "Enter grade for {{name}}",
+    "gradeFor": "Grade for {{name}}",
+    "save": "Save",
+    "saveFor": "Save grade for {{name}}",
+    "cancelFor": "Cancel grade for {{name}}",
+    "columns": {
+      "uniNumber": "University number",
+      "name": "Student",
+      "grade": "Grade",
+      "letter": "Letter grade"
+    },
+    "errors": {
+      "required": "Enter a grade",
+      "gradeNumber": "Grade must be a number",
+      "gradeRange": "Grade must be between 0 and 100",
+      "alreadyGraded": "This student already has a grade for this curriculum"
+    }
+  },
+  "roles": {
+    "admin": "Administrator",
+    "data-entry": "Data entry",
+    "site-content-employee": "Site content"
+  },
+  "login": {
+    "title": "Sign in",
+    "subtitle": "Use your university account.",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Sign in",
+    "submitting": "Signing in…",
     "errors": {
       "required": "This field is required",
-      "gradeNumber": "Grade must be a number",
-      "gradeRange": "Grade must be between 0 and 100"
+      "credentials": "Incorrect email or password.",
+      "unavailable": "Couldn't reach the server. Please try again in a moment."
+    }
+  },
+  "userList": {
+    "title": "Users",
+    "empty": "No users match the selected filters",
+    "allFaculties": "All faculties",
+    "active": "Active",
+    "suspended": "Suspended",
+    "you": "You",
+    "suspend": "Suspend",
+    "restore": "Restore",
+    "suspendTitle": "Suspend user",
+    "restoreTitle": "Restore user",
+    "suspendMessage": "Suspend \"{{name}}\"? They will not be able to sign in until restored.",
+    "restoreMessage": "Restore \"{{name}}\"? They will be able to sign in again.",
+    "columns": {
+      "name": "Name",
+      "email": "Login",
+      "role": "Role",
+      "faculty": "Faculty",
+      "status": "Status"
+    },
+    "filters": {
+      "faculty": "Faculty",
+      "allFaculties": "All faculties",
+      "role": "Role",
+      "allRoles": "All roles"
+    }
+  },
+  "userEntry": {
+    "title": "Add user",
+    "name": "Full name",
+    "email": "Login",
+    "password": "Password",
+    "passwordHint": "Shown in the clear — pass it to the user yourself.",
+    "role": "Role",
+    "selectRole": "Select role",
+    "faculty": "Faculty",
+    "facultyPlaceholder": "Search faculties...",
+    "noResults": "No results",
+    "unscopedRole": "Administrators are not tied to a faculty.",
+    "phone": "Phone (optional)",
+    "submit": "Save",
+    "saved": "User created.",
+    "errors": {
+      "required": "This field is required",
+      "passwordLength": "Password must be at least 8 characters",
+      "taken": "That login is already in use.",
+      "unavailable": "Couldn't reach the server. Please try again in a moment."
     }
   }
 }

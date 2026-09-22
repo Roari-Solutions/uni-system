@@ -8,13 +8,22 @@ import { config } from './config';
 
 const PASS = 'secret123';
 
-/** Initial faculties: English names with their abbreviations. */
+/**
+ * The university's faculties, in both UI languages. This array is the source of
+ * truth: re-running the seed reconciles existing rows to match it.
+ */
 const FACULTIES = [
-  { name: 'Nursing', abbreviation: 'NS' },
-  { name: 'Law', abbreviation: 'LW' },
-  { name: 'Information Systems', abbreviation: 'IS' },
-  { name: 'Computer and Information Technology', abbreviation: 'IT' },
-  { name: 'Business Studies', abbreviation: 'CS' },
+  { nameEn: 'Engineering', nameAr: 'الهندسة', abbreviation: 'EN' },
+  { nameEn: 'Architecture', nameAr: 'العمارة', abbreviation: 'AR' },
+  { nameEn: 'Nursing', nameAr: 'التمريض', abbreviation: 'NS' },
+  { nameEn: 'Law', nameAr: 'القانون', abbreviation: 'LW' },
+  { nameEn: 'Information Systems', nameAr: 'نظم المعلومات', abbreviation: 'IS' },
+  {
+    nameEn: 'Computer and Information Technology',
+    nameAr: 'الحاسوب وتقانة المعلومات',
+    abbreviation: 'IT',
+  },
+  { nameEn: 'Business Studies', nameAr: 'الدراسات التجارية', abbreviation: 'CS' },
 ];
 
 /** Opens a Drizzle handle using the central database URL. */
@@ -24,23 +33,33 @@ function getDb() {
 
 type Db = ReturnType<typeof getDb>;
 
-/** Ensures a faculty exists by name; fills in a missing abbreviation. */
+/** Ensures a faculty exists, keeping its names in step with FACULTIES. */
 async function ensureFaculty(
   db: Db,
-  name: string,
+  nameEn: string,
+  nameAr: string,
   abbreviation: string,
-): Promise<{ id: string; name: string; abbreviation: string }> {
+): Promise<{ id: string; nameEn: string; abbreviation: string }> {
   const found = await db.query.faculties.findFirst({
-    where: eq(schema.faculties.name, name),
+    where: eq(schema.faculties.abbreviation, abbreviation),
   });
   if (found) {
-    if (!found.abbreviation) {
-      await db.update(schema.faculties).set({ abbreviation }).where(eq(schema.faculties.id, found.id));
+    // this file is authoritative, so correct anything that has drifted
+    if (found.nameEn !== nameEn || found.nameAr !== nameAr) {
+      await db
+        .update(schema.faculties)
+        .set({ nameEn, nameAr })
+        .where(eq(schema.faculties.id, found.id));
+      console.log(`faculty ${abbreviation} names updated`);
     }
-    return { id: found.id, name: found.name, abbreviation: found.abbreviation ?? abbreviation };
+    return { id: found.id, nameEn, abbreviation };
   }
-  const [row] = await db.insert(schema.faculties).values({ name, abbreviation }).returning();
-  return { id: row.id, name: row.name, abbreviation: row.abbreviation ?? abbreviation };
+  const [row] = await db
+    .insert(schema.faculties)
+    .values({ nameEn, nameAr, abbreviation })
+    .returning();
+  console.log(`faculty ${abbreviation} created`);
+  return { id: row.id, nameEn: row.nameEn, abbreviation };
 }
 
 /** Ensures a department exists; returns its id. */
@@ -102,7 +121,9 @@ async function main() {
   const db = getDb();
   try {
     const rows = [];
-    for (const f of FACULTIES) rows.push(await ensureFaculty(db, f.name, f.abbreviation));
+    for (const f of FACULTIES) {
+      rows.push(await ensureFaculty(db, f.nameEn, f.nameAr, f.abbreviation));
+    }
     await ensureRole(db, 'admin');
     await ensureRole(db, 'data-entry');
     await ensureRole(db, 'site-content-employee');
@@ -110,7 +131,14 @@ async function main() {
     await ensureUser(db, 'admin', 'Admin', 'admin', null, deptId);
     await ensureUser(db, 'test-testuser', 'Test User', 'site-content-employee', null, deptId);
     for (const f of rows) {
-      await ensureUser(db, `entry-${f.abbreviation.toLowerCase()}`, `${f.name} Entry`, 'data-entry', f.id, deptId);
+      await ensureUser(
+        db,
+        `entry-${f.abbreviation.toLowerCase()}`,
+        `${f.nameEn} Entry`,
+        'data-entry',
+        f.id,
+        deptId,
+      );
     }
   } finally {
     await db.$client.end();

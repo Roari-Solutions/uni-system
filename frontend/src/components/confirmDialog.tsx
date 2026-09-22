@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { destructiveButtonClass, secondaryButtonClass } from "../styles/form";
 
 type ConfirmDialogProps = {
 	open: boolean;
@@ -37,25 +38,17 @@ const ConfirmDialog = ({
 			onClose={onCancel}
 			// a click on the dialog element itself (not its content) is a click on the backdrop
 			onClick={(e) => e.target === e.currentTarget && onCancel()}
-			className="m-auto w-full max-w-md rounded-lg border border-palette-2 bg-white p-0 text-palette-6 backdrop:bg-black/50"
+			className="m-auto w-full max-w-md rounded-md border border-border-subtle bg-surface p-0 text-foreground shadow-xl backdrop:bg-foreground/60"
 		>
-			<div className="flex flex-col gap-4 p-6">
-				<h2 className="text-lg font-semibold">{title}</h2>
-				<p>{message}</p>
+			<div className="flex flex-col gap-6 p-6">
+				<h2 className="text-heading-5 text-accent-deep">{title}</h2>
+				<p className="text-body-md">{message}</p>
 
 				<div className="flex justify-end gap-3">
-					<button
-						type="button"
-						onClick={onCancel}
-						className="rounded-md border border-palette-2 bg-white px-4 py-2 outline-none hover:bg-palette-1 focus:ring-2 focus:ring-palette-4"
-					>
+					<button type="button" onClick={onCancel} className={secondaryButtonClass}>
 						{cancelLabel}
 					</button>
-					<button
-						type="button"
-						onClick={onConfirm}
-						className="rounded-md bg-red-600 px-4 py-2 font-medium text-white outline-none hover:bg-red-700 focus:ring-2 focus:ring-palette-4"
-					>
+					<button type="button" onClick={onConfirm} className={destructiveButtonClass}>
 						{confirmLabel}
 					</button>
 				</div>

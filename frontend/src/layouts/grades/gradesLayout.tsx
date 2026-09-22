@@ -1,22 +1,16 @@
-import { useEffect } from "react";
 import { Outlet } from "react-router";
-import { useTranslation } from "react-i18next";
 import SideNav from "./sideNav";
 
 const GradesLayout = () => {
-	const { i18n } = useTranslation();
-
-	// keep document direction and language in sync with the selected language
-	useEffect(() => {
-		document.documentElement.dir = i18n.dir();
-		document.documentElement.lang = i18n.language;
-	}, [i18n, i18n.language]);
-
 	return (
-		<main className="flex h-svh">
+		<main className="flex h-svh bg-background">
 			<SideNav />
-			<div className="flex-1 overflow-auto bg-palette-1 p-8">
-				<Outlet />
+			{/* §11.2 — container padding steps 16 / 24 / 32px by breakpoint */}
+			<div className="flex-1 overflow-auto px-4 py-8 md:px-6 lg:px-8">
+				{/* dashboard tables use the full width beside the nav; forms narrow themselves */}
+				<div className="w-full">
+					<Outlet />
+				</div>
 			</div>
 		</main>
 	);

@@ -5,24 +5,46 @@ import {
   Get,
   Inject,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { GrGurdGuard, type GrRequest } from 'src/gr-gurd/gr-gurd.guard';
 import { GradesService } from './grades.service';
-import { CreateGradeDto, GradeIdentifiersDto, UpdateGradeDto } from './dto/grades.dto';
-/** Grades/curriculums/students endpoints (auth + faculty-scope guarded). */
+import { CreateGradeDto, ListGradesQueryDto, UpdateGradeDto } from './dto/grades.dto';
+
+/** Grade endpoints (auth + faculty-scope guarded). */
 @Controller('gr/grades')
 @UseGuards(AuthGuard, GrGurdGuard)
 export class GradesController {
   constructor(@Inject() private readonly gradesService: GradesService) {}
 
+  /** GET /gr/grades — list view rows, already filtered. */
   @Get()
-  async GetAllGrades(@Req() req: GrRequest) {
-    return await this.gradesService.listGrades(req.grCaller);
+  async GetAllGrades(@Req() req: GrRequest, @Query() query: ListGradesQueryDto) {
+    return await this.gradesService.listGrades(req.grCaller, query);
+  }
+
+  /** GET /gr/grades/pending/:curriculumId — the entry sheet for one curriculum. */
+  @Get('pending/:curriculumId')
+  async GetPendingGrades(
+    @Req() req: GrRequest,
+    @Param('curriculumId', ParseUUIDPipe) curriculumId: string,
+  ) {
+    return await this.gradesService.pendingGrades(curriculumId, req.grCaller);
+  }
+
+  /** GET /gr/grades/student/:studentId — the student's current-year curriculums and marks. */
+  @Get('student/:studentId')
+  async GetStudentYearGrades(
+    @Req() req: GrRequest,
+    @Param('studentId', ParseUUIDPipe) studentId: string,
+  ) {
+    return await this.gradesService.studentYearGrades(studentId, req.grCaller);
   }
 
   @Post()
@@ -30,26 +52,26 @@ export class GradesController {
     return await this.gradesService.createGrade(dto, req.grCaller);
   }
 
-  @Patch(':uniNo')
+  @Patch(':id')
   async UpdateGrade(
     @Req() req: GrRequest,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateGradeDto,
-    @Param('uniNo') uniNo: string,
   ) {
-    return await this.gradesService.updateGrade(uniNo, dto, req.grCaller);
+    return await this.gradesService.updateGrade(id, dto, req.grCaller);
   }
 
-  @Delete('/all/:uniNo')
-  async DeleteAllGrade(@Req() req: GrRequest, @Param('uniNo') uniNo: string) {
-    return await this.gradesService.deleteAllGrades(uniNo, req.grCaller);
-  }
-
-  @Delete(':uniNo')
-  async DeleteGrade(
+  /** DELETE /gr/grades/all/:studentId — clears one student's grades and results. */
+  @Delete('all/:studentId')
+  async DeleteAllGrades(
     @Req() req: GrRequest,
-    @Param('uniNo') uniNo: string,
-    @Body() ids: GradeIdentifiersDto,
+    @Param('studentId', ParseUUIDPipe) studentId: string,
   ) {
-    return await this.gradesService.deleteGrade(uniNo, ids, req.grCaller);
+    return await this.gradesService.deleteAllGrades(studentId, req.grCaller);
+  }
+
+  @Delete(':id')
+  async DeleteGrade(@Req() req: GrRequest, @Param('id', ParseUUIDPipe) id: string) {
+    return await this.gradesService.deleteGrade(id, req.grCaller);
   }
 }

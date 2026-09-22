@@ -5,35 +5,50 @@
     "grades": "الدرجات",
     "list": "القائمة",
     "entry": "الإدخال",
-    "switchLanguage": "English"
+    "switchLanguage": "English",
+    "logout": "تسجيل الخروج",
+    "toggleMenu": "القائمة",
+    "users": "المستخدمون"
   },
   "curriculumEntry": {
     "title": "إضافة منهج",
-    "name": "اسم المنهج",
     "faculty": "الكلية",
     "facultyPlaceholder": "ابحث عن كلية...",
     "noResults": "لا توجد نتائج",
     "abbreviation": "الاختصار",
-    "academicYear": "العام الدراسي",
-    "selectYear": "اختر العام الدراسي",
+    "academicYear": "السنة الدراسية",
+    "selectYear": "اختر السنة الدراسية",
+    "semester": "الفصل الدراسي",
+    "selectSemester": "اختر الفصل الدراسي",
+    "requirementType": "نوع المتطلب",
+    "selectRequirementType": "اختر نوع المتطلب",
     "submit": "حفظ",
     "errors": {
       "required": "هذا الحقل مطلوب",
-      "abbreviationTooLong": "يجب ألا يتجاوز الاختصار 10 أحرف"
-    }
+      "abbreviationFormat": "استخدم الصيغة XXXX-0000، مثل ENCR-1101"
+    },
+    "nameAr": "اسم المقرر بالعربية",
+    "nameEn": "اسم المقرر بالإنجليزية"
   },
   "curriculumList": {
     "title": "المناهج",
     "faculty": "الكلية",
     "allFaculties": "جميع الكليات",
-    "academicYear": "العام الدراسي",
-    "allYears": "جميع الأعوام الدراسية",
+    "academicYear": "السنة الدراسية",
+    "allYears": "كل السنوات الدراسية",
+    "semester": "الفصل الدراسي",
+    "allSemesters": "جميع الفصول الدراسية",
+    "requirementType": "نوع المتطلب",
+    "allRequirementTypes": "جميع أنواع المتطلبات",
+    "notSet": "غير محدد",
     "empty": "لا توجد مناهج تطابق عوامل التصفية المحددة",
     "columns": {
       "name": "الاسم",
       "faculty": "الكلية",
       "abbreviation": "الاختصار",
-      "academicYear": "العام الدراسي"
+      "academicYear": "السنة الدراسية",
+      "semester": "الفصل الدراسي",
+      "requirementType": "نوع المتطلب"
     },
     "deleteTitle": "حذف المنهج",
     "deleteMessage": "هل أنت متأكد من حذف \"{{name}}\"؟ لا يمكن التراجع عن هذا الإجراء."
@@ -44,12 +59,16 @@
     "empty": "لا يوجد طلاب يطابقون عوامل التصفية المحددة",
     "columns": {
       "name": "الاسم",
+      "nameEn": "الاسم بالإنجليزية",
       "uniNumber": "الرقم الجامعي",
+      "nationality": "الجنسية",
       "acceptanceYear": "سنة القبول",
       "acceptanceType": "نوع القبول",
       "level": "السنة الدراسية الحالية",
       "faculty": "الكلية",
-      "status": "الحالة"
+      "status": "الحالة",
+      "nationalId": "الرقم الوطني",
+      "passportNumber": "رقم الجواز"
     },
     "filters": {
       "level": "السنة الدراسية",
@@ -62,12 +81,46 @@
     "deleteTitle": "حذف الطالب",
     "deleteMessage": "هل أنت متأكد من حذف \"{{name}}\"؟ لا يمكن التراجع عن هذا الإجراء."
   },
+  "studentDetails": {
+    "title": "بيانات الطالب",
+    "back": "العودة إلى الطلاب",
+    "registeredData": "البيانات المسجلة",
+    "yearGrades": "درجات {{year}}",
+    "notEntered": "لم تُدخل",
+    "noCurriculums": "لا توجد مناهج في هذا الفصل الدراسي",
+    "fields": {
+      "nameAr": "الاسم (بالعربية)",
+      "nameEn": "الاسم (بالإنجليزية)",
+      "uniNumber": "الرقم الجامعي",
+      "nationality": "الجنسية",
+      "nationalId": "الرقم الوطني",
+      "passportNumber": "رقم الجواز",
+      "faculty": "الكلية",
+      "level": "السنة الدراسية الحالية",
+      "acceptanceYear": "سنة القبول",
+      "acceptanceType": "نوع القبول",
+      "status": "نتيجة السنة"
+    },
+    "columns": {
+      "curriculum": "المنهج",
+      "abbreviation": "الاختصار",
+      "requirementType": "نوع المتطلب",
+      "grade": "الدرجة",
+      "letter": "التقدير"
+    }
+  },
   "student": {
     "acceptanceTypes": {
       "general": "قبول عام",
       "special": "قبول خاص",
       "vacancies": "قبول شواغر",
-      "teachersChildren": "قبول أبناء معلمين"
+      "teachersChildren": "قبول أبناء معلمين",
+      "international": "قبول وافدين",
+      "arabCertificate": "قبول شهادة عربية"
+    },
+    "nationalities": {
+      "sudanese": "سوداني",
+      "foreign": "أجنبي"
     },
     "levels": {
       "1": "السنة الأولى",
@@ -82,16 +135,31 @@
       "repeat": "معيد"
     }
   },
+  "semesters": {
+    "1": "الفصل الدراسي الأول",
+    "2": "الفصل الدراسي الثاني"
+  },
+  "requirementTypes": {
+    "university": "متطلب جامعة",
+    "faculty": "متطلب كلية",
+    "major": "متطلب تخصص"
+  },
   "common": {
     "actions": "الإجراءات",
     "delete": "حذف",
     "cancel": "إلغاء",
-    "deleteItem": "حذف {{name}}"
+    "deleteItem": "حذف {{name}}",
+    "loading": "جارٍ التحميل…",
+    "saving": "جارٍ الحفظ…",
+    "saved": "تم الحفظ",
+    "saveFailed": "تعذّر الحفظ. حاول مرة أخرى.",
+    "loadFailed": "تعذّر تحميل البيانات. حاول مرة أخرى.",
+    "facultyLocked": "محدّدة من حسابك ولا يمكن تغييرها."
   },
   "studentEntry": {
     "title": "إضافة طالب",
-    "name": "اسم الطالب",
     "uniNumber": "الرقم الجامعي",
+    "nationality": "الجنسية",
     "faculty": "الكلية",
     "facultyPlaceholder": "ابحث عن كلية...",
     "noResults": "لا توجد نتائج",
@@ -106,14 +174,12 @@
     "submit": "حفظ",
     "errors": {
       "required": "هذا الحقل مطلوب",
-      "uniNumberDigits": "يجب أن يحتوي الرقم الجامعي على أرقام فقط"
-    }
-  },
-  "grade": {
-    "statuses": {
-      "pass": "ناجح",
-      "fail": "راسب"
-    }
+      "uniNumberFormat": "يجب أن يحتوي الرقم الجامعي على حروف وأرقام وشرطات فقط"
+    },
+    "nameAr": "اسم الطالب بالعربية",
+    "nameEn": "اسم الطالب بالإنجليزية",
+    "nationalId": "الرقم الوطني",
+    "passportNumber": "رقم الجواز"
   },
   "gradeList": {
     "title": "الدرجات",
@@ -124,32 +190,125 @@
       "faculty": "الكلية",
       "curriculum": "المنهج",
       "grade": "الدرجة",
-      "status": "الحالة"
+      "letter": "التقدير"
     },
     "filters": {
       "faculty": "الكلية",
       "allFaculties": "جميع الكليات",
       "curriculum": "المنهج",
       "allCurriculums": "جميع المناهج",
-      "status": "الحالة",
-      "allStatuses": "جميع الحالات"
+      "letter": "التقدير",
+      "allLetters": "جميع التقديرات"
     }
   },
   "gradeEntry": {
-    "title": "إضافة درجة",
-    "student": "الطالب",
-    "studentPlaceholder": "ابحث بالاسم أو الرقم الجامعي...",
-    "curriculum": "المنهج",
-    "curriculumPlaceholder": "ابحث عن منهج...",
-    "noResults": "لا توجد نتائج",
-    "grade": "الدرجة",
-    "status": "الحالة",
-    "selectStatus": "اختر الحالة",
-    "submit": "حفظ",
+    "title": "إدخال الدرجات",
+    "faculty": "الكلية",
+    "allFaculties": "جميع الكليات",
+    "academicYear": "السنة الدراسية",
+    "allYears": "كل السنوات الدراسية",
+    "semester": "الفصل الدراسي",
+    "allSemesters": "جميع الفصول الدراسية",
+    "empty": "لا توجد مناهج تطابق عوامل التصفية المحددة",
+    "enterGrades": "إدخال الدرجات",
+    "enterGradesFor": "إدخال درجات {{name}}",
+    "columns": {
+      "name": "المنهج",
+      "abbreviation": "الاختصار",
+      "faculty": "الكلية",
+      "academicYear": "السنة الدراسية",
+      "semester": "الفصل الدراسي"
+    }
+  },
+  "gradeSheet": {
+    "title": "إدخال الدرجات",
+    "back": "العودة إلى المناهج",
+    "empty": "جميع طلاب سنة هذا المنهج لديهم درجات مسجلة",
+    "notEntered": "لم تُدخل",
+    "enterGrade": "إدخال الدرجة",
+    "enterGradeFor": "إدخال درجة {{name}}",
+    "gradeFor": "درجة {{name}}",
+    "save": "حفظ",
+    "saveFor": "حفظ درجة {{name}}",
+    "cancelFor": "إلغاء درجة {{name}}",
+    "columns": {
+      "uniNumber": "الرقم الجامعي",
+      "name": "الطالب",
+      "grade": "الدرجة",
+      "letter": "التقدير"
+    },
+    "errors": {
+      "required": "أدخل الدرجة",
+      "gradeNumber": "يجب أن تكون الدرجة رقمًا",
+      "gradeRange": "يجب أن تكون الدرجة بين 0 و 100",
+      "alreadyGraded": "هذا الطالب لديه درجة مسجلة في هذا المنهج"
+    }
+  },
+  "roles": {
+    "admin": "مسؤول",
+    "data-entry": "مدخل بيانات",
+    "site-content-employee": "محتوى الموقع"
+  },
+  "login": {
+    "title": "تسجيل الدخول",
+    "subtitle": "استخدم حساب الجامعة الخاص بك.",
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "submit": "تسجيل الدخول",
+    "submitting": "جارٍ تسجيل الدخول…",
     "errors": {
       "required": "هذا الحقل مطلوب",
-      "gradeNumber": "يجب أن تكون الدرجة رقمًا",
-      "gradeRange": "يجب أن تكون الدرجة بين 0 و 100"
+      "credentials": "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+      "unavailable": "تعذّر الوصول إلى الخادم. حاول مرة أخرى بعد قليل."
+    }
+  },
+  "userList": {
+    "title": "المستخدمون",
+    "empty": "لا يوجد مستخدمون مطابقون للفلاتر المحددة",
+    "allFaculties": "كل الكليات",
+    "active": "نشط",
+    "suspended": "موقوف",
+    "you": "أنت",
+    "suspend": "إيقاف",
+    "restore": "إعادة تفعيل",
+    "suspendTitle": "إيقاف المستخدم",
+    "restoreTitle": "إعادة تفعيل المستخدم",
+    "suspendMessage": "إيقاف \"{{name}}\"؟ لن يتمكن من تسجيل الدخول حتى تتم إعادة تفعيله.",
+    "restoreMessage": "إعادة تفعيل \"{{name}}\"؟ سيتمكن من تسجيل الدخول مرة أخرى.",
+    "columns": {
+      "name": "الاسم",
+      "email": "اسم الدخول",
+      "role": "الدور",
+      "faculty": "الكلية",
+      "status": "الحالة"
+    },
+    "filters": {
+      "faculty": "الكلية",
+      "allFaculties": "كل الكليات",
+      "role": "الدور",
+      "allRoles": "كل الأدوار"
+    }
+  },
+  "userEntry": {
+    "title": "إضافة مستخدم",
+    "name": "الاسم الكامل",
+    "email": "اسم الدخول",
+    "password": "كلمة المرور",
+    "passwordHint": "تظهر بشكل واضح — سلّمها للمستخدم بنفسك.",
+    "role": "الدور",
+    "selectRole": "اختر الدور",
+    "faculty": "الكلية",
+    "facultyPlaceholder": "ابحث عن الكليات...",
+    "noResults": "لا توجد نتائج",
+    "unscopedRole": "المسؤولون غير مرتبطين بكلية معيّنة.",
+    "phone": "الهاتف (اختياري)",
+    "submit": "حفظ",
+    "saved": "تم إنشاء المستخدم.",
+    "errors": {
+      "required": "هذا الحقل مطلوب",
+      "passwordLength": "يجب ألا تقل كلمة المرور عن 8 أحرف",
+      "taken": "اسم الدخول مستخدم بالفعل.",
+      "unavailable": "تعذّر الوصول إلى الخادم. حاول مرة أخرى بعد قليل."
     }
   }
 }

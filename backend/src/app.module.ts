@@ -8,6 +8,8 @@ import { ContentModule } from './content/content.module';
 import { GradesModule } from './grades/grades.module';
 import { StudentsModule } from './students/students.module';
 import { CurriculumsModule } from './curriculums/curriculums.module';
+import { FacultiesModule } from './faculties/faculties.module';
+import { AdminModule } from './admin/admin.module';
 import { GrGurdGuard } from './gr-gurd/gr-gurd.guard';
 
 @Module({
@@ -20,6 +22,8 @@ import { GrGurdGuard } from './gr-gurd/gr-gurd.guard';
     GradesModule,
     StudentsModule,
     CurriculumsModule,
+    FacultiesModule,
+    AdminModule,
     AuthModule,
     DatabaseModule,
   ],

@@ -1,28 +1,42 @@
-/** Shape of the main page JSON document. Images are stored as hashes. */
 export type MainPageContent = {
-  hero: {
+  heroSection: {
     backgroundImages: string[];
-    name: string;
-    logo: string;
-    motto: string;
+    mainHeading: string;
+    subHeading: string;
   };
-  president: {
-    name: string;
-    quote: string;
-    photo: string;
+  managerWordSection: {
+    managerPicture: string;
+    managerName: string;
+    managerWord: string;
   };
-  logoMeaning: {
-    vision: string;
-    goals: string[];
-    values: string;
-    purpose: string;
+  visionSection: {
+    card: { title: string; content: string }[];
   };
-  contacts: {
-    email: string;
-    facebook: string;
-    instagram: string;
-    x: string;
-    phone: string;
-    whatsapp: string;
+  newsSection: {
+    cards: {
+      pictureLink: string;
+      tag: string;
+      title: string;
+      content: string;
+      date: string;
+    }[];
+  };
+  analytics: {
+    researchCenters: number;
+    employeesNumber: number;
+    collegeCount: number;
+    studentsCount: number;
+    femaleStudents: number;
+    maleStudents: number;
+  };
+  footerSection: {
+    contactsAndLocationSection: {
+      email: string;
+      phone: string;
+      box: string;
+      location: string;
+    };
+    importantLinks: { link: string; name: string }[];
+    collegesAndCenters: { link: string; name: string }[];
   };
 };

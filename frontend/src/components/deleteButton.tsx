@@ -12,7 +12,7 @@ const DeleteButton = ({ label, onClick }: DeleteButtonProps) => {
 			onClick={onClick}
 			aria-label={label}
 			title={label}
-			className="rounded-md p-1.5 text-palette-6 outline-none hover:bg-palette-1 hover:text-red-600 focus:ring-2 focus:ring-palette-4"
+			className="rounded-xs p-2 text-foreground transition-colors duration-150 ease-out hover:bg-background hover:text-error"
 		>
 			<TrashIcon className="size-5" />
 		</button>

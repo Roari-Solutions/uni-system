@@ -4,12 +4,10 @@ import { faculties } from 'schema';
 import type { Db } from 'src/database/database.module';
 import type { GrCaller } from 'src/gr-gurd/gr-gurd.guard';
 
-/** Resolves a faculty name to its id; throws BadRequestException when unknown. */
-export async function facultyIdFromName(db: Db, name: string): Promise<string> {
-  const clean = name.trim();
-
+/** Verifies a faculty id exists; throws BadRequestException when unknown. */
+export async function assertFacultyExists(db: Db, facultyId: string): Promise<string> {
   const row = await db.query.faculties.findFirst({
-    where: eq(faculties.name, clean),
+    where: eq(faculties.id, facultyId),
     columns: { id: true },
   });
 

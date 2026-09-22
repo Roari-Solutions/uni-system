@@ -13,12 +13,15 @@ const FormField = ({ id, label, error, children }: FormFieldProps) => {
 	const { t } = useTranslation();
 
 	return (
-		<div className="flex flex-col gap-1.5">
-			<label htmlFor={id} className="font-medium text-palette-6">
+		<div className="flex flex-col gap-2">
+			<label htmlFor={id} className="text-body-sm font-medium text-accent-deep">
 				{label}
 			</label>
 			{children}
-			{error && <p className="text-sm text-red-600">{t(error)}</p>}
+			{/* §39 — the message carries the meaning, not the colour alone */}
+			{error && (
+				<p className="text-body-sm text-error">{t(error)}</p>
+			)}
 		</div>
 	);
 };

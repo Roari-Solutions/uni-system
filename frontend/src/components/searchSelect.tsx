@@ -38,7 +38,7 @@ const SearchSelect = ({
 
 	return (
 		<div className="relative">
-			<MagnifyingGlassIcon className="pointer-events-none absolute start-3 top-1/2 size-5 -translate-y-1/2 text-palette-5" />
+			<MagnifyingGlassIcon className="pointer-events-none absolute start-4 top-1/2 size-5 -translate-y-1/2 text-primary-hover" />
 			<input
 				id={id}
 				type="text"
@@ -56,8 +56,8 @@ const SearchSelect = ({
 				}}
 				onFocus={() => setOpen(true)}
 				onBlur={() => setOpen(false)}
-				className={`w-full rounded-md border bg-white py-2 pe-3 ps-10 text-palette-6 outline-none focus:ring-2 focus:ring-palette-4 ${
-					invalid ? "border-red-600" : "border-palette-2"
+				className={`h-12 w-full rounded-sm border bg-surface pe-4 ps-12 text-body-md text-foreground outline-none focus:border-primary focus:ring-3 focus:ring-primary/25 ${
+					invalid ? "border-error" : "border-border"
 				}`}
 			/>
 
@@ -65,10 +65,10 @@ const SearchSelect = ({
 				<ul
 					id={listId}
 					role="listbox"
-					className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border border-palette-2 bg-white py-1 text-palette-6"
+					className="absolute z-10 mt-2 max-h-60 w-full overflow-auto rounded-sm border border-border bg-surface py-2 text-foreground shadow-lg"
 				>
 					{options.length === 0 ? (
-						<li className="px-3 py-2 text-sm">{noResultsText}</li>
+						<li className="px-4 py-2 text-body-sm">{noResultsText}</li>
 					) : (
 						options.map((option) => (
 							<li
@@ -80,7 +80,7 @@ const SearchSelect = ({
 									e.preventDefault();
 									select(option);
 								}}
-								className="cursor-pointer px-3 py-2 hover:bg-palette-1"
+								className="cursor-pointer px-4 py-2 transition-colors duration-150 ease-out hover:bg-background"
 							>
 								{option.label}
 							</li>

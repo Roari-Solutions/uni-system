@@ -1,149 +1,126 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState } from "react";
+import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
-import { z } from "zod";
-import FormField from "../../../components/formField";
-import SearchSelect, { type SearchOption } from "../../../components/searchSelect";
-import { formCardClass, inputClass, submitButtonClass } from "../../../styles/form";
-import { GRADE_STATUSES } from "../../../types/grade";
+import { PencilSquareIcon } from "@heroicons/react/24/outline";
+import DataTable, { type Column } from "../../../components/dataTable";
+import FilterSelect from "../../../components/filterSelect";
+import useFaculties from "../../../hooks/useFaculties";
+import { fetchCurriculums } from "../../../api/curriculums";
+import type { Curriculum } from "../../../types/curriculum";
+import { smallSecondaryButtonClass } from "../../../styles/form";
+import { SEMESTERS, STUDY_LEVELS } from "../../../utils/academicYears";
 
-const REQUIRED = "gradeEntry.errors.required";
-const GRADE_RANGE = "gradeEntry.errors.gradeRange";
-
-// messages are i18n keys, translated when rendered
-const gradeSchema = z.object({
-	studentId: z.string().min(1, REQUIRED),
-	curriculumId: z.string().min(1, REQUIRED),
-	grade: z
-		.string()
-		.trim()
-		.min(1, REQUIRED)
-		.transform(Number)
-		.pipe(z.number({ error: "gradeEntry.errors.gradeNumber" }).min(0, GRADE_RANGE).max(100, GRADE_RANGE)),
-	status: z.enum(GRADE_STATUSES, { error: REQUIRED }),
-});
-
-type GradeForm = z.input<typeof gradeSchema>;
-type FormErrors = Partial<Record<keyof GradeForm, string[]>>;
-
-const EMPTY_FORM: GradeForm = {
-	studentId: "",
-	curriculumId: "",
-	grade: "",
-	status: "" as GradeForm["status"],
-};
-
+// step one of grade entry: pick the curriculum whose grades are being entered
 const GradeEntry = () => {
-	const { t } = useTranslation();
+	const { t, i18n } = useTranslation();
+	const lang = i18n.language === "ar" ? "ar" : "en";
+	const { faculties, locked, lockedFacultyId } = useFaculties();
 
-	const [form, setForm] = useState<GradeForm>(EMPTY_FORM);
-	const [errors, setErrors] = useState<FormErrors>({});
-	const [studentQuery, setStudentQuery] = useState("");
-	const [curriculumQuery, setCurriculumQuery] = useState("");
-	// TODO: fill from the students search API (by name or university number) using studentQuery
-	const studentOptions: SearchOption[] = [];
-	// TODO: fill from the curriculums search API using curriculumQuery
-	const curriculumOptions: SearchOption[] = [];
+	const [curriculums, setCurriculums] = useState<Curriculum[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [failed, setFailed] = useState(false);
+	const [facultyId, setFacultyId] = useState("");
+	const [academicYear, setAcademicYear] = useState("");
+	const [semester, setSemester] = useState("");
 
-	const setField = <K extends keyof GradeForm>(key: K, value: GradeForm[K]) => {
-		setForm((prev) => ({ ...prev, [key]: value }));
-	};
+	// a locked caller only ever sees their own faculty
+	const effectiveFacultyId = locked ? (lockedFacultyId ?? "") : facultyId;
 
-	const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-		e.preventDefault();
+	useEffect(() => {
+		let cancelled = false;
+		// state changes live in the callbacks: the effect body itself stays sync-free
+		fetchCurriculums({
+			facultyId: effectiveFacultyId || undefined,
+			academicYear: academicYear ? Number(academicYear) : undefined,
+			semester: semester ? Number(semester) : undefined,
+		})
+			.then((rows) => {
+				if (cancelled) return;
+				setCurriculums(rows);
+				setFailed(false);
+			})
+			.catch(() => {
+				if (!cancelled) setFailed(true);
+			})
+			.finally(() => {
+				if (!cancelled) setLoading(false);
+			});
 
-		const result = gradeSchema.safeParse(form);
-		if (!result.success) {
-			setErrors(z.flattenError(result.error).fieldErrors);
-			return;
-		}
+		return () => {
+			cancelled = true;
+		};
+	}, [effectiveFacultyId, academicYear, semester]);
 
-		setErrors({});
-		// TODO: send result.data to the API
-	};
+	const facultyName = (id: string) => faculties.find((f) => f.id === id)?.name[lang] ?? "";
+
+	const columns: Column<Curriculum>[] = [
+		{ key: "name", header: t("gradeEntry.columns.name"), render: (c) => c.name[lang] },
+		{ key: "abbreviation", header: t("gradeEntry.columns.abbreviation"), render: (c) => c.abbreviation },
+		{ key: "faculty", header: t("gradeEntry.columns.faculty"), render: (c) => facultyName(c.facultyId) },
+		{ key: "academicYear", header: t("gradeEntry.columns.academicYear"), render: (c) => t(`student.levels.${c.academicYear}`) },
+		{ key: "semester", header: t("gradeEntry.columns.semester"), render: (c) => t(`semesters.${c.semester}`) },
+		{
+			key: "actions",
+			header: t("common.actions"),
+			render: (c) => (
+				<Link
+					to={c.id}
+					aria-label={t("gradeEntry.enterGradesFor", { name: c.name[lang] })}
+					className={`whitespace-nowrap ${smallSecondaryButtonClass}`}
+				>
+					<PencilSquareIcon className="size-4" aria-hidden />
+					{t("gradeEntry.enterGrades")}
+				</Link>
+			),
+		},
+	];
 
 	return (
-		<div className="mx-auto max-w-xl">
-			<h1 className="mb-6 text-2xl font-semibold text-palette-6">
+		<div>
+			<h1 className="mb-8 border-s-3 border-primary ps-4 text-heading-3 text-accent-deep">
 				{t("gradeEntry.title")}
 			</h1>
 
-			<form noValidate onSubmit={handleSubmit} className={formCardClass}>
-				<FormField id="student" label={t("gradeEntry.student")} error={errors.studentId?.[0]}>
-					<SearchSelect
-						id="student"
-						query={studentQuery}
-						onQueryChange={(query) => {
-							setStudentQuery(query);
-							// typing invalidates any previous selection
-							setField("studentId", "");
-						}}
-						options={studentOptions}
-						onSelect={(option) => {
-							setStudentQuery(option.label);
-							setField("studentId", option.id);
-						}}
-						placeholder={t("gradeEntry.studentPlaceholder")}
-						noResultsText={t("gradeEntry.noResults")}
-						invalid={!!errors.studentId}
-					/>
-				</FormField>
+			<div className="mb-6 flex flex-wrap gap-6">
+				<FilterSelect
+					id="facultyFilter"
+					label={t("gradeEntry.faculty")}
+					value={effectiveFacultyId}
+					onChange={setFacultyId}
+					allLabel={t("gradeEntry.allFaculties")}
+					options={faculties.map((f) => ({ value: f.id, label: f.name[lang] }))}
+					disabled={locked}
+				/>
+				<FilterSelect
+					id="yearFilter"
+					label={t("gradeEntry.academicYear")}
+					value={academicYear}
+					onChange={setAcademicYear}
+					allLabel={t("gradeEntry.allYears")}
+					options={STUDY_LEVELS.map((l) => ({ value: String(l), label: t(`student.levels.${l}`) }))}
+				/>
+				<FilterSelect
+					id="semesterFilter"
+					label={t("gradeEntry.semester")}
+					value={semester}
+					onChange={setSemester}
+					allLabel={t("gradeEntry.allSemesters")}
+					options={SEMESTERS.map((s) => ({ value: String(s), label: t(`semesters.${s}`) }))}
+				/>
+			</div>
 
-				<FormField id="curriculum" label={t("gradeEntry.curriculum")} error={errors.curriculumId?.[0]}>
-					<SearchSelect
-						id="curriculum"
-						query={curriculumQuery}
-						onQueryChange={(query) => {
-							setCurriculumQuery(query);
-							setField("curriculumId", "");
-						}}
-						options={curriculumOptions}
-						onSelect={(option) => {
-							setCurriculumQuery(option.label);
-							setField("curriculumId", option.id);
-						}}
-						placeholder={t("gradeEntry.curriculumPlaceholder")}
-						noResultsText={t("gradeEntry.noResults")}
-						invalid={!!errors.curriculumId}
-					/>
-				</FormField>
+			{failed && (
+				<p role="alert" className="mb-6 text-body-sm text-error">
+					{t("common.loadFailed")}
+				</p>
+			)}
 
-				<FormField id="grade" label={t("gradeEntry.grade")} error={errors.grade?.[0]}>
-					<input
-						id="grade"
-						type="number"
-						min={0}
-						max={100}
-						step="any"
-						value={form.grade}
-						onChange={(e) => setField("grade", e.target.value)}
-						aria-invalid={!!errors.grade}
-						className={inputClass(!!errors.grade)}
-					/>
-				</FormField>
-
-				<FormField id="status" label={t("gradeEntry.status")} error={errors.status?.[0]}>
-					<select
-						id="status"
-						value={form.status}
-						onChange={(e) => setField("status", e.target.value as GradeForm["status"])}
-						aria-invalid={!!errors.status}
-						className={inputClass(!!errors.status)}
-					>
-						<option value="" disabled>
-							{t("gradeEntry.selectStatus")}
-						</option>
-						{GRADE_STATUSES.map((status) => (
-							<option key={status} value={status}>
-								{t(`grade.statuses.${status}`)}
-							</option>
-						))}
-					</select>
-				</FormField>
-
-				<button type="submit" className={submitButtonClass}>
-					{t("gradeEntry.submit")}
-				</button>
-			</form>
+			<DataTable
+				columns={columns}
+				rows={curriculums}
+				getRowId={(c) => c.id}
+				emptyText={loading ? t("common.loading") : t("gradeEntry.empty")}
+			/>
 		</div>
 	);
 };

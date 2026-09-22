@@ -1,10 +1,115 @@
 @import "tailwindcss";
+/* §6 TYPOGRAPHY — Tajawal (Arabic) and Inter (English) are loaded from
+   index.html so they can preconnect and avoid an @import request waterfall. */
 
+/* Token model per §43. Nothing outside this block should hard-code a visual value. */
 @theme {
-  --color-palette-1: #e3eaef;
-  --color-palette-2: #c1d1d6;
-  --color-palette-3: #e2c499;
-  --color-palette-4: #dfad56;
-  --color-palette-5: #a87523;
-  --color-palette-6: #623f0c;
+	/* §3.1 CORE PALETTE */
+	--color-primary: #ebad3e;
+	--color-primary-hover: #ad7006;
+	--color-accent-soft: #ecc580;
+	--color-accent-deep: #764a01;
+	--color-background: #e2eaec;
+	--color-background-secondary: #c6d8d8;
+	--color-surface: #ffffff;
+	--color-foreground: #1b2a38;
+
+	/* §14 BORDER SYSTEM */
+	--color-border: #c6d8d8;
+	--color-border-accent: #ad7006;
+	--color-border-subtle: rgba(27, 42, 56, 0.08);
+
+	/* §4.2 — a functional state colour, allowed only as an explicit semantic
+	   token. This is the red the app already used; it is named here rather
+	   than introduced, and is never used decoratively. */
+	--color-error: #dc2626;
+	--color-error-hover: #b91c1c;
+
+	/* §7 TYPE TOKENS + §8 LINE HEIGHT */
+	--text-display-xl: 64px;
+	--text-display-xl--line-height: 1.15;
+	--text-display-xl--font-weight: 800;
+	--text-display-lg: 56px;
+	--text-display-lg--line-height: 1.15;
+	--text-display-lg--font-weight: 800;
+	--text-heading-1: 48px;
+	--text-heading-1--line-height: 1.25;
+	--text-heading-1--font-weight: 700;
+	--text-heading-2: 36px;
+	--text-heading-2--line-height: 1.25;
+	--text-heading-2--font-weight: 700;
+	--text-heading-3: 28px;
+	--text-heading-3--line-height: 1.25;
+	--text-heading-3--font-weight: 700;
+	--text-heading-4: 24px;
+	--text-heading-4--line-height: 1.25;
+	--text-heading-4--font-weight: 700;
+	--text-heading-5: 20px;
+	--text-heading-5--line-height: 1.25;
+	--text-heading-5--font-weight: 600;
+	--text-body-lg: 18px;
+	--text-body-lg--line-height: 1.7;
+	--text-body-md: 16px;
+	--text-body-md--line-height: 1.7;
+	--text-body-sm: 14px;
+	--text-body-sm--line-height: 1.5;
+	--text-caption: 12px;
+	--text-caption--line-height: 1.5;
+	--text-caption--font-weight: 500;
+	--text-button: 16px;
+	--text-button--line-height: 1.25;
+	--text-button--font-weight: 600;
+	--text-navigation: 15px;
+	--text-navigation--line-height: 1.25;
+	--text-navigation--font-weight: 500;
+
+	/* §12 BORDER RADIUS */
+	--radius-xs: 4px;
+	--radius-sm: 8px;
+	--radius-md: 12px;
+	--radius-lg: 16px;
+	--radius-xl: 24px;
+	--radius-2xl: 32px;
+	--radius-full: 999px;
+
+	/* §13 SHADOW SYSTEM — soft and subtle */
+	--shadow-xs: 0 1px 3px rgba(0, 0, 0, 0.04);
+	--shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
+	--shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
+	--shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08);
+	--shadow-xl: 0 16px 40px rgba(0, 0, 0, 0.1);
+
+	/* §11 LAYOUT */
+	--container-content: 1320px;
+
+	/* §6 FONT FAMILIES */
+	--font-ar: "Tajawal", "Cairo", sans-serif;
+	--font-en: "Inter", "Poppins", sans-serif;
+}
+
+@layer base {
+	/* §8 — Arabic needs vertical breathing room; never compress it */
+	body {
+		background-color: var(--color-background);
+		color: var(--color-foreground);
+		font-family: var(--font-en);
+		font-size: var(--text-body-md);
+		line-height: 1.7;
+	}
+
+	html[lang="ar"] body {
+		font-family: var(--font-ar);
+	}
+
+	/* §37 FOCUS — every keyboard-accessible element shows a visible ring,
+	   legible on both light and dark surfaces */
+	:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+		outline: 2px solid var(--color-primary);
+		outline-offset: 2px;
+	}
+
+	/* §15 ICONOGRAPHY — one family, consistent 1.75px stroke */
+	svg[data-slot="icon"] {
+		stroke-width: 1.75;
+	}
 }

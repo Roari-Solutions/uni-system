@@ -12,6 +12,13 @@ import {
 } from 'drizzle-orm/pg-core';
 import type { MainPageContent } from 'src/content/entities/main-page.entity';
 import type { FacultyPageContent } from 'src/content/entities/faculty-page.entity';
+import { AboutUs } from 'src/content/entities/about-page.entity';
+import { DeanshipAndCenters } from 'src/content/entities/deanship-and-centers-page.entity';
+import { ContactUs } from 'src/content/entities/contact-us-page.entity';
+import { CrewPage } from 'src/content/entities/crew-page.entity';
+import { ImagesExhibition } from 'src/content/entities/images-exhibition.entity';
+import { Partnerships } from 'src/content/entities/partnerships.entity';
+import { ScientificAffairsPage } from 'src/content/entities/scientific-affairs-page.entity';
 
 /** Blood group values stored on users. */
 export const bloodTypeEnum = pgEnum('blood_type', [
@@ -25,11 +32,26 @@ export const bloodTypeEnum = pgEnum('blood_type', [
   'O-',
 ]);
 
-/** Academic semester (first/second half of the year). */
+/** Academic year = study year (1-6), the level a student or curriculum sits in. */
+export const studyLevelEnum = pgEnum('study_level', ['1', '2', '3', '4', '5', '6']);
+
+/** Exams seating status */
+export const seatingStatusEnum = pgEnum('seating_status', ['attended', 'absent', 'cheating']);
+
+/** Semester within an academic year; every curriculum runs in exactly one. */
 export const semesterEnum = pgEnum('semester', ['1', '2']);
 
-/** Per-semester student outcome. */
+/** Which body requires a curriculum: the university, the faculty, or the major. */
+export const requirementTypeEnum = pgEnum('requirement_type', ['university', 'faculty', 'major']);
+
+/** A student is Sudanese (identified by national ID) or foreign (by passport). */
+export const nationalityEnum = pgEnum('nationality', ['sudanese', 'foreign']);
+
+/** Per-year student outcome. */
 export const studentStatusEnum = pgEnum('student_status_enum', ['pass', 'fail']);
+
+/** Whether a student carried their academic year or must repeat it. */
+export const studentResultEnum = pgEnum('student_result', ['success', 'repeat']);
 
 /** Role seniority level (1-4). */
 export const roleLevelEnum = pgEnum('role_level', ['1', '2', '3', '4']);
@@ -45,8 +67,9 @@ const timestamps = () => ({
 /** University faculties; each user belongs to at most one. */
 export const faculties = pgTable('faculties', {
   id: uuid('id').primaryKey().defaultRandom(),
-  name: text('name').notNull().unique(),
   abbreviation: text('abbreviation').unique(),
+  nameEn: text('name_en').notNull().unique(),
+  nameAr: text('name_ar').notNull(),
   ...timestamps(),
 });
 
@@ -60,9 +83,8 @@ export const users = pgTable('users', {
   bloodType: bloodTypeEnum('blood_type'),
   password: text('password').notNull(),
   nationalId: text('national_id').unique(),
-  facultyId: uuid('faculty_id')
-    .references(() => faculties.id)
-    .unique(),
+  /** Many users may belong to one faculty; null for staff who span all of them. */
+  facultyId: uuid('faculty_id').references(() => faculties.id),
   pfp: text('pfp'),
   ...timestamps(),
 });
@@ -166,9 +188,15 @@ export const news = pgTable('news', {
 /** Course curriculums with credit weight. */
 export const curriculums = pgTable('curriculums', {
   id: uuid('id').primaryKey().defaultRandom(),
-  name: text('name').notNull().unique(),
+  nameEn: text('name_en').notNull(),
+  nameAr: text('name_ar').notNull(),
+  /** The curriculum's identifier; names are free text. */
   abbreviation: text().unique(),
-  academicYear: text('academic_year').notNull(),
+  academicYear: studyLevelEnum('academic_year').notNull(),
+  /** Defaults to 1 only so rows that predate semesters get one; the API requires it. */
+  semester: semesterEnum('semester').notNull().default('1'),
+  /** Null only on rows that predate requirement types; the API requires it. */
+  requirementType: requirementTypeEnum('requirement_type'),
   courseHours: integer('course_hours').notNull().default(1), // Course credit / weight
   ...timestamps(),
 });
@@ -193,17 +221,27 @@ export const facultyCurriculums = pgTable(
 export const students = pgTable('students', {
   id: uuid('id').primaryKey().defaultRandom(),
   uniNumber: text('uni_number').notNull().unique(),
-  name: text('name').notNull(),
+  nameEn: text('name_en').notNull(),
+  nameAr: text('name_ar').notNull(),
+  /** Optional; unique across students when present. */
+  nationalId: text('national_id').unique(),
+  /** Defaults only so rows that predate nationality get one; the API requires it. */
+  nationality: nationalityEnum('nationality').notNull().default('sudanese'),
+  /** Foreign students only; unique when present, like nationalId. */
+  passportNumber: text('passport_number').unique(),
   acceptanceType: text('acceptance_type').notNull(),
   acceptanceYear: text('acceptance_year').notNull(),
-  academicYear: text('academic_year').notNull(),
+  /** Academic year = study year 1-6. */
+  academicYear: studyLevelEnum('academic_year').notNull(),
+  /** Null until the year's outcome is determined. */
+  status: studentResultEnum('status'),
   facultyId: uuid('faculty_id')
     .notNull()
     .references(() => faculties.id),
   ...timestamps(),
 });
 
-/** Per-student per-course per-term grades (one row each). */
+/** Per-student per-course grades (one row each). */
 export const grades = pgTable(
   'grades',
   {
@@ -221,17 +259,10 @@ export const grades = pgTable(
     semester: semesterEnum('semester').notNull(),
     ...timestamps(),
   },
-  (t) => [
-    unique('student_curriculum_academic_year_semester_grade_unique').on(
-      t.studentId,
-      t.curriculumId,
-      t.academicYear,
-      t.semester,
-    ),
-  ],
+  (t) => [unique('student_curriculum_unique').on(t.studentId, t.curriculumId)],
 );
 
-/** Per-student per-term aggregate results (one row each). */
+/** Per-student per-academic-year aggregate results (one row each). */
 export const results = pgTable(
   'results',
   {
@@ -239,29 +270,62 @@ export const results = pgTable(
     studentId: uuid('student_id')
       .notNull()
       .references(() => students.id),
-    academicYear: text('academic_year').notNull(),
-    semester: semesterEnum('semester').notNull(),
+    academicYear: studyLevelEnum('academic_year').notNull(),
     result: numeric('result', { precision: 6, scale: 2 }).notNull(),
     gpa: numeric('gpa', { precision: 3, scale: 2 }).notNull(),
     cgpa: numeric('cgpa', { precision: 3, scale: 2 }).notNull(),
     status: studentStatusEnum('status'),
     ...timestamps(),
   },
-  (t) => [
-    unique('unique_result_student_academic_year_semester').on(
-      t.studentId,
-      t.academicYear,
-      t.semester,
-    ),
-  ],
+  (t) => [unique('unique_result_student_year').on(t.studentId, t.academicYear)],
 );
 
 // ============================================== CMS ==============================================
+
+export const aboutPage = pgTable('about_page', {
+  id: uuid().primaryKey().defaultRandom(),
+  content: jsonb().$type<AboutUs>().notNull(),
+  ...timestamps(),
+});
+
+export const contactUsPage = pgTable('contact_us_page', {
+  id: uuid().primaryKey().defaultRandom(),
+  content: jsonb().$type<ContactUs>().notNull(),
+  ...timestamps(),
+});
+
+export const crewPage = pgTable('crew_page', {
+  id: uuid().primaryKey().defaultRandom(),
+  crewId: uuid()
+    .notNull()
+    .unique()
+    .references(() => crews.id),
+  content: jsonb().$type<CrewPage>().notNull(),
+  ...timestamps(),
+});
+
+export const deanshipPage = pgTable('deanship_page', {
+  id: uuid().primaryKey().defaultRandom(),
+  content: jsonb().$type<DeanshipAndCenters>().notNull(),
+  ...timestamps(),
+});
+
+export const imageExhibitionPage = pgTable('image_exhibition_page', {
+  id: uuid().primaryKey().defaultRandom(),
+  content: jsonb().$type<ImagesExhibition>().notNull(),
+  ...timestamps(),
+});
 
 /** Main page website content as a single JSON document. */
 export const mainPage = pgTable('main_page', {
   id: uuid('id').primaryKey().defaultRandom(),
   content: jsonb('content').$type<MainPageContent>().notNull(),
+  ...timestamps(),
+});
+
+export const partnershipPage = pgTable('partnership_page', {
+  id: uuid().primaryKey().defaultRandom(),
+  content: jsonb().$type<Partnerships>().notNull(),
   ...timestamps(),
 });
 
@@ -276,7 +340,20 @@ export const facultyPages = pgTable('faculty_pages', {
   ...timestamps(),
 });
 
+export const scientificAffairsPage = pgTable('scientific_affairs_page', {
+  id: uuid().primaryKey().defaultRandom(),
+  content: jsonb().$type<ScientificAffairsPage>().notNull(),
+  ...timestamps(),
+});
+
 // ==============================================relations=============================================================
+
+export const crewPageRelations = relations(crewPage, ({ one }) => ({
+  crew: one(crews, {
+    fields: [crewPage.crewId],
+    references: [crews.id],
+  }),
+}));
 
 /** Relations for users: employee, departments, faculty. */
 export const userRelations = relations(users, ({ many, one }) => ({
@@ -301,6 +378,7 @@ export const employeeRelations = relations(employees, ({ one }) => ({
 
 /** Relations for crews: owning employee. */
 export const crewRelations = relations(crews, ({ one }) => ({
+  crewPage: one(crewPage),
   employee: one(employees, {
     fields: [crews.employeeId],
     references: [employees.id],
