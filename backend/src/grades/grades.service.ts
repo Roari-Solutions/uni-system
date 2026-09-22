@@ -27,6 +27,13 @@ import {
   type AcademicYear,
 } from 'src/common/academic-year';
 
+/** Seating statuses that void the mark: the grade is stored as 0, so its letter is F. */
+const ZEROED_STATUSES: readonly SeatingStatus[] = ['absent', 'cheating'];
+
+function voidsMark(status: SeatingStatus | null): boolean {
+  return status !== null && ZEROED_STATUSES.includes(status);
+}
+
 /** A grade as the views consume it; `letter` is derived, never stored. */
 export interface GradeView {
   id: string;
@@ -348,12 +355,14 @@ export class GradesService {
       });
       if (existing) throw new ConflictException();
 
+      // absent or cheating stores 0 whatever mark was sent
+      const grade = voidsMark(dto.seatingStatus) ? 0 : dto.grade;
       const [created] = await this.db
         .insert(grades)
         .values({
           studentId: student.id,
           curriculumId: curriculum.id,
-          grade: String(dto.grade),
+          grade: String(grade),
           seatingStatus: dto.seatingStatus,
         })
         .returning();
@@ -365,8 +374,8 @@ export class GradesService {
         id: created.id,
         studentId: created.studentId,
         curriculumId: created.curriculumId,
-        grade: dto.grade,
-        letter: letterOf(dto.grade),
+        grade,
+        letter: letterOf(grade),
         seatingStatus: created.seatingStatus,
       };
     } catch (error) {
@@ -416,11 +425,15 @@ export class GradesService {
         if (clash && clash.id !== row.id) throw new ConflictException();
       }
 
+      // judge the status the row ends up with: a PATCH may send only one of grade and status.
+      // Absent or cheating stores 0; switching back to attended keeps 0 until a new mark is sent.
+      const nextGrade = voidsMark(dto.seatingStatus ?? row.seatingStatus) ? 0 : dto.grade;
+
       const [updated] = await this.db
         .update(grades)
         .set({
           curriculumId,
-          ...(dto.grade !== undefined ? { grade: String(dto.grade) } : {}),
+          ...(nextGrade !== undefined ? { grade: String(nextGrade) } : {}),
           ...(dto.seatingStatus !== undefined ? { seatingStatus: dto.seatingStatus } : {}),
         })
         .where(eq(grades.id, row.id))
