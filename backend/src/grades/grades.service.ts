@@ -16,6 +16,7 @@ import {
   CreateGradeDto,
   ListGradesQueryDto,
   UpdateGradeDto,
+  type SeatingStatus,
 } from './dto/grades.dto';
 import { letterOf, type LetterGrade } from './letter-grade';
 import { assertFaculty, scopeFacultyId } from 'src/gr-scope/gr-scope';
@@ -33,6 +34,8 @@ export interface GradeView {
   curriculumId: string;
   grade: number;
   letter: LetterGrade;
+  // null only on rows saved before seating status existed
+  seatingStatus: SeatingStatus | null;
 }
 
 /** A curriculum's entry sheet: the curriculum and the students still without a grade for it. */
@@ -57,6 +60,8 @@ export interface StudentYearGradeView {
   requirementType: RequirementType | null;
   grade: number | null;
   letter: LetterGrade | null;
+  // null when no grade row exists yet, or on rows saved before seating status existed
+  seatingStatus: SeatingStatus | null;
 }
 
 /** CRUD for grades and per-academic-year results, with faculty scoping. */
@@ -185,6 +190,7 @@ export class GradesService {
             curriculumId: row.curriculumId,
             grade,
             letter: letterOf(grade),
+            seatingStatus: row.seatingStatus,
           };
         });
 
@@ -289,14 +295,15 @@ export class GradesService {
             yearCurriculums.map((c) => c.id),
           ),
         ),
-        columns: { curriculumId: true, grade: true },
+        columns: { curriculumId: true, grade: true, seatingStatus: true },
       });
-      const markOf = new Map(marks.map((m) => [m.curriculumId, m.grade]));
+      const markOf = new Map(marks.map((m) => [m.curriculumId, m]));
 
       return yearCurriculums
         .map((c) => {
-          const raw = markOf.get(c.id);
-          const grade = raw === undefined || raw === null ? null : Number(raw);
+          const mark = markOf.get(c.id);
+          const grade =
+            mark === undefined || mark.grade === null ? null : Number(mark.grade);
           return {
             curriculumId: c.id,
             name: { en: c.nameEn, ar: c.nameAr },
@@ -305,6 +312,7 @@ export class GradesService {
             requirementType: c.requirementType,
             grade,
             letter: grade === null ? null : letterOf(grade),
+            seatingStatus: mark?.seatingStatus ?? null,
           };
         })
         .sort(
@@ -346,6 +354,7 @@ export class GradesService {
           studentId: student.id,
           curriculumId: curriculum.id,
           grade: String(dto.grade),
+          seatingStatus: dto.seatingStatus,
         })
         .returning();
 
@@ -358,6 +367,7 @@ export class GradesService {
         curriculumId: created.curriculumId,
         grade: dto.grade,
         letter: letterOf(dto.grade),
+        seatingStatus: created.seatingStatus,
       };
     } catch (error) {
       if (
@@ -411,6 +421,7 @@ export class GradesService {
         .set({
           curriculumId,
           ...(dto.grade !== undefined ? { grade: String(dto.grade) } : {}),
+          ...(dto.seatingStatus !== undefined ? { seatingStatus: dto.seatingStatus } : {}),
         })
         .where(eq(grades.id, row.id))
         .returning();
@@ -428,6 +439,7 @@ export class GradesService {
         curriculumId: updated.curriculumId,
         grade,
         letter: letterOf(grade),
+        seatingStatus: updated.seatingStatus,
       };
     } catch (error) {
       if (
