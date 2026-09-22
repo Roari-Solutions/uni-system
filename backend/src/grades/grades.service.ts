@@ -536,7 +536,7 @@ export class GradesService {
       });
       if (existing) throw new ConflictException();
 
-      const rawScore = (dto as any).score !== undefined ? Number((dto as any).score) : Number(dto.grade);
+      const rawScore = Number(dto.score);
       const { grade: mappedGrade, letterGrade: mappedLetter } = this.completeGradeFromScore(rawScore);
 
       const isVoided = voidsMark(dto.seatingStatus);
@@ -623,13 +623,11 @@ export class GradesService {
       const isVoided = voidsMark(effectiveStatus);
 
       const rawScore =
-        (dto as any).score !== undefined
-          ? Number((dto as any).score)
-          : dto.grade !== undefined
-            ? Number(dto.grade)
-            : row.score !== null
-              ? Number(row.score)
-              : null;
+        dto.score !== undefined
+          ? Number(dto.score)
+          : row.score !== null
+            ? Number(row.score)
+            : null;
 
       const updateValues: Record<string, any> = {
         curriculumId,

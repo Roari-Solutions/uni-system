@@ -69,11 +69,12 @@ export class CurriculumsService {
   ): Promise<CurriculumView[]> {
     try {
       const scope = scopeFacultyId(caller);
-      if (!scope) {
-        const rows = await this.db.query.curriculums.findMany();
-        // ponytail: strip server ids/timestamps
-        return rows.map(({ id: _id, createdAt: _ca, updatedAt: _ua, ...rest }) => rest);
+      // data-entry may only ever see their own faculty, whatever they asked for
+      const facultyId = scope ?? query.facultyId;
+      if (scope && query.facultyId && query.facultyId !== scope) {
+        throw new UnauthorizedException();
       }
+
       const links = await this.db.query.facultyCurriculums.findMany({
         where: facultyId ? eq(facultyCurriculums.facultyId, facultyId) : undefined,
         with: { curriculum: true },
@@ -217,6 +218,7 @@ export class CurriculumsService {
           academicYear: dto.academicYear,
           semester: dto.semester,
           requirementType: dto.requirementType,
+          courseHours: dto.courseHours ?? 1,
           abbreviation,
         })
         .returning();
@@ -279,6 +281,7 @@ export class CurriculumsService {
           ...(dto.academicYear !== undefined ? { academicYear: dto.academicYear } : {}),
           ...(dto.semester !== undefined ? { semester: dto.semester } : {}),
           ...(dto.requirementType !== undefined ? { requirementType: dto.requirementType } : {}),
+          ...(dto.courseHours !== undefined ? { courseHours: dto.courseHours } : {}),
           ...(abbreviation !== undefined ? { abbreviation } : {}),
         })
         .where(eq(curriculums.id, row.id))

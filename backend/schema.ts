@@ -255,6 +255,7 @@ export const grades = pgTable(
     score: numeric({ precision: 5, scale: 2 }),
     letterGrade: text().notNull(),
     grade: numeric().notNull(),
+    seatingStatus: seatingStatusEnum('seating_status'),
     academicYear: text('academic_year').notNull(),
     semester: semesterEnum('semester').notNull(),
     ...timestamps(),

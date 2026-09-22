@@ -1,14 +1,5 @@
-import { IsInt, IsNotEmpty, IsOptional, IsString, Min } from 'class-validator';
+import { IsInt, IsIn, IsOptional, IsString, IsUUID, Matches, MaxLength, Min, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
-import {
-  IsIn,
-  IsOptional,
-  IsString,
-  IsUUID,
-  Matches,
-  MaxLength,
-  ValidateNested,
-} from 'class-validator';
 import { PartialType } from '@nestjs/mapped-types';
 import { OptionalEnglishNameDto } from 'src/common/dto/localized-name.dto';
 import { REQUIREMENT_TYPES, type RequirementType } from 'src/common/requirement-type';
@@ -39,9 +30,8 @@ export class CreateCurriculumDto {
   @Min(1)
   courseHours?: number;
 
-  @IsString()
-  @IsNotEmpty()
-  faculty!: string;
+  @IsUUID()
+  facultyId!: string;
   /** Study year 1-6, not a calendar year. */
   @NormaliseAcademicYear()
   @IsIn(ACADEMIC_YEARS)
