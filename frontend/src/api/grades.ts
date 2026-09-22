@@ -52,3 +52,10 @@ export const createGrade = async (payload: GradePayload): Promise<Grade> => {
 	const { data } = await api.post<Grade>("/gr/grades", payload);
 	return data;
 };
+
+
+export const updateGrade = async (id: string, payload: GradePayload,): Promise<Grade> => {
+	const { data } = await api.patch<Grade>(`/gr/grades/${id}`, payload);
+	return data;
+};
+

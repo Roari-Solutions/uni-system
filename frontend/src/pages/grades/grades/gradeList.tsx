@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import DataTable, { type Column } from "../../../components/dataTable";
 import FilterSelect from "../../../components/filterSelect";
 import useFaculties from "../../../hooks/useFaculties";
-import { fetchGrades } from "../../../api/grades";
+import { fetchGrades, updateGrade } from "../../../api/grades";
 import { fetchCurriculums } from "../../../api/curriculums";
 import { fetchStudents } from "../../../api/students";
 import type { Curriculum } from "../../../types/curriculum";
@@ -71,12 +71,32 @@ const GradeList = () => {
 		}
 	};
 
+	const handleGradeChange = async (g: Grade, grade: number) => {
+	const updated = await updateGrade(g.id, {
+		studentId: g.studentId,
+		curriculumId: g.curriculumId,
+		grade,
+	});
+	setGrades((prev) => prev.map((row) => (row.id === g.id ? updated : row)));
+};
+
 	const columns: Column<Grade>[] = [
 		{ key: "name", header: t("gradeList.columns.name"), render: (g) => student(g)?.name[lang] },
 		{ key: "uniNumber", header: t("gradeList.columns.uniNumber"), render: (g) => student(g)?.uniNumber },
 		{ key: "faculty", header: t("gradeList.columns.faculty"), render: (g) => facultyName(student(g)?.facultyId) },
 		{ key: "curriculum", header: t("gradeList.columns.curriculum"), render: (g) => curriculumName(g.curriculumId) },
-		{ key: "grade", header: t("gradeList.columns.grade"), render: (g) => g.grade },
+		{
+	key: "grade",
+	header: t("gradeList.columns.grade"),
+	render: (g) => (
+		<input
+			type="number"
+			defaultValue={g.grade}
+			onBlur={(e) => void handleGradeChange(g, Number(e.target.value))}
+			className="w-16 rounded-xs border border-border-subtle px-2 py-1"
+		/>
+	),
+},
 		{ key: "letter", header: t("gradeList.columns.letter"), render: (g) => <span dir="ltr" className="font-semibold">{g.letter}</span> },
 	];
 
