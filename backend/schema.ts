@@ -340,6 +340,13 @@ export const scientificAffairsPage = pgTable('scientific_affairs_page', {
 
 // ==============================================relations=============================================================
 
+export const crewPageRelations = relations(crewPage, ({ one }) => ({
+  crew: one(crews, {
+    fields: [crewPage.crewId],
+    references: [crews.id],
+  }),
+}));
+
 /** Relations for users: employee, departments, faculty. */
 export const userRelations = relations(users, ({ many, one }) => ({
   employee: one(employees),
@@ -363,6 +370,7 @@ export const employeeRelations = relations(employees, ({ one }) => ({
 
 /** Relations for crews: owning employee. */
 export const crewRelations = relations(crews, ({ one }) => ({
+  crewPage: one(crewPage),
   employee: one(employees, {
     fields: [crews.employeeId],
     references: [employees.id],
