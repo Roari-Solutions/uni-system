@@ -1,6 +1,6 @@
 import api from "../lib/api";
 import type { Curriculum } from "../types/curriculum";
-import type { Grade } from "../types/grade";
+import type { Grade, SeatingStatus } from "../types/grade";
 import type { Student } from "../types/student";
 
 export type GradeFilters = {
@@ -14,6 +14,7 @@ export type GradePayload = {
 	studentId: string;
 	curriculumId: string;
 	grade: number;
+	seatingStatus: SeatingStatus;
 };
 
 export const fetchGrades = async (filters: GradeFilters = {}): Promise<Grade[]> => {
@@ -32,7 +33,7 @@ export const fetchPendingGrades = async (curriculumId: string): Promise<PendingG
 	return data;
 };
 
-// one curriculum of the student's current year; grade and letter are null until entered
+// one curriculum of the student's current year; the marks are null until entered
 export type StudentYearGrade = {
 	curriculumId: string;
 	name: Curriculum["name"];
@@ -41,6 +42,7 @@ export type StudentYearGrade = {
 	requirementType: Curriculum["requirementType"];
 	grade: number | null;
 	letter: Grade["letter"] | null;
+	seatingStatus: SeatingStatus | null;
 };
 
 export const fetchStudentYearGrades = async (studentId: string): Promise<StudentYearGrade[]> => {
@@ -53,8 +55,8 @@ export const createGrade = async (payload: GradePayload): Promise<Grade> => {
 	return data;
 };
 
-
-export const updateGrade = async (id: string, payload: GradePayload,): Promise<Grade> => {
+// PATCH is partial: send only the fields being changed
+export const updateGrade = async (id: string, payload: Partial<GradePayload>): Promise<Grade> => {
 	const { data } = await api.patch<Grade>(`/gr/grades/${id}`, payload);
 	return data;
 };

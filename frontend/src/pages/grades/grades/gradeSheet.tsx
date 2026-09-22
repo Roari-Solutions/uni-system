@@ -6,6 +6,8 @@ import { z } from "zod";
 import { ArrowLeftIcon, CheckIcon, PencilSquareIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import DataTable, { type Column } from "../../../components/dataTable";
 import { createGrade, fetchPendingGrades, type PendingGrades } from "../../../api/grades";
+import SeatingStatusSelect, { SeatingStatusTag } from "../../../components/seatingStatusSelect";
+import type { SeatingStatus } from "../../../types/grade";
 import { smallPrimaryButtonClass, smallSecondaryButtonClass } from "../../../styles/form";
 
 const GRADE_RANGE = "gradeSheet.errors.gradeRange";
@@ -23,10 +25,16 @@ type PendingStudent = PendingGrades["students"][number];
 // a row is idle until its entry mode is opened; saved rows stay, read-only, for this visit
 type RowState =
 	| { mode: "idle" }
-	| { mode: "editing" | "saving"; draft: string; error?: string }
-	| { mode: "saved"; grade: number; letter: string };
+	| { mode: "editing" | "saving"; draft: string; seatingStatus: SeatingStatus; error?: string }
+	| { mode: "saved"; grade: number; letter: string; seatingStatus: SeatingStatus | null };
 
 const IDLE: RowState = { mode: "idle" };
+
+// the common case, so a row opens ready for the grade alone
+const DEFAULT_STATUS: SeatingStatus = "attended";
+
+// absent and cheating score 0; the API enforces this too
+const voidsMark = (status: SeatingStatus) => status !== "attended";
 
 // step two of grade entry: one curriculum's students, each graded in its own row
 const GradeSheet = () => {
@@ -67,22 +75,35 @@ const GradeSheet = () => {
 		const row = rowOf(student.id);
 		if (row.mode !== "editing") return;
 
-		const result = gradeSchema.safeParse(row.draft);
+		// a voided mark needs no entry: the grade is 0 whatever was typed
+		const voided = voidsMark(row.seatingStatus);
+		const result = gradeSchema.safeParse(voided ? "0" : row.draft);
 		if (!result.success) {
 			setRow(student.id, { ...row, error: result.error.issues[0]?.message });
 			return;
 		}
 
-		setRow(student.id, { mode: "saving", draft: row.draft });
+		setRow(student.id, { mode: "saving", draft: row.draft, seatingStatus: row.seatingStatus });
 		try {
-			const created = await createGrade({ studentId: student.id, curriculumId, grade: result.data });
-			setRow(student.id, { mode: "saved", grade: created.grade, letter: created.letter });
+			const created = await createGrade({
+				studentId: student.id,
+				curriculumId,
+				grade: result.data,
+				seatingStatus: row.seatingStatus,
+			});
+			setRow(student.id, {
+				mode: "saved",
+				grade: created.grade,
+				letter: created.letter,
+				seatingStatus: created.seatingStatus,
+			});
 		} catch (error) {
 			// 409: someone else graded this student since the sheet loaded
 			const status = axios.isAxiosError(error) ? error.response?.status : undefined;
 			setRow(student.id, {
 				mode: "editing",
 				draft: row.draft,
+				seatingStatus: row.seatingStatus,
 				error: status === 409 ? "gradeSheet.errors.alreadyGraded" : "common.saveFailed",
 			});
 		}
@@ -115,6 +136,7 @@ const GradeSheet = () => {
 		}
 
 		const errorId = `grade-${student.id}-error`;
+		const voided = voidsMark(row.seatingStatus);
 		return (
 			<div className="flex flex-col gap-1">
 				<input
@@ -125,9 +147,15 @@ const GradeSheet = () => {
 					dir="ltr"
 					// the row was just opened for entry; take the user straight to its field
 					autoFocus
-					value={row.draft}
-					disabled={row.mode === "saving"}
-					onChange={(e) => setRow(student.id, { mode: "editing", draft: e.target.value })}
+					value={voided ? "0" : row.draft}
+					disabled={row.mode === "saving" || voided}
+					onChange={(e) =>
+						setRow(student.id, {
+							mode: "editing",
+							draft: e.target.value,
+							seatingStatus: row.seatingStatus,
+						})
+					}
 					onKeyDown={(e) => handleKeyDown(e, student)}
 					aria-label={t("gradeSheet.gradeFor", { name: student.name[lang] })}
 					aria-invalid={!!row.error}
@@ -136,12 +164,31 @@ const GradeSheet = () => {
 						row.error ? "border-error" : "border-border"
 					}`}
 				/>
+				{voided && <p className="text-body-sm text-primary-hover">{t("gradeSheet.voidedGrade")}</p>}
 				{row.error && (
 					<p id={errorId} role="alert" className="text-body-sm text-error">
 						{t(row.error)}
 					</p>
 				)}
 			</div>
+		);
+	};
+
+	const renderSeatingStatus = (student: PendingStudent) => {
+		const row = rowOf(student.id);
+		if (row.mode === "idle") return <span className="text-primary-hover">—</span>;
+		if (row.mode === "saved") return <SeatingStatusTag status={row.seatingStatus} />;
+
+		return (
+			<SeatingStatusSelect
+				id={`seating-status-${student.id}`}
+				value={row.seatingStatus}
+				disabled={row.mode === "saving"}
+				label={t("gradeSheet.seatingStatusFor", { name: student.name[lang] })}
+				onChange={(next) =>
+					setRow(student.id, { mode: "editing", draft: row.draft, seatingStatus: next })
+				}
+			/>
 		);
 	};
 
@@ -153,7 +200,9 @@ const GradeSheet = () => {
 			return (
 				<button
 					type="button"
-					onClick={() => setRow(student.id, { mode: "editing", draft: "" })}
+					onClick={() =>
+						setRow(student.id, { mode: "editing", draft: "", seatingStatus: DEFAULT_STATUS })
+					}
 					aria-label={t("gradeSheet.enterGradeFor", { name })}
 					className={`whitespace-nowrap ${smallSecondaryButtonClass}`}
 				>
@@ -193,6 +242,11 @@ const GradeSheet = () => {
 	const columns: Column<PendingStudent>[] = [
 		{ key: "uniNumber", header: t("gradeSheet.columns.uniNumber"), render: (s) => s.uniNumber },
 		{ key: "name", header: t("gradeSheet.columns.name"), render: (s) => s.name[lang] },
+		{
+			key: "seatingStatus",
+			header: t("gradeSheet.columns.seatingStatus"),
+			render: renderSeatingStatus,
+		},
 		{ key: "grade", header: t("gradeSheet.columns.grade"), render: renderGrade },
 		{
 			key: "letter",

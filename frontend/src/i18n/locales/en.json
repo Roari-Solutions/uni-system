@@ -190,7 +190,8 @@
       "faculty": "Faculty",
       "curriculum": "Curriculum",
       "grade": "Grade",
-      "letter": "Letter grade"
+      "letter": "Letter grade",
+      "seatingStatus": "Seating status"
     },
     "filters": {
       "faculty": "Faculty",
@@ -235,14 +236,17 @@
       "uniNumber": "University number",
       "name": "Student",
       "grade": "Grade",
-      "letter": "Letter grade"
+      "letter": "Letter grade",
+      "seatingStatus": "Seating status"
     },
     "errors": {
       "required": "Enter a grade",
       "gradeNumber": "Grade must be a number",
       "gradeRange": "Grade must be between 0 and 100",
       "alreadyGraded": "This student already has a grade for this curriculum"
-    }
+    },
+    "seatingStatusFor": "Seating status for {{name}}",
+    "voidedGrade": "Absent and cheating are recorded as 0 (F)."
   },
   "roles": {
     "admin": "Administrator",
@@ -310,5 +314,10 @@
       "taken": "That login is already in use.",
       "unavailable": "Couldn't reach the server. Please try again in a moment."
     }
+  },
+  "seatingStatuses": {
+    "attended": "Attended",
+    "cheating": "Cheating case",
+    "absent": "Absent"
   }
 }

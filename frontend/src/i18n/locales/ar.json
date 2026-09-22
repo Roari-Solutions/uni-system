@@ -190,7 +190,8 @@
       "faculty": "الكلية",
       "curriculum": "المنهج",
       "grade": "الدرجة",
-      "letter": "التقدير"
+      "letter": "التقدير",
+      "seatingStatus": "حالة الجلوس"
     },
     "filters": {
       "faculty": "الكلية",
@@ -235,14 +236,17 @@
       "uniNumber": "الرقم الجامعي",
       "name": "الطالب",
       "grade": "الدرجة",
-      "letter": "التقدير"
+      "letter": "التقدير",
+      "seatingStatus": "حالة الجلوس"
     },
     "errors": {
       "required": "أدخل الدرجة",
       "gradeNumber": "يجب أن تكون الدرجة رقمًا",
       "gradeRange": "يجب أن تكون الدرجة بين 0 و 100",
       "alreadyGraded": "هذا الطالب لديه درجة مسجلة في هذا المنهج"
-    }
+    },
+    "seatingStatusFor": "حالة الجلوس لـ {{name}}",
+    "voidedGrade": "تُسجَّل حالتا الغياب والغش بالدرجة 0 (راسب)."
   },
   "roles": {
     "admin": "مسؤول",
@@ -310,5 +314,10 @@
       "taken": "اسم الدخول مستخدم بالفعل.",
       "unavailable": "تعذّر الوصول إلى الخادم. حاول مرة أخرى بعد قليل."
     }
+  },
+  "seatingStatuses": {
+    "attended": "حضور",
+    "cheating": "حالة غش",
+    "absent": "غائب"
   }
 }

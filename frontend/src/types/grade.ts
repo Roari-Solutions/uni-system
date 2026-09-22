@@ -2,10 +2,16 @@
 export const LETTER_GRADES = ["A+", "A", "B+", "B", "C+", "C", "D", "F"] as const;
 export type LetterGrade = (typeof LETTER_GRADES)[number];
 
+// how a student sat the exam; mirrors the API's seating_status enum
+export const SEATING_STATUSES = ["attended", "cheating", "absent"] as const;
+export type SeatingStatus = (typeof SEATING_STATUSES)[number];
+
 export type Grade = {
 	id: string;
 	studentId: string;
 	curriculumId: string;
 	grade: number;
 	letter: LetterGrade;
+	// null only on grades saved before seating status existed
+	seatingStatus: SeatingStatus | null;
 };

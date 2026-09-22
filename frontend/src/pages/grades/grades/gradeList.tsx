@@ -4,6 +4,7 @@ import DataTable, { type Column } from "../../../components/dataTable";
 import FilterSelect from "../../../components/filterSelect";
 import useFaculties from "../../../hooks/useFaculties";
 import { fetchGrades, updateGrade } from "../../../api/grades";
+import { SeatingStatusTag } from "../../../components/seatingStatusSelect";
 import { fetchCurriculums } from "../../../api/curriculums";
 import { fetchStudents } from "../../../api/students";
 import type { Curriculum } from "../../../types/curriculum";
@@ -71,14 +72,11 @@ const GradeList = () => {
 		}
 	};
 
+	// PATCH takes just the changed field; the API re-derives the letter
 	const handleGradeChange = async (g: Grade, grade: number) => {
-	const updated = await updateGrade(g.id, {
-		studentId: g.studentId,
-		curriculumId: g.curriculumId,
-		grade,
-	});
-	setGrades((prev) => prev.map((row) => (row.id === g.id ? updated : row)));
-};
+		const updated = await updateGrade(g.id, { grade });
+		setGrades((prev) => prev.map((row) => (row.id === g.id ? updated : row)));
+	};
 
 	const columns: Column<Grade>[] = [
 		{ key: "name", header: t("gradeList.columns.name"), render: (g) => student(g)?.name[lang] },
@@ -97,6 +95,11 @@ const GradeList = () => {
 		/>
 	),
 },
+		{
+			key: "seatingStatus",
+			header: t("gradeList.columns.seatingStatus"),
+			render: (g) => <SeatingStatusTag status={g.seatingStatus} />,
+		},
 		{ key: "letter", header: t("gradeList.columns.letter"), render: (g) => <span dir="ltr" className="font-semibold">{g.letter}</span> },
 	];
 
