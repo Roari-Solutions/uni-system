@@ -1,72 +1,37 @@
-/** A titled text card (vision, mission). */
-type TextCard = {
-  title: string;
-  text: string;
-};
-
-/** A titled card made of several paragraphs (study system, graduation requirements). */
-type ParagraphsCard = {
-  title: string;
-  paragraphs: string[];
-};
-
-/** An admission criterion shown as a headline value with a short note under it. */
-type AdmissionCriterion<T> = {
-  value: T;
-  note: string;
-};
-
-/**
- * Shape of a faculty sub page JSON document. Images and files are stored as hashes.
- * The faculty name comes from `faculties.name` and the programs count from `programs.length`.
- */
 export type FacultyPageContent = {
-  hero: {
-    backgroundImage: string;
-    englishName: string;
-    code: string;
-    accreditation?: string;
-    description: string;
-    brochure: string;
-    studentsCount: number;
+  title: string;
+  heroSection: {
+    backgroundImages: string[];
+    mainHead: string;
+    subHeading: string;
   };
-  about: {
-    text: string;
-    dean: {
-      name: string;
-      title: string;
-      quote: string;
-    };
+  pageCatalog: string;
+  specializations: number;
+  currentStudents: number;
+  graduatedStudents: number;
+  about: string;
+  quote: {
+    content: string;
+    author: string;
+    position: string;
   };
-  visionMission: {
-    vision: TextCard;
-    mission: TextCard;
-  };
-  goals: {
-    title: string;
-    description: string;
-  }[];
+  vision: { title: string; content: string; icon: string }[];
+  goals: { title: string; content: string }[];
   programs: {
-    code: string;
-    name: string;
-    englishName: string;
-    degree: string;
-    duration: string;
-    description: string;
-    creditHours: number;
+    tag: string;
+    title: string;
+    subTitle: string;
+    level: string;
+    content: string;
+    hours: number;
     track: string;
-    tag?: string;
-    studyPlan: string;
   }[];
-  admission: {
-    minimumGrade: AdmissionCriterion<number>;
-    englishProficiency: AdmissionCriterion<string>;
-    interview: AdmissionCriterion<string>;
-    documents: string[];
-    applicationDeadline: string;
-  };
-  studySystem: {
-    system: ParagraphsCard;
-    graduation: ParagraphsCard;
-  };
+  acceptanceConditions: {
+    conditionTitle: string;
+    content: string;
+    detail: string;
+  }[];
+  requiredPapers: { point: string }[];
+  applicationDuration: string;
+  creditHoursDetails: { title: string; content: string }[];
 };

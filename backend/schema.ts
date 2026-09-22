@@ -12,6 +12,13 @@ import {
 } from 'drizzle-orm/pg-core';
 import type { MainPageContent } from 'src/content/entities/main-page.entity';
 import type { FacultyPageContent } from 'src/content/entities/faculty-page.entity';
+import { AboutUs } from 'src/content/entities/about-page.entity';
+import { DeanshipAndCenters } from 'src/content/entities/deanship-and-centers-page.entity';
+import { ContactUs } from 'src/content/entities/contact-us-page.entity';
+import { CrewPage } from 'src/content/entities/crew-page.entity';
+import { ImagesExhibition } from 'src/content/entities/images-exhibition.entity';
+import { Partnerships } from 'src/content/entities/partnerships.entity';
+import { ScientificAffairsPage } from 'src/content/entities/scientific-affairs-page.entity';
 
 /** Blood group values stored on users. */
 export const bloodTypeEnum = pgEnum('blood_type', [
@@ -271,10 +278,50 @@ export const results = pgTable(
 
 // ============================================== CMS ==============================================
 
+export const aboutPage = pgTable('about_page', {
+  id: uuid().primaryKey().defaultRandom(),
+  content: jsonb().$type<AboutUs>().notNull(),
+  ...timestamps(),
+});
+
+export const contactUsPage = pgTable('contact_us_page', {
+  id: uuid().primaryKey().defaultRandom(),
+  content: jsonb().$type<ContactUs>().notNull(),
+  ...timestamps(),
+});
+
+export const crewPage = pgTable('crew_page', {
+  id: uuid().primaryKey().defaultRandom(),
+  crewId: uuid()
+    .notNull()
+    .unique()
+    .references(() => crews.id),
+  content: jsonb().$type<CrewPage>().notNull(),
+  ...timestamps(),
+});
+
+export const deanshipPage = pgTable('deanship_page', {
+  id: uuid().primaryKey().defaultRandom(),
+  content: jsonb().$type<DeanshipAndCenters>().notNull(),
+  ...timestamps(),
+});
+
+export const imageExhibitionPage = pgTable('image_exhibition_page', {
+  id: uuid().primaryKey().defaultRandom(),
+  content: jsonb().$type<ImagesExhibition>().notNull(),
+  ...timestamps(),
+});
+
 /** Main page website content as a single JSON document. */
 export const mainPage = pgTable('main_page', {
   id: uuid('id').primaryKey().defaultRandom(),
   content: jsonb('content').$type<MainPageContent>().notNull(),
+  ...timestamps(),
+});
+
+export const partnershipPage = pgTable('partnership_page', {
+  id: uuid().primaryKey().defaultRandom(),
+  content: jsonb().$type<Partnerships>().notNull(),
   ...timestamps(),
 });
 
@@ -289,7 +336,20 @@ export const facultyPages = pgTable('faculty_pages', {
   ...timestamps(),
 });
 
+export const scientificAffairsPage = pgTable('scientific_affairs_page', {
+  id: uuid().primaryKey().defaultRandom(),
+  content: jsonb().$type<ScientificAffairsPage>().notNull(),
+  ...timestamps(),
+});
+
 // ==============================================relations=============================================================
+
+export const crewPageRelations = relations(crewPage, ({ one }) => ({
+  crew: one(crews, {
+    fields: [crewPage.crewId],
+    references: [crews.id],
+  }),
+}));
 
 /** Relations for users: employee, departments, faculty. */
 export const userRelations = relations(users, ({ many, one }) => ({
@@ -314,6 +374,7 @@ export const employeeRelations = relations(employees, ({ one }) => ({
 
 /** Relations for crews: owning employee. */
 export const crewRelations = relations(crews, ({ one }) => ({
+  crewPage: one(crewPage),
   employee: one(employees, {
     fields: [crews.employeeId],
     references: [employees.id],
