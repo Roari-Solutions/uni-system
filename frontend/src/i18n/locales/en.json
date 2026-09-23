@@ -124,7 +124,8 @@
     },
     "semesterGpa": "Semester GPA",
     "annualGpa": "Annual GPA",
-    "missingGrades": "Still missing curriculum grades"
+    "missingGrades": "Still missing curriculum grades",
+    "edit": "Edit details"
   },
   "student": {
     "acceptanceTypes": {
@@ -193,12 +194,14 @@
     "submit": "Save",
     "errors": {
       "required": "This field is required",
-      "uniNumberFormat": "Use letters, digits and dashes only"
+      "uniNumberFormat": "Use letters, digits and dashes only",
+      "taken": "That university number, national ID or passport number is already registered to another student."
     },
     "nameAr": "Student name (Arabic)",
     "nameEn": "Student name (English)",
     "nationalId": "National ID",
-    "passportNumber": "Passport number"
+    "passportNumber": "Passport number",
+    "editTitle": "Edit student"
   },
   "gradeList": {
     "title": "Grades",

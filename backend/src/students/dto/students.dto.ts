@@ -3,6 +3,7 @@ import {
   ArrayMaxSize,
   ArrayNotEmpty,
   IsArray,
+  IsBoolean,
   IsIn,
   IsInt,
   IsOptional,
@@ -86,7 +87,16 @@ export class CreateStudentDto {
 }
 
 /** Body for patching a student (all fields optional). */
-export class UpdateStudentDto extends PartialType(CreateStudentDto) {}
+export class UpdateStudentDto extends PartialType(CreateStudentDto) {
+  /**
+   * The caller has seen the GRADES_ORPHANED warning and accepts that grades in
+   * curriculums the new faculty doesn't offer stop counting. They are kept as
+   * history either way.
+   */
+  @IsOptional()
+  @IsBoolean()
+  confirmOrphanedGrades?: boolean;
+}
 
 /** Query filters for GET /gr/students, shared by the list view and the entry cascade. */
 export class ListStudentsQueryDto {

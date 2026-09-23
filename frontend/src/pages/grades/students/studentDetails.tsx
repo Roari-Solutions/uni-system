@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
-import { ArrowLeftIcon } from "@heroicons/react/24/outline";
+import { ArrowLeftIcon, PencilSquareIcon } from "@heroicons/react/24/outline";
 import DataTable, { type Column } from "../../../components/dataTable";
 import useFaculties from "../../../hooks/useFaculties";
 import { fetchStudent } from "../../../api/students";
@@ -229,9 +229,15 @@ const StudentDetails = () => {
 			{student && (
 				<>
 					<section aria-labelledby="registeredData" className={`mb-10 ${cardClass}`}>
-						<h2 id="registeredData" className="mb-6 text-heading-5 text-accent-deep">
-							{t("studentDetails.registeredData")}
-						</h2>
+						<div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+							<h2 id="registeredData" className="text-heading-5 text-accent-deep">
+								{t("studentDetails.registeredData")}
+							</h2>
+							<Link to="edit" className={smallSecondaryButtonClass}>
+								<PencilSquareIcon className="size-4" aria-hidden />
+								{t("studentDetails.edit")}
+							</Link>
+						</div>
 						<dl className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
 							<Detail label={t("studentDetails.fields.nameAr")}>{student.name.ar}</Detail>
 							<Detail label={t("studentDetails.fields.nameEn")}>

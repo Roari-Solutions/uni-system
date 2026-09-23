@@ -9,12 +9,13 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { and, eq, inArray, SQL } from 'drizzle-orm';
-import { gpas, grades, students } from 'schema';
+import { facultyCurriculums, gpas, grades, students } from 'schema';
 import { DATABASE, type Db } from 'src/database/database.module';
 import { GrCaller } from 'src/gr-gurd/gr-gurd.guard';
 import { assertFaculty, assertFacultyExists, scopeFacultyId } from 'src/gr-scope/gr-scope';
-import { academicYearToNumber } from 'src/common/academic-year';
+import { academicYearToNumber, SEMESTERS } from 'src/common/academic-year';
 import { MISSING_NAME } from 'src/common/dto/localized-name.dto';
+import { GradesService } from 'src/grades/grades.service';
 import {
   CreateStudentDto,
   ListStudentsQueryDto,
@@ -63,7 +64,10 @@ type StudentRow = typeof students.$inferSelect;
 export class StudentsService {
   private readonly logger = new Logger(StudentsService.name);
 
-  constructor(@Inject(DATABASE) private readonly db: Db) {}
+  constructor(
+    @Inject(DATABASE) private readonly db: Db,
+    @Inject() private readonly gradesService: GradesService,
+  ) {}
 
   /**
    * Resolves the identity document for a nationality: the matching number is
@@ -240,13 +244,18 @@ export class StudentsService {
     }
   }
 
-  /** Updates the student with this id. */
+  /**
+   * Updates a student; every field may change. Moving faculty leaves the grades
+   * in curriculums the new faculty doesn't offer as history, and the caller must
+   * first confirm that (GRADES_ORPHANED carries how many are affected).
+   */
   async updateStudent(
     id: string,
     dto: UpdateStudentDto,
     caller: GrCaller,
   ): Promise<StudentView> {
-    if (!dto || !Object.keys(dto).length) throw new BadRequestException();
+    const { confirmOrphanedGrades, ...changes } = dto ?? {};
+    if (!Object.keys(changes).length) throw new BadRequestException();
     try {
       const row = await this.db.query.students.findFirst({
         where: eq(students.id, id),
@@ -254,48 +263,81 @@ export class StudentsService {
       if (!row) throw new NotFoundException();
       assertFaculty(caller, row.facultyId);
 
-      // the university number is immutable
-      if (dto.uniNumber !== undefined && dto.uniNumber.trim() !== row.uniNumber) {
-        throw new BadRequestException();
+      const uniNumber = changes.uniNumber?.trim();
+      if (uniNumber !== undefined && uniNumber !== row.uniNumber) {
+        const clash = await this.db.query.students.findFirst({
+          where: eq(students.uniNumber, uniNumber),
+        });
+        if (clash) throw new ConflictException();
       }
 
       let facultyId = row.facultyId;
-      if (dto.facultyId !== undefined) {
-        facultyId = await assertFacultyExists(this.db, dto.facultyId);
+      if (changes.facultyId !== undefined) {
+        facultyId = await assertFacultyExists(this.db, changes.facultyId);
         assertFaculty(caller, facultyId);
       }
 
+      if (facultyId !== row.facultyId && !confirmOrphanedGrades) {
+        const offered = (
+          await this.db.query.facultyCurriculums.findMany({
+            where: eq(facultyCurriculums.facultyId, facultyId),
+            columns: { curriculumId: true },
+          })
+        ).map((l) => l.curriculumId);
+        const held = await this.db.query.grades.findMany({
+          where: eq(grades.studentId, row.id),
+          columns: { curriculumId: true },
+        });
+        const orphaned = held.filter((g) => !offered.includes(g.curriculumId)).length;
+        if (orphaned) throw new ConflictException({ code: 'GRADES_ORPHANED', count: orphaned });
+      }
+
       // changing nationality clears the document that no longer applies
-      const nationality = dto.nationality ?? row.nationality;
+      const nationality = changes.nationality ?? row.nationality;
       const documents = await this.identityDocuments(
         nationality,
-        dto.nationalId,
-        dto.passportNumber,
+        changes.nationalId,
+        changes.passportNumber,
         row,
       );
 
       const [updated] = await this.db
         .update(students)
         .set({
-          ...(dto.name !== undefined
+          ...(changes.name !== undefined
             ? {
-                nameEn: dto.name.en?.trim() || MISSING_NAME,
-                nameAr: dto.name.ar.trim(),
+                nameEn: changes.name.en?.trim() || MISSING_NAME,
+                nameAr: changes.name.ar.trim(),
               }
             : {}),
+          ...(uniNumber !== undefined ? { uniNumber } : {}),
           nationality,
           ...documents,
-          ...(dto.acceptanceType !== undefined ? { acceptanceType: dto.acceptanceType } : {}),
-          ...(dto.acceptanceYear !== undefined
-            ? { acceptanceYear: dto.acceptanceYear.trim() }
+          ...(changes.acceptanceType !== undefined
+            ? { acceptanceType: changes.acceptanceType }
             : {}),
-          ...(dto.level !== undefined ? { academicYear: dto.level } : {}),
+          ...(changes.acceptanceYear !== undefined
+            ? { acceptanceYear: changes.acceptanceYear.trim() }
+            : {}),
+          ...(changes.level !== undefined ? { academicYear: changes.level } : {}),
           facultyId,
         })
         .where(eq(students.id, row.id))
         .returning();
 
-      this.logger.log(`Updated student: ${row.uniNumber}`);
+      // the current year is measured against the faculty's curriculums, so it is
+      // rebuilt; earlier years keep the GPAs they were given, as history
+      if (facultyId !== row.facultyId || updated.academicYear !== row.academicYear) {
+        for (const semester of SEMESTERS) {
+          await this.gradesService.refreshStudentsSemester(
+            [updated.id],
+            updated.academicYear,
+            semester,
+          );
+        }
+      }
+
+      this.logger.log(`Updated student: ${updated.uniNumber}`);
       return this.toView(updated);
     } catch (error) {
       if (

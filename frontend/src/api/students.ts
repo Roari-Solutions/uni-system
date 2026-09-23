@@ -37,6 +37,22 @@ export const createStudent = async (payload: StudentPayload): Promise<Student> =
 	return data;
 };
 
+/**
+ * Fails with 409 GRADES_ORPHANED when the new faculty doesn't offer curriculums
+ * the student holds grades in; resend with confirmOrphanedGrades to go ahead.
+ */
+export const updateStudent = async (
+	id: string,
+	payload: StudentPayload,
+	confirmOrphanedGrades = false,
+): Promise<Student> => {
+	const { data } = await api.patch<Student>(`/gr/students/${id}`, {
+		...payload,
+		...(confirmOrphanedGrades ? { confirmOrphanedGrades } : {}),
+	});
+	return data;
+};
+
 export const deleteStudent = async (id: string): Promise<void> => {
 	await api.delete(`/gr/students/${id}`);
 };
