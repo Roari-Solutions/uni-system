@@ -57,7 +57,9 @@
       "courseHours": "Course hours"
     },
     "deleteTitle": "Delete curriculum",
-    "deleteMessage": "Are you sure you want to delete \"{{name}}\"? This can't be undone."
+    "deleteMessage": "Are you sure you want to delete \"{{name}}\"? This can't be undone.",
+    "search": "Search",
+    "searchPlaceholder": "Name or abbreviation"
   },
   "studentList": {
     "title": "Students",
@@ -82,7 +84,9 @@
       "faculty": "Faculty",
       "allFaculties": "All faculties",
       "acceptanceYear": "Acceptance year",
-      "allAcceptanceYears": "All acceptance years"
+      "allAcceptanceYears": "All acceptance years",
+      "search": "Search",
+      "searchPlaceholder": "Name, university number or ID"
     },
     "deleteTitle": "Delete student",
     "deleteMessage": "Are you sure you want to delete \"{{name}}\"? This can't be undone."
@@ -164,7 +168,8 @@
     "saved": "Saved",
     "saveFailed": "Couldn't save. Please try again.",
     "loadFailed": "Couldn't load the data. Please try again.",
-    "facultyLocked": "Set from your account and cannot be changed."
+    "facultyLocked": "Set from your account and cannot be changed.",
+    "clearSearch": "Clear the search"
   },
   "studentEntry": {
     "title": "Add student",

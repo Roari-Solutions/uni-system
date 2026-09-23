@@ -57,7 +57,9 @@
       "courseHours": "الساعات المعتمدة"
     },
     "deleteTitle": "حذف المنهج",
-    "deleteMessage": "هل أنت متأكد من حذف \"{{name}}\"؟ لا يمكن التراجع عن هذا الإجراء."
+    "deleteMessage": "هل أنت متأكد من حذف \"{{name}}\"؟ لا يمكن التراجع عن هذا الإجراء.",
+    "search": "بحث",
+    "searchPlaceholder": "الاسم أو الاختصار"
   },
   "studentList": {
     "title": "الطلاب",
@@ -82,7 +84,9 @@
       "faculty": "الكلية",
       "allFaculties": "جميع الكليات",
       "acceptanceYear": "سنة القبول",
-      "allAcceptanceYears": "جميع سنوات القبول"
+      "allAcceptanceYears": "جميع سنوات القبول",
+      "search": "بحث",
+      "searchPlaceholder": "الاسم أو الرقم الجامعي أو الرقم الوطني"
     },
     "deleteTitle": "حذف الطالب",
     "deleteMessage": "هل أنت متأكد من حذف \"{{name}}\"؟ لا يمكن التراجع عن هذا الإجراء."
@@ -164,7 +168,8 @@
     "saved": "تم الحفظ",
     "saveFailed": "تعذّر الحفظ. حاول مرة أخرى.",
     "loadFailed": "تعذّر تحميل البيانات. حاول مرة أخرى.",
-    "facultyLocked": "محدّدة من حسابك ولا يمكن تغييرها."
+    "facultyLocked": "محدّدة من حسابك ولا يمكن تغييرها.",
+    "clearSearch": "مسح البحث"
   },
   "studentEntry": {
     "title": "إضافة طالب",

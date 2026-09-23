@@ -4,6 +4,7 @@ import ConfirmDialog from "../../../components/confirmDialog";
 import DataTable, { type Column } from "../../../components/dataTable";
 import DeleteButton from "../../../components/deleteButton";
 import FilterSelect from "../../../components/filterSelect";
+import SearchField from "../../../components/searchField";
 import useFaculties from "../../../hooks/useFaculties";
 import { deleteCurriculum, fetchCurriculums } from "../../../api/curriculums";
 import type { Curriculum } from "../../../types/curriculum";
@@ -22,6 +23,7 @@ const CurriculumList = () => {
 	const [academicYear, setAcademicYear] = useState("");
 	const [semester, setSemester] = useState("");
 	const [requirementType, setRequirementType] = useState<RequirementType | "">("");
+	const [search, setSearch] = useState("");
 	const [pendingDelete, setPendingDelete] = useState<Curriculum | null>(null);
 
 	// a locked caller only ever sees their own faculty
@@ -35,6 +37,7 @@ const CurriculumList = () => {
 			academicYear: academicYear ? Number(academicYear) : undefined,
 			semester: semester ? Number(semester) : undefined,
 			requirementType: requirementType || undefined,
+			q: search.trim() || undefined,
 		})
 			.then((rows) => {
 				if (cancelled) return;
@@ -51,7 +54,7 @@ const CurriculumList = () => {
 		return () => {
 			cancelled = true;
 		};
-	}, [effectiveFacultyId, academicYear, semester, requirementType]);
+	}, [effectiveFacultyId, academicYear, semester, requirementType, search]);
 
 	const facultyName = (id: string) => faculties.find((f) => f.id === id)?.name[lang] ?? "";
 
@@ -102,7 +105,14 @@ const CurriculumList = () => {
 				{t("curriculumList.title")}
 			</h1>
 
-			<div className="mb-6 flex flex-wrap gap-6">
+			<div className="mb-6 flex flex-wrap items-end gap-6">
+				<SearchField
+					id="curriculumSearch"
+					label={t("curriculumList.search")}
+					placeholder={t("curriculumList.searchPlaceholder")}
+					value={search}
+					onChange={setSearch}
+				/>
 				<FilterSelect
 					id="facultyFilter"
 					label={t("curriculumList.faculty")}
