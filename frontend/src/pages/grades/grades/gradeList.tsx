@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import DataTable, { type Column } from "../../../components/dataTable";
 import FilterSelect from "../../../components/filterSelect";
 import useFaculties from "../../../hooks/useFaculties";
-import { fetchGrades, updateGrade } from "../../../api/grades";
+import { fetchGrades, resolveCheating, updateGrade } from "../../../api/grades";
 import { SeatingStatusTag } from "../../../components/seatingStatusSelect";
 import ResolveCheatingDialog, {
 	type CheatingResolution,
@@ -97,17 +97,13 @@ const GradeList = () => {
 	};
 
 	// accepting the mark moves the row to attended; the other outcome keeps the
-	// cheating on record and scores 0. Either way the mark rejoins the year result.
-	const handleResolve = async ({ outcome }: CheatingResolution) => {
+	// cheating on record and scores 0. Either way the mark rejoins the year result,
+	// and any penalties land on the case and the student.
+	const handleResolve = async (resolution: CheatingResolution) => {
 		if (!resolving) return;
 		setSaving(true);
 		try {
-			const updated = await updateGrade(
-				resolving.id,
-				outcome === "accept"
-					? { seatingStatus: "attended" }
-					: { seatingStatus: "cheating", grade: 0, cheatingResolved: true },
-			);
+			const updated = await resolveCheating(resolving.id, resolution);
 			replaceRow(updated);
 			setResolving(null);
 		} catch {

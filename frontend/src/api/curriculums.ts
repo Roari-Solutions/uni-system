@@ -52,6 +52,27 @@ export const createCurriculum = async (payload: CurriculumPayload): Promise<Curr
 	return data;
 };
 
+export const fetchCurriculum = async (id: string): Promise<Curriculum> => {
+	const { data } = await api.get<Curriculum>(`/gr/curriculum/${id}`);
+	return data;
+};
+
+/**
+ * Fails with 409 GRADES_ORPHANED when faculties that stop offering the
+ * curriculum hold grades in it; resend with confirmOrphanedGrades to go ahead.
+ */
+export const updateCurriculum = async (
+	id: string,
+	payload: CurriculumPayload,
+	confirmOrphanedGrades = false,
+): Promise<Curriculum> => {
+	const { data } = await api.patch<Curriculum>(`/gr/curriculum/${id}`, {
+		...payload,
+		...(confirmOrphanedGrades ? { confirmOrphanedGrades } : {}),
+	});
+	return data;
+};
+
 export const deleteCurriculum = async (id: string): Promise<void> => {
 	await api.delete(`/gr/curriculum/${id}`);
 };

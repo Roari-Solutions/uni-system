@@ -1,10 +1,11 @@
 import api from "../lib/api";
-import type { Student } from "../types/student";
+import type { Student, StudentStanding } from "../types/student";
 
 export type StudentFilters = {
 	facultyId?: string;
 	level?: number;
 	acceptanceYear?: string;
+	standing?: StudentStanding;
 	q?: string;
 };
 
@@ -34,6 +35,28 @@ export const fetchStudent = async (id: string): Promise<Student> => {
 
 export const createStudent = async (payload: StudentPayload): Promise<Student> => {
 	const { data } = await api.post<Student>("/gr/students", payload);
+	return data;
+};
+
+/**
+ * Fails with 409 GRADES_ORPHANED when the new faculty doesn't offer curriculums
+ * the student holds grades in; resend with confirmOrphanedGrades to go ahead.
+ */
+export const updateStudent = async (
+	id: string,
+	payload: StudentPayload,
+	confirmOrphanedGrades = false,
+): Promise<Student> => {
+	const { data } = await api.patch<Student>(`/gr/students/${id}`, {
+		...payload,
+		...(confirmOrphanedGrades ? { confirmOrphanedGrades } : {}),
+	});
+	return data;
+};
+
+/** Lifts a suspension or reverses a dismissal; admin only. */
+export const reinstateStudent = async (id: string): Promise<Student> => {
+	const { data } = await api.post<Student>(`/gr/students/${id}/reinstate`);
 	return data;
 };
 

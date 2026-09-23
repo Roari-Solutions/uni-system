@@ -1,7 +1,7 @@
 import api from "../lib/api";
 import type { Curriculum } from "../types/curriculum";
 import type { Grade, SeatingStatus } from "../types/grade";
-import type { Student } from "../types/student";
+import type { Student, SuspensionYears } from "../types/student";
 
 export type GradeFilters = {
 	facultyId?: string;
@@ -48,6 +48,10 @@ export type StudentYearGrade = {
 	letter: Grade["letter"] | null;
 	seatingStatus: SeatingStatus | null;
 	cheatingResolved: boolean;
+	// penalties recorded when this cheating case was decided
+	penaltyWarning: boolean;
+	penaltySuspensionYears: SuspensionYears | null;
+	penaltyDismissal: boolean;
 };
 
 export const fetchStudentYearGrades = async (studentId: string): Promise<StudentYearGrade[]> => {
@@ -57,6 +61,21 @@ export const fetchStudentYearGrades = async (studentId: string): Promise<Student
 
 export const createGrade = async (payload: GradePayload): Promise<Grade> => {
 	const { data } = await api.post<Grade>("/gr/grades", payload);
+	return data;
+};
+
+/** How staff decided a cheating case, and any penalties on the student. */
+export type CheatingDecision = {
+	// "accept" keeps the mark and moves the row to attended; "zero" keeps the case and scores 0
+	outcome: "accept" | "zero";
+	warning: boolean;
+	// omitted for no suspension; never sent with a dismissal
+	suspensionYears?: SuspensionYears;
+	dismiss: boolean;
+};
+
+export const resolveCheating = async (id: string, decision: CheatingDecision): Promise<Grade> => {
+	const { data } = await api.post<Grade>(`/gr/grades/${id}/resolve`, decision);
 	return data;
 };
 

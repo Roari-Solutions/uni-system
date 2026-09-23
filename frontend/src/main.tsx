@@ -39,6 +39,7 @@ const router = createBrowserRouter([
 								children: [
 									{ path: "list", element: <CurriculumList /> },
 									{ path: "entry", element: <CurriculumEntry /> },
+									{ path: ":curriculumId/edit", element: <CurriculumEntry /> },
 								],
 							},
 							{
@@ -48,6 +49,7 @@ const router = createBrowserRouter([
 									{ path: "entry", element: <StudentEntry /> },
 									{ path: "import", element: <StudentImportRoute /> },
 									{ path: ":studentId", element: <StudentDetails /> },
+									{ path: ":studentId/edit", element: <StudentEntry /> },
 								],
 							},
 							{

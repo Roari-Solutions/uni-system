@@ -1,13 +1,19 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
-import { ArrowLeftIcon } from "@heroicons/react/24/outline";
+import {
+	ArrowLeftIcon,
+	NoSymbolIcon,
+	PauseCircleIcon,
+	PencilSquareIcon,
+} from "@heroicons/react/24/outline";
 import DataTable, { type Column } from "../../../components/dataTable";
 import useFaculties from "../../../hooks/useFaculties";
-import { fetchStudent } from "../../../api/students";
+import { fetchStudent, reinstateStudent } from "../../../api/students";
 import {
 	fetchStudentGpas,
 	fetchStudentYearGrades,
+	resolveCheating,
 	updateGrade,
 	type StudentGpas,
 	type StudentYearGrade,
@@ -18,6 +24,8 @@ import ResolveCheatingDialog, {
 } from "../../../components/resolveCheatingDialog";
 import EditGradeDialog, { type GradeEdit } from "../../../components/editGradeDialog";
 import ConfirmDialog from "../../../components/confirmDialog";
+import { PenaltyTags, StandingTag } from "../../../components/standingTag";
+import useAuth from "../../../auth/useAuth";
 import { smallSecondaryButtonClass } from "../../../styles/form";
 import type { Student } from "../../../types/student";
 import { cardClass } from "../../../styles/form";
@@ -36,6 +44,7 @@ const StudentDetails = () => {
 	const lang = i18n.language === "ar" ? "ar" : "en";
 	const { studentId = "" } = useParams();
 	const { faculties } = useFaculties();
+	const { user } = useAuth();
 
 	const [student, setStudent] = useState<Student | null>(null);
 	const [grades, setGrades] = useState<StudentYearGrade[]>([]);
@@ -48,6 +57,7 @@ const StudentDetails = () => {
 	const [editing, setEditing] = useState<StudentYearGrade | null>(null);
 	const [pending, setPending] = useState<{ row: StudentYearGrade; edit: GradeEdit } | null>(null);
 	const [saving, setSaving] = useState(false);
+	const [confirmReinstate, setConfirmReinstate] = useState(false);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -89,11 +99,16 @@ const StudentDetails = () => {
 	const awaitsDecision = (g: StudentYearGrade) =>
 		g.seatingStatus === "cheating" && !g.cheatingResolved;
 
+	// a suspension or dismissal freezes grades and results; resolving a pending case is still allowed
+	const frozen = student !== null && student.standing !== "active";
+
 	const reload = async () => {
-		const [gradeRows, gpaRows] = await Promise.all([
+		const [studentRow, gradeRows, gpaRows] = await Promise.all([
+			fetchStudent(studentId),
 			fetchStudentYearGrades(studentId),
 			fetchStudentGpas(studentId),
 		]);
+		setStudent(studentRow);
 		setGrades(gradeRows);
 		setGpas(gpaRows);
 	};
@@ -116,18 +131,26 @@ const StudentDetails = () => {
 		}
 	};
 
-	const handleResolve = async ({ outcome }: CheatingResolution) => {
+	const handleResolve = async (resolution: CheatingResolution) => {
 		if (!resolving?.gradeId) return;
 		setSaving(true);
 		try {
-			await updateGrade(
-				resolving.gradeId,
-				outcome === "accept"
-					? { seatingStatus: "attended" }
-					: { seatingStatus: "cheating", grade: 0, cheatingResolved: true },
-			);
+			await resolveCheating(resolving.gradeId, resolution);
 			await reload();
 			setResolving(null);
+		} catch {
+			setFailed(true);
+		} finally {
+			setSaving(false);
+		}
+	};
+
+	const handleReinstate = async () => {
+		setSaving(true);
+		try {
+			await reinstateStudent(studentId);
+			await reload();
+			setConfirmReinstate(false);
 		} catch {
 			setFailed(true);
 		} finally {
@@ -165,9 +188,9 @@ const StudentDetails = () => {
 		{
 			key: "actions",
 			header: t("common.actions"),
-			// only a curriculum that carries a mark can have it edited
+			// only a curriculum that carries a mark can have it edited, and never on a frozen record
 			render: (g) =>
-				g.gradeId === null ? null : (
+				g.gradeId === null || frozen ? null : (
 					<button
 						type="button"
 						onClick={() => setEditing(g)}
@@ -197,6 +220,11 @@ const StudentDetails = () => {
 							</button>
 						</>
 					)}
+					<PenaltyTags
+						warning={g.penaltyWarning}
+						suspensionYears={g.penaltySuspensionYears}
+						dismissal={g.penaltyDismissal}
+					/>
 				</div>
 			),
 		},
@@ -219,6 +247,49 @@ const StudentDetails = () => {
 			</h1>
 			{student && <p className="mb-8 ps-4 text-body-sm text-foreground">{student.uniNumber}</p>}
 
+			{student && frozen && (
+				// §4.2 error token for a disciplinary state; §39 the icon and words carry the meaning
+				<section
+					aria-labelledby="standingTitle"
+					className="mb-8 flex flex-wrap items-start justify-between gap-4 rounded-sm border-s-3 border-error bg-error/8 p-4"
+				>
+					<div className="flex items-start gap-3">
+						{student.standing === "dismissed" ? (
+							<NoSymbolIcon className="mt-0.5 size-6 shrink-0 text-error" aria-hidden />
+						) : (
+							<PauseCircleIcon className="mt-0.5 size-6 shrink-0 text-error" aria-hidden />
+						)}
+						<div>
+							<h2 id="standingTitle" className="text-heading-5 text-error">
+								{student.standing === "dismissed"
+									? t("studentDetails.standing.dismissedTitle")
+									: t(`student.suspendedFor.${student.suspensionYears ?? 1}`)}
+							</h2>
+							<p className="text-body-md text-foreground">
+								{t(
+									student.standing === "dismissed"
+										? "studentDetails.standing.dismissedText"
+										: "studentDetails.standing.suspendedText",
+								)}
+							</p>
+						</div>
+					</div>
+					{user?.role === "admin" && (
+						<button
+							type="button"
+							onClick={() => setConfirmReinstate(true)}
+							className={smallSecondaryButtonClass}
+						>
+							{t(
+								student.standing === "dismissed"
+									? "studentDetails.standing.reverse"
+									: "studentDetails.standing.lift",
+							)}
+						</button>
+					)}
+				</section>
+			)}
+
 			{failed && (
 				<p role="alert" className="mb-6 text-body-sm text-error">
 					{t("common.loadFailed")}
@@ -229,9 +300,18 @@ const StudentDetails = () => {
 			{student && (
 				<>
 					<section aria-labelledby="registeredData" className={`mb-10 ${cardClass}`}>
-						<h2 id="registeredData" className="mb-6 text-heading-5 text-accent-deep">
-							{t("studentDetails.registeredData")}
-						</h2>
+						<div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+							<h2 id="registeredData" className="text-heading-5 text-accent-deep">
+								{t("studentDetails.registeredData")}
+							</h2>
+							{/* a dismissed student's record is read-only */}
+							{student.standing !== "dismissed" && (
+								<Link to="edit" className={smallSecondaryButtonClass}>
+									<PencilSquareIcon className="size-4" aria-hidden />
+									{t("studentDetails.edit")}
+								</Link>
+							)}
+						</div>
 						<dl className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
 							<Detail label={t("studentDetails.fields.nameAr")}>{student.name.ar}</Detail>
 							<Detail label={t("studentDetails.fields.nameEn")}>
@@ -254,6 +334,12 @@ const StudentDetails = () => {
 							</Detail>
 							<Detail label={t("studentDetails.fields.status")}>
 								{student.status ? t(`student.statuses.${student.status}`) : "—"}
+							</Detail>
+							<Detail label={t("studentDetails.fields.standing")}>
+								<StandingTag standing={student.standing} suspensionYears={student.suspensionYears} />
+							</Detail>
+							<Detail label={t("studentDetails.fields.warnings")}>
+								<span dir="ltr">{student.warnings ?? 0}</span>
 							</Detail>
 						</dl>
 					</section>
@@ -357,6 +443,33 @@ const StudentDetails = () => {
 				cancelLabel={t("common.cancel")}
 				onConfirm={() => void handleEditConfirm()}
 				onCancel={() => setPending(null)}
+			/>
+
+			<ConfirmDialog
+				open={confirmReinstate}
+				title={t(
+					student?.standing === "dismissed"
+						? "studentDetails.standing.reverseTitle"
+						: "studentDetails.standing.liftTitle",
+				)}
+				message={t(
+					student?.standing === "dismissed"
+						? "studentDetails.standing.reverseMessage"
+						: "studentDetails.standing.liftMessage",
+					{ name: student?.name[lang] ?? "" },
+				)}
+				confirmLabel={
+					saving
+						? t("common.saving")
+						: t(
+								student?.standing === "dismissed"
+									? "studentDetails.standing.reverse"
+									: "studentDetails.standing.lift",
+							)
+				}
+				cancelLabel={t("common.cancel")}
+				onConfirm={() => void handleReinstate()}
+				onCancel={() => setConfirmReinstate(false)}
 			/>
 
 			<ResolveCheatingDialog

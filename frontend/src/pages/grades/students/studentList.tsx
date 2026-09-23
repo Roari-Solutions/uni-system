@@ -9,7 +9,8 @@ import FilterSelect from "../../../components/filterSelect";
 import SearchField from "../../../components/searchField";
 import useFaculties from "../../../hooks/useFaculties";
 import { deleteStudent, fetchStudents } from "../../../api/students";
-import type { Student } from "../../../types/student";
+import { STUDENT_STANDINGS, type Student, type StudentStanding } from "../../../types/student";
+import { StandingTag } from "../../../components/standingTag";
 import { ACCEPTANCE_YEARS, STUDY_LEVELS } from "../../../utils/academicYears";
 
 // columns that can't be hidden
@@ -26,6 +27,7 @@ const StudentList = () => {
 	const [level, setLevel] = useState("");
 	const [facultyId, setFacultyId] = useState("");
 	const [acceptanceYear, setAcceptanceYear] = useState("");
+	const [standing, setStanding] = useState<StudentStanding | "">("");
 	const [search, setSearch] = useState("");
 	const [hiddenColumns, setHiddenColumns] = useState<string[]>([]);
 	const [pendingDelete, setPendingDelete] = useState<Student | null>(null);
@@ -40,6 +42,7 @@ const StudentList = () => {
 			facultyId: effectiveFacultyId || undefined,
 			level: level ? Number(level) : undefined,
 			acceptanceYear: acceptanceYear || undefined,
+			standing: standing || undefined,
 			q: search.trim() || undefined,
 		})
 			.then((rows) => {
@@ -57,7 +60,7 @@ const StudentList = () => {
 		return () => {
 			cancelled = true;
 		};
-	}, [effectiveFacultyId, level, acceptanceYear, search]);
+	}, [effectiveFacultyId, level, acceptanceYear, standing, search]);
 
 	const toggleColumn = (key: string) => {
 		setHiddenColumns((prev) =>
@@ -110,14 +113,21 @@ const StudentList = () => {
 		{ key: "faculty", header: t("studentList.columns.faculty"), render: (s) => facultyName(s.facultyId) },
 		{ key: "status", header: t("studentList.columns.status"), render: (s) => (s.status ? t(`student.statuses.${s.status}`) : "—") },
 		{
+			key: "standing",
+			header: t("studentList.columns.standing"),
+			render: (s) => <StandingTag standing={s.standing} suspensionYears={s.suspensionYears} />,
+		},
+		{
 			key: "actions",
 			header: t("common.actions"),
-			render: (s) => (
-				<DeleteButton
-					label={t("common.deleteItem", { name: s.name[lang] })}
-					onClick={() => setPendingDelete(s)}
-				/>
-			),
+			// a frozen record is kept until an admin reinstates the student
+			render: (s) =>
+				s.standing !== "active" ? null : (
+					<DeleteButton
+						label={t("common.deleteItem", { name: s.name[lang] })}
+						onClick={() => setPendingDelete(s)}
+					/>
+				),
 		},
 	];
 
@@ -159,6 +169,14 @@ const StudentList = () => {
 					onChange={setAcceptanceYear}
 					allLabel={t("studentList.filters.allAcceptanceYears")}
 					options={ACCEPTANCE_YEARS.map((year) => ({ value: year, label: year }))}
+				/>
+				<FilterSelect
+					id="standingFilter"
+					label={t("studentList.filters.standing")}
+					value={standing}
+					onChange={(value) => setStanding(value as StudentStanding | "")}
+					allLabel={t("studentList.filters.allStandings")}
+					options={STUDENT_STANDINGS.map((st) => ({ value: st, label: t(`student.standings.${st}`) }))}
 				/>
 
 				<div className="ms-auto">

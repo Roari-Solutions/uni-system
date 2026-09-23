@@ -15,7 +15,12 @@ import {
 import { AuthGuard } from 'src/auth/auth.guard';
 import { GrGurdGuard, type GrRequest } from 'src/gr-gurd/gr-gurd.guard';
 import { GradesService } from './grades.service';
-import { CreateGradeDto, ListGradesQueryDto, UpdateGradeDto } from './dto/grades.dto';
+import {
+  CreateGradeDto,
+  ListGradesQueryDto,
+  ResolveCheatingDto,
+  UpdateGradeDto,
+} from './dto/grades.dto';
 
 /** Grade endpoints (auth + faculty-scope guarded). */
 @Controller('gr/grades')
@@ -68,6 +73,16 @@ export class GradesController {
     @Body() dto: UpdateGradeDto,
   ) {
     return await this.gradesService.updateGrade(id, dto, req.grCaller);
+  }
+
+  /** POST /gr/grades/:id/resolve — decides a pending cheating case and its penalties. */
+  @Post(':id/resolve')
+  async ResolveCheating(
+    @Req() req: GrRequest,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ResolveCheatingDto,
+  ) {
+    return await this.gradesService.resolveCheating(id, dto, req.grCaller);
   }
 
   /** DELETE /gr/grades/all/:studentId — clears one student's grades and results. */
