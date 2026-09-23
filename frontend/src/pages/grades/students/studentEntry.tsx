@@ -5,7 +5,7 @@ import FacultyField from "../../../components/facultyField";
 import FormField from "../../../components/formField";
 import { createStudent } from "../../../api/students";
 import { formCardClass, inputClass, submitButtonClass } from "../../../styles/form";
-import { ACCEPTANCE_TYPES, NATIONALITIES, STUDENT_STATUSES } from "../../../types/student";
+import { ACCEPTANCE_TYPES, NATIONALITIES } from "../../../types/student";
 import { ACCEPTANCE_YEARS, STUDY_LEVELS } from "../../../utils/academicYears";
 
 const REQUIRED = "studentEntry.errors.required";
@@ -27,8 +27,6 @@ const studentSchema = z.object({
 	acceptanceType: z.enum(ACCEPTANCE_TYPES, { error: REQUIRED }),
 	level: z.string().min(1, REQUIRED).transform(Number),
 	facultyId: z.string().min(1, REQUIRED),
-	// "" means the result isn't determined yet
-	status: z.enum(["", ...STUDENT_STATUSES]).transform((s) => s || null),
 });
 
 type StudentForm = z.input<typeof studentSchema>;
@@ -45,7 +43,6 @@ const EMPTY_FORM: StudentForm = {
 	acceptanceType: "" as StudentForm["acceptanceType"],
 	level: "",
 	facultyId: "",
-	status: "",
 };
 
 const StudentEntry = () => {
@@ -92,7 +89,6 @@ const StudentEntry = () => {
 				acceptanceYear: result.data.acceptanceYear,
 				acceptanceType: result.data.acceptanceType,
 				level: result.data.level,
-				status: result.data.status,
 			});
 			setForm({ ...EMPTY_FORM, facultyId: form.facultyId });
 			setSaved(true);
@@ -254,22 +250,6 @@ const StudentEntry = () => {
 								{STUDY_LEVELS.map((level) => (
 									<option key={level} value={level}>
 										{t(`student.levels.${level}`)}
-									</option>
-								))}
-							</select>
-						</FormField>
-
-						<FormField id="status" label={t("studentEntry.status")} error={errors.status?.[0]}>
-							<select
-								id="status"
-								value={form.status}
-								onChange={(e) => setField("status", e.target.value as StudentForm["status"])}
-								className={inputClass(!!errors.status)}
-							>
-								<option value="">{t("studentEntry.statusUndetermined")}</option>
-								{STUDENT_STATUSES.map((status) => (
-									<option key={status} value={status}>
-										{t(`student.statuses.${status}`)}
 									</option>
 								))}
 							</select>
