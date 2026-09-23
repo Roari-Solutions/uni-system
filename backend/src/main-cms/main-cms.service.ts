@@ -1,9 +1,4 @@
-import {
-  BadRequestException,
-  Inject,
-  Injectable,
-  InternalServerErrorException,
-} from '@nestjs/common';
+import { Inject, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import { mainPage } from 'schema';
 import { MainPageContent } from 'src/content/entities/main-page.entity';
@@ -27,22 +22,14 @@ export type StoredFiles = {
   newsPictureByIndex: Record<number, string>;
 };
 
-/** Prefers file URL, then patch value, then stored value. */
-function imageUrl(
-  file: string | undefined,
-  dtoUrl: string | undefined,
-  oldUrl: string | undefined,
-): string {
-  return file ?? dtoUrl ?? oldUrl ?? '';
+/** Prefers uploaded file URL, then stored value. */
+function imageUrl(file: string | undefined, oldUrl: string | undefined): string {
+  return file ?? oldUrl ?? '';
 }
 
 /** Same as imageUrl for image lists. */
-function imageList(
-  files: string[] | undefined,
-  dtoList: string[] | undefined,
-  oldList: string[] | undefined,
-): string[] {
-  return files ?? dtoList ?? oldList ?? [];
+function imageList(files: string[] | undefined, oldList: string[] | undefined): string[] {
+  return files ?? oldList ?? [];
 }
 
 /** Merges patched sections and uploaded-file URLs over stored content. */
@@ -58,11 +45,7 @@ export function mergeMainPage(
   if (heroSrc) {
     merged.heroSection = {
       ...heroSrc,
-      backgroundImages: imageList(
-        stored.backgroundImages,
-        dto.heroSection?.backgroundImages,
-        base.heroSection?.backgroundImages,
-      ),
+      backgroundImages: imageList(stored.backgroundImages, base.heroSection?.backgroundImages),
     };
   }
 
@@ -70,11 +53,7 @@ export function mergeMainPage(
   if (managerSrc) {
     merged.managerWordSection = {
       ...managerSrc,
-      managerPicture: imageUrl(
-        stored.managerPicture,
-        dto.managerWordSection?.managerPicture,
-        base.managerWordSection?.managerPicture,
-      ),
+      managerPicture: imageUrl(stored.managerPicture, base.managerWordSection?.managerPicture),
     };
   }
 
@@ -83,11 +62,7 @@ export function mergeMainPage(
     const oldCards = base.newsSection?.cards ?? [];
     const cards = (newsSrc?.cards ?? oldCards).map((card, index) => ({
       ...card,
-      pictureLink: imageUrl(
-        stored.newsPictureByIndex[index],
-        card.pictureLink,
-        oldCards[index]?.pictureLink,
-      ),
+      pictureLink: imageUrl(stored.newsPictureByIndex[index], oldCards[index]?.pictureLink),
     }));
     merged.newsSection = { ...(newsSrc ?? {}), cards };
   }
@@ -103,6 +78,7 @@ export class MainCmsService {
     @Inject(DATABASE) private readonly db: Db,
     private readonly imagesService: ImagesService,
   ) {}
+  logger = new Logger(MainCmsService.name);
 
   /** Returns the landing page content, or null before the first patch. */
   async get(): Promise<MainPageContent | null> {
@@ -110,6 +86,7 @@ export class MainCmsService {
       const row = await this.db.query.mainPage.findFirst();
       return row?.content ?? null;
     } catch (error) {
+      this.logger.error('error getting main page content', error);
       throw new InternalServerErrorException('Main page fetch failed', {
         cause: error,
       });
@@ -117,7 +94,37 @@ export class MainCmsService {
   }
 
   /** Applies a partial body plus uploaded images over stored content. */
-  async patch(body: unknown, files: MemoryFile[]): Promise<{ status: string }> {
-    return Promise.resolve({ status: 'true' });
+  async patch(body: Partial<MainPageContent>, files: MemoryFile[]): Promise<{ status: string }> {
+    // ponytail: fieldname convention — backgroundImages, managerPicture, newsPicture_<index>
+    const stored: StoredFiles = { newsPictureByIndex: {} };
+    for (const f of files) {
+      const url = await this.imagesService.store(f.buffer, f.mimetype);
+      if (f.fieldname === 'backgroundImages')
+        (stored.backgroundImages ??= []).push(url); // append or create the array
+      else if (f.fieldname === 'managerPicture') stored.managerPicture = url;
+      else {
+        const m = /^newsPicture_(\d+)$/.exec(f.fieldname); // you pass newsPicture_{number} and the image belongs to the card with tht number
+        if (m) stored.newsPictureByIndex[Number(m[1])] = url;
+      }
+    }
+
+    this.logger.log(`media files stored and organized in an object`);
+
+    const existing = await this.db.query.mainPage.findFirst();
+    const merged = mergeMainPage(
+      existing?.content as Partial<MainPageContent> | undefined,
+      body as UpdateMainPageDto,
+      stored,
+    );
+
+    this.logger.log('new page content constructed');
+
+    if (existing)
+      await this.db.update(mainPage).set({ content: merged }).where(eq(mainPage.id, existing.id));
+    else await this.db.insert(mainPage).values({ content: merged });
+
+    this.logger.log('new page contenct stored');
+
+    return { status: 'true' };
   }
 }

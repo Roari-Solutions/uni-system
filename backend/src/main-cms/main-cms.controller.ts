@@ -16,6 +16,10 @@ import { DynamicContentGuard } from 'src/dynamic_content/dynamic_content.guard';
 import { MAX_IMAGE_BYTES } from 'src/images/images.service';
 import { MainCmsService, type MemoryFile } from './main-cms.service';
 
+interface BodyWrapper {
+  body: Partial<MainPageContent>;
+}
+
 @Controller('cms')
 /** Public landing page read; guarded partial updates with image uploads. */
 export class MainCmsController {
@@ -33,9 +37,21 @@ export class MainCmsController {
   @UseGuards(AuthGuard, DynamicContentGuard)
   @UseInterceptors(AnyFilesInterceptor({ limits: { fileSize: MAX_IMAGE_BYTES } }))
   patchMain(
-    @Body() body: unknown,
+    @Body() body: BodyWrapper,
     @UploadedFiles() files: MemoryFile[] = [],
   ): Promise<{ status: string }> {
-    return this.mainCmsService.patch(body, files);
+    // parese the body
+    const { body: parsed = {} } = Object.fromEntries(
+      Object.entries(body ?? {}).map(([k, v]) => {
+        if (typeof v !== 'string') return [k, v];
+        try {
+          return [k, JSON.parse(v)];
+        } catch {
+          return [k, v];
+        }
+      }),
+    ) as BodyWrapper;
+
+    return this.mainCmsService.patch(parsed, files);
   }
 }
