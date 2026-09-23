@@ -41,7 +41,7 @@ export class UpdateGradeDto extends PartialType(CreateGradeDto) {}
 export const CHEATING_OUTCOMES = ['accept', 'zero'] as const;
 export type CheatingOutcome = (typeof CHEATING_OUTCOMES)[number];
 
-/** Body for POST /gr/grades/:id/resolve: the decision plus any penalties on the student. */
+/** Body for POST /gr/grades/:id/resolve: the decision plus at most one penalty on the student. */
 export class ResolveCheatingDto {
   @IsIn(CHEATING_OUTCOMES)
   outcome!: CheatingOutcome;

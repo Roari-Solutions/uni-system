@@ -383,21 +383,20 @@
     "legend": "How does this case end?",
     "accept": "Accept the mark ({{grade}}) and record the student as attended",
     "zero": "Keep the cheating case and record 0 for this curriculum",
-    "warnStudent": "Place a warning on the student",
     "confirm": "Resolve",
     "action": "Resolve",
     "actionFor": "Resolve the cheating case for {{name}}",
     "pending": "Awaiting a decision; left out of the year result",
     "resolved": "Decided",
-    "penaltiesLegend": "Penalties on the student (optional)",
-    "suspendStudent": "Suspend the student",
-    "suspensionLength": "Suspension length",
-    "suspensionYears": {
-      "1": "1 academic year",
-      "2": "2 academic years"
-    },
-    "dismissStudent": "Dismiss the student from the university",
-    "freezeNote": "The student's grades and results are frozen until an administrator lifts this. Only one of suspension and dismissal can be chosen."
+    "penaltiesLegend": "What penalty does the student receive?",
+    "freezeNote": "The student's grades and results are frozen until an administrator lifts this.",
+    "penalties": {
+      "none": "No penalty",
+      "warning": "Place a warning on the student",
+      "suspendOneYear": "Suspend the student for 1 academic year",
+      "suspendTwoYears": "Suspend the student for 2 academic years",
+      "dismiss": "Dismiss the student from the university"
+    }
   },
   "gpaStatuses": {
     "pass": "Pass",

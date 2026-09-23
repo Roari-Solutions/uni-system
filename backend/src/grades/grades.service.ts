@@ -743,8 +743,8 @@ export class GradesService {
 
   /**
    * Decides a pending cheating case: accept the mark (the row becomes attended)
-   * or keep the case and score 0, then record any penalties on the row and the
-   * student. A suspension or dismissal freezes the student's record; a stronger
+   * or keep the case and score 0, then record the penalty, if any, on the row
+   * and the student. A suspension or dismissal freezes the student's record; a stronger
    * standing is never downgraded by a later case. A frozen student's other
    * pending cases can still be decided, since they belong to the same record.
    */
@@ -753,7 +753,9 @@ export class GradesService {
     dto: ResolveCheatingDto,
     caller: GrCaller,
   ): Promise<GradeView> {
-    if (dto.dismiss && dto.suspensionYears !== undefined) throw new BadRequestException();
+    // at most one penalty per case: a warning, one suspension, or a dismissal
+    const penalties = [dto.warning, dto.suspensionYears !== undefined, dto.dismiss].filter(Boolean);
+    if (penalties.length > 1) throw new BadRequestException();
     try {
       const row = await this.db.query.grades.findFirst({
         where: eq(grades.id, id),

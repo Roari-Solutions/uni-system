@@ -2,10 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { secondaryButtonClass, submitButtonClass } from "../styles/form";
 import type { CheatingDecision } from "../api/grades";
-import { SUSPENSION_YEARS, type SuspensionYears } from "../types/student";
 
 /** What staff decided about a cheating case. */
 export type CheatingResolution = CheatingDecision;
+
+// one penalty at most per case, so the choices are a single list
+const PENALTIES = ["none", "warning", "suspendOneYear", "suspendTwoYears", "dismiss"] as const;
+type Penalty = (typeof PENALTIES)[number];
 
 type ResolveCheatingDialogProps = {
 	open: boolean;
@@ -18,7 +21,7 @@ type ResolveCheatingDialogProps = {
 };
 
 /**
- * Asks how a cheating case ends and which penalties, if any, the student
+ * Asks how a cheating case ends and which penalty, if any, the student
  * receives. Until it is answered the mark stays out of the student's year result.
  */
 const ResolveCheatingDialog = ({
@@ -32,10 +35,7 @@ const ResolveCheatingDialog = ({
 	const { t } = useTranslation();
 	const ref = useRef<HTMLDialogElement>(null);
 	const [outcome, setOutcome] = useState<CheatingResolution["outcome"]>("accept");
-	const [warning, setWarning] = useState(false);
-	const [suspend, setSuspend] = useState(false);
-	const [suspensionYears, setSuspensionYears] = useState<SuspensionYears>(1);
-	const [dismiss, setDismiss] = useState(false);
+	const [penalty, setPenalty] = useState<Penalty>("none");
 	const [wasOpen, setWasOpen] = useState(open);
 
 	// each case is decided on its own; nothing carries over from the last one
@@ -43,10 +43,7 @@ const ResolveCheatingDialog = ({
 		setWasOpen(open);
 		if (open) {
 			setOutcome("accept");
-			setWarning(false);
-			setSuspend(false);
-			setSuspensionYears(1);
-			setDismiss(false);
+			setPenalty("none");
 		}
 	}
 
@@ -60,14 +57,16 @@ const ResolveCheatingDialog = ({
 
 	const choiceClass =
 		"flex cursor-pointer items-start gap-3 rounded-sm border border-border p-4 text-body-md transition-colors duration-150 ease-out hover:border-border-accent";
-	const checkClass = "flex cursor-pointer items-start gap-3 text-body-md";
+	// a suspension or dismissal freezes the record, so the dialog says so before it is chosen
+	const freezes = penalty === "suspendOneYear" || penalty === "suspendTwoYears" || penalty === "dismiss";
 
 	const resolve = () =>
 		onResolve({
 			outcome,
-			warning,
-			suspensionYears: suspend ? suspensionYears : undefined,
-			dismiss,
+			warning: penalty === "warning",
+			suspensionYears:
+				penalty === "suspendOneYear" ? 1 : penalty === "suspendTwoYears" ? 2 : undefined,
+			dismiss: penalty === "dismiss",
 		});
 
 	return (
@@ -121,63 +120,21 @@ const ResolveCheatingDialog = ({
 						{t("resolveCheating.penaltiesLegend")}
 					</legend>
 
-					<label className={checkClass}>
-						<input
-							type="checkbox"
-							checked={warning}
-							onChange={(e) => setWarning(e.target.checked)}
-							className="mt-1 accent-primary"
-						/>
-						<span>{t("resolveCheating.warnStudent")}</span>
-					</label>
+					{PENALTIES.map((option) => (
+						<label key={option} className={choiceClass}>
+							<input
+								type="radio"
+								name="cheatingPenalty"
+								value={option}
+								checked={penalty === option}
+								onChange={() => setPenalty(option)}
+								className="mt-1 accent-primary"
+							/>
+							<span>{t(`resolveCheating.penalties.${option}`)}</span>
+						</label>
+					))}
 
-					<label className={checkClass}>
-						<input
-							type="checkbox"
-							checked={suspend}
-							onChange={(e) => {
-								setSuspend(e.target.checked);
-								// a dismissal already ends the student's time; the two never stack
-								if (e.target.checked) setDismiss(false);
-							}}
-							className="mt-1 accent-primary"
-						/>
-						<span>{t("resolveCheating.suspendStudent")}</span>
-					</label>
-
-					{suspend && (
-						<fieldset className="ms-7 flex flex-wrap gap-x-6 gap-y-2">
-							<legend className="sr-only">{t("resolveCheating.suspensionLength")}</legend>
-							{SUSPENSION_YEARS.map((years) => (
-								<label key={years} className="flex cursor-pointer items-center gap-2 text-body-md">
-									<input
-										type="radio"
-										name="suspensionYears"
-										value={years}
-										checked={suspensionYears === years}
-										onChange={() => setSuspensionYears(years)}
-										className="accent-primary"
-									/>
-									{t(`resolveCheating.suspensionYears.${years}`)}
-								</label>
-							))}
-						</fieldset>
-					)}
-
-					<label className={checkClass}>
-						<input
-							type="checkbox"
-							checked={dismiss}
-							onChange={(e) => {
-								setDismiss(e.target.checked);
-								if (e.target.checked) setSuspend(false);
-							}}
-							className="mt-1 accent-primary"
-						/>
-						<span>{t("resolveCheating.dismissStudent")}</span>
-					</label>
-
-					{(suspend || dismiss) && (
+					{freezes && (
 						<p className="text-body-sm text-primary-hover">{t("resolveCheating.freezeNote")}</p>
 					)}
 				</fieldset>
