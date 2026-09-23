@@ -2,10 +2,17 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ConfirmDialog from "../../components/confirmDialog";
 import DataTable, { type Column } from "../../components/dataTable";
+import EditUserDialog, { type UserEdit } from "../../components/editUserDialog";
 import FilterSelect from "../../components/filterSelect";
 import useAuth from "../../auth/useAuth";
 import useFaculties from "../../hooks/useFaculties";
-import { fetchRoles, fetchUsers, setUserSuspended } from "../../api/users";
+import {
+	fetchRoles,
+	fetchUsers,
+	renameUser,
+	resetUserPassword,
+	setUserSuspended,
+} from "../../api/users";
 import type { AssignableRole, ManagedUser } from "../../types/user";
 
 const UserList = () => {
@@ -21,6 +28,9 @@ const UserList = () => {
 	const [facultyId, setFacultyId] = useState("");
 	const [role, setRole] = useState("");
 	const [pendingSuspend, setPendingSuspend] = useState<ManagedUser | null>(null);
+	const [editing, setEditing] = useState<ManagedUser | null>(null);
+	const [editSaving, setEditSaving] = useState(false);
+	const [editFailure, setEditFailure] = useState<string | null>(null);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -62,6 +72,34 @@ const UserList = () => {
 		}
 	};
 
+	const openEdit = (u: ManagedUser) => {
+		setEditFailure(null);
+		setEditing(u);
+	};
+
+	const saveEdit = async ({ name, password }: UserEdit) => {
+		if (!editing) return;
+		const target = editing;
+		setEditSaving(true);
+		setEditFailure(null);
+		try {
+			if (name !== target.name) {
+				const updated = await renameUser(target.id, name);
+				setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
+			}
+			if (password) await resetUserPassword(target.id, password);
+			setEditing(null);
+		} catch {
+			// the dialog stays open so nothing typed is lost
+			setEditFailure("common.saveFailed");
+		} finally {
+			setEditSaving(false);
+		}
+	};
+
+	const actionClass =
+		"rounded-xs px-3 py-2 text-body-sm text-accent-deep underline-offset-4 transition-colors duration-150 ease-out hover:bg-background hover:underline";
+
 	const columns: Column<ManagedUser>[] = [
 		{ key: "name", header: t("userList.columns.name"), render: (u) => u.name },
 		{
@@ -80,19 +118,28 @@ const UserList = () => {
 		{
 			key: "actions",
 			header: t("common.actions"),
-			render: (u) =>
-				// an admin may not suspend themselves: that locks everyone out
-				u.id === currentUser?.id ? (
-					<span className="text-body-sm text-primary-hover">{t("userList.you")}</span>
-				) : (
+			render: (u) => (
+				<div className="flex flex-wrap items-center gap-1">
 					<button
 						type="button"
-						onClick={() => setPendingSuspend(u)}
-						className="rounded-xs px-3 py-2 text-body-sm text-accent-deep underline-offset-4 transition-colors duration-150 ease-out hover:bg-background hover:underline"
+						onClick={() => openEdit(u)}
+						aria-label={t("userList.editItem", { name: u.name })}
+						className={actionClass}
 					>
-						{t(u.suspended ? "userList.restore" : "userList.suspend")}
+						{t("userList.edit")}
 					</button>
-				),
+					{/* an admin may not suspend themselves: that locks everyone out */}
+					{u.id === currentUser?.id ? (
+						<span className="px-3 py-2 text-body-sm text-primary-hover">
+							{t("userList.you")}
+						</span>
+					) : (
+						<button type="button" onClick={() => setPendingSuspend(u)} className={actionClass}>
+							{t(u.suspended ? "userList.restore" : "userList.suspend")}
+						</button>
+					)}
+				</div>
+			),
 		},
 	];
 
@@ -145,6 +192,16 @@ const UserList = () => {
 				cancelLabel={t("common.cancel")}
 				onConfirm={() => void confirmSuspend()}
 				onCancel={() => setPendingSuspend(null)}
+			/>
+
+			<EditUserDialog
+				open={editing !== null}
+				name={editing?.name ?? ""}
+				login={editing?.email ?? ""}
+				saving={editSaving}
+				failure={editFailure}
+				onSave={(edit) => void saveEdit(edit)}
+				onCancel={() => setEditing(null)}
 			/>
 		</div>
 	);

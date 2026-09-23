@@ -311,7 +311,9 @@
       "allFaculties": "All faculties",
       "role": "Role",
       "allRoles": "All roles"
-    }
+    },
+    "edit": "Edit",
+    "editItem": "Edit {{name}}"
   },
   "userEntry": {
     "title": "Add user",
@@ -334,6 +336,12 @@
       "taken": "That login is already in use.",
       "unavailable": "Couldn't reach the server. Please try again in a moment."
     }
+  },
+  "editUser": {
+    "title": "Edit user",
+    "newPassword": "New password (optional)",
+    "passwordHint": "Leave blank to keep the current password. Shown in the clear — pass it to the user yourself.",
+    "save": "Save"
   },
   "seatingStatuses": {
     "attended": "Attended",

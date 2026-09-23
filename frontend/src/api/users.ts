@@ -32,6 +32,11 @@ export const createUser = async (payload: UserPayload): Promise<ManagedUser> => 
 	return data;
 };
 
+export const renameUser = async (id: string, name: string): Promise<ManagedUser> => {
+	const { data } = await api.patch<ManagedUser>(`/admin/users/${id}`, { name });
+	return data;
+};
+
 /** Suspending is how a user is removed; nothing is ever deleted. */
 export const setUserSuspended = async (
 	id: string,
