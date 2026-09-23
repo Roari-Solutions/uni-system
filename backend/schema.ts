@@ -59,6 +59,9 @@ export const studentResultEnum = pgEnum('student_result', ['success', 'repeat'])
 /** Role seniority level (1-4). */
 export const roleLevelEnum = pgEnum('role_level', ['1', '2', '3', '4']);
 
+/** Whether a student's record may change: a suspension or dismissal freezes it. */
+export const studentStandingEnum = pgEnum('student_standing', ['active', 'suspended', 'dismissed']);
+
 const timestamps = () => ({
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true })
@@ -238,6 +241,10 @@ export const students = pgTable('students', {
   academicYear: studyLevelEnum('academic_year').notNull(),
   /** Null until the year's outcome is determined. */
   status: studentResultEnum('status'),
+  /** Suspended or dismissed students' grades and results are frozen until an admin lifts it. */
+  standing: studentStandingEnum('standing').notNull().default('active'),
+  /** Suspended students only: the academic years they sit out (1 or 2). */
+  suspensionYears: integer('suspension_years'),
   facultyId: uuid('faculty_id')
     .notNull()
     .references(() => faculties.id),
@@ -263,6 +270,10 @@ export const grades = pgTable(
     seatingStatus: seatingStatusEnum('seating_status'),
     /** Cheating only: false until staff decide the case, and the mark is left out of the year until then. */
     cheatingResolved: boolean('cheating_resolved').notNull().default(false),
+    /** The penalties staff placed on the student when deciding this cheating case, kept as a record. */
+    penaltyWarning: boolean('penalty_warning').notNull().default(false),
+    penaltySuspensionYears: integer('penalty_suspension_years'),
+    penaltyDismissal: boolean('penalty_dismissal').notNull().default(false),
     ...timestamps(),
   },
   (t) => [unique('student_curriculum_unique').on(t.studentId, t.curriculumId)],

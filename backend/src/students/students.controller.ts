@@ -69,6 +69,12 @@ export class StudentsController {
     return await this.studentsService.updateStudent(id, dto, req.grCaller);
   }
 
+  /** POST /gr/students/:id/reinstate — lifts a suspension or reverses a dismissal (admin only). */
+  @Post(':id/reinstate')
+  async ReinstateStudent(@Param('id', ParseUUIDPipe) id: string, @Req() req: GrRequest) {
+    return await this.studentsService.reinstateStudent(id, req.grCaller);
+  }
+
   @Delete(':id')
   async DeleteStudent(@Param('id', ParseUUIDPipe) id: string, @Req() req: GrRequest) {
     return await this.studentsService.deleteStudent(id, req.grCaller);

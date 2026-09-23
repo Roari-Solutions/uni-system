@@ -21,6 +21,7 @@ import {
   NormaliseAcademicYear,
   type AcademicYear,
 } from 'src/common/academic-year';
+import { STUDENT_STANDINGS, type StudentStanding } from 'src/common/student-standing';
 
 /** Admission routes offered to students; mirrors ACCEPTANCE_TYPES in the views. */
 export const ACCEPTANCE_TYPES = [
@@ -113,6 +114,10 @@ export class ListStudentsQueryDto {
   @IsString()
   @Matches(/^\d{4}$/)
   acceptanceYear?: string;
+
+  @IsOptional()
+  @IsIn(STUDENT_STANDINGS)
+  standing?: StudentStanding;
 
   /** Free-text match against either language's name or the university number. */
   @IsOptional()

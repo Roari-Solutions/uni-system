@@ -15,9 +15,11 @@ import { GrCaller } from 'src/gr-gurd/gr-gurd.guard';
 import {
   CreateGradeDto,
   ListGradesQueryDto,
+  ResolveCheatingDto,
   UpdateGradeDto,
   type SeatingStatus,
 } from './dto/grades.dto';
+import { assertNotFrozen, type StudentStanding } from 'src/common/student-standing';
 import { letterOf, pointsOf, type LetterGrade } from './letter-grade';
 import { assertFaculty, scopeFacultyId } from 'src/gr-scope/gr-scope';
 import type { RequirementType } from 'src/common/requirement-type';
@@ -40,6 +42,28 @@ function voidsMark(status: SeatingStatus | null): boolean {
  */
 function awaitsDecision(status: SeatingStatus | null, resolved: boolean): boolean {
   return status === 'cheating' && !resolved;
+}
+
+/**
+ * The student's standing after a cheating decision. Dismissal outranks a
+ * suspension, and a longer suspension outranks a shorter one; nothing here
+ * lowers a standing, which only an admin's reinstatement does.
+ */
+function nextStanding(
+  current: StudentStanding,
+  currentYears: number | null,
+  dto: ResolveCheatingDto,
+): { standing: StudentStanding; suspensionYears: number | null } {
+  if (current === 'dismissed' || dto.dismiss) {
+    return { standing: 'dismissed', suspensionYears: null };
+  }
+  if (dto.suspensionYears !== undefined) {
+    return {
+      standing: 'suspended',
+      suspensionYears: Math.max(dto.suspensionYears, currentYears ?? 0),
+    };
+  }
+  return { standing: current, suspensionYears: currentYears };
 }
 
 /** A student's stored semester GPAs for one academic year, plus the annual average. */
@@ -100,6 +124,10 @@ export interface StudentYearGradeView {
   // null when no grade row exists yet, or on rows saved before seating status existed
   seatingStatus: SeatingStatus | null;
   cheatingResolved: boolean;
+  /** Penalties recorded when this cheating case was decided. */
+  penaltyWarning: boolean;
+  penaltySuspensionYears: number | null;
+  penaltyDismissal: boolean;
 }
 
 /** CRUD for grades and per-semester GPAs, with faculty scoping. */
@@ -185,10 +213,27 @@ export class GradesService {
   }
 
   /**
+   * Recomputes one semester's GPA, unless the student is suspended or dismissed:
+   * their results stay as they were when the record froze.
+   */
+  private async refreshSemesterGpa(
+    studentId: string,
+    academicYear: AcademicYear,
+    semester: Semester,
+  ): Promise<void> {
+    const student = await this.db.query.students.findFirst({
+      where: eq(students.id, studentId),
+      columns: { standing: true },
+    });
+    if (student?.standing !== 'active') return;
+    await this.rebuildSemesterGpa(studentId, academicYear, semester);
+  }
+
+  /**
    * Recomputes and stores one semester's GPA: upserts when the semester is
    * fully marked, and drops any stale row when it is not.
    */
-  private async refreshSemesterGpa(
+  private async rebuildSemesterGpa(
     studentId: string,
     academicYear: AcademicYear,
     semester: Semester,
@@ -411,6 +456,8 @@ export class GradesService {
         where: and(
           eq(students.facultyId, facultyId),
           eq(students.academicYear, curriculum.academicYear),
+          // suspended and dismissed students take no new marks
+          eq(students.standing, 'active'),
         ),
         columns: { id: true, nameEn: true, nameAr: true, uniNumber: true },
       });
@@ -487,6 +534,9 @@ export class GradesService {
           grade: true,
           seatingStatus: true,
           cheatingResolved: true,
+          penaltyWarning: true,
+          penaltySuspensionYears: true,
+          penaltyDismissal: true,
         },
       });
       const markOf = new Map(marks.map((m) => [m.curriculumId, m]));
@@ -507,6 +557,9 @@ export class GradesService {
             letter: grade === null ? null : letterOf(grade),
             seatingStatus: mark?.seatingStatus ?? null,
             cheatingResolved: mark?.cheatingResolved ?? false,
+            penaltyWarning: mark?.penaltyWarning ?? false,
+            penaltySuspensionYears: mark?.penaltySuspensionYears ?? null,
+            penaltyDismissal: mark?.penaltyDismissal ?? false,
           };
         })
         .sort(
@@ -529,10 +582,11 @@ export class GradesService {
     try {
       const student = await this.db.query.students.findFirst({
         where: eq(students.id, dto.studentId),
-        columns: { id: true, facultyId: true, uniNumber: true },
+        columns: { id: true, facultyId: true, uniNumber: true, standing: true },
       });
       if (!student) throw new BadRequestException();
       assertFaculty(caller, student.facultyId);
+      assertNotFrozen(student.standing);
 
       const curriculum = await this.curriculumOrThrow(dto.curriculumId, false);
 
@@ -592,7 +646,7 @@ export class GradesService {
       const row = await this.db.query.grades.findFirst({
         where: eq(grades.id, id),
         with: {
-          student: { columns: { id: true, facultyId: true } },
+          student: { columns: { id: true, facultyId: true, standing: true } },
           curriculum: {
             columns: { id: true, academicYear: true, semester: true, courseHours: true },
           },
@@ -600,6 +654,7 @@ export class GradesService {
       });
       if (!row) throw new NotFoundException();
       assertFaculty(caller, row.student.facultyId);
+      assertNotFrozen(row.student.standing);
 
       if (dto.studentId !== undefined && dto.studentId !== row.studentId) {
         throw new BadRequestException();
@@ -686,18 +741,125 @@ export class GradesService {
     }
   }
 
+  /**
+   * Decides a pending cheating case: accept the mark (the row becomes attended)
+   * or keep the case and score 0, then record any penalties on the row and the
+   * student. A suspension or dismissal freezes the student's record; a stronger
+   * standing is never downgraded by a later case. A frozen student's other
+   * pending cases can still be decided, since they belong to the same record.
+   */
+  async resolveCheating(
+    id: string,
+    dto: ResolveCheatingDto,
+    caller: GrCaller,
+  ): Promise<GradeView> {
+    if (dto.dismiss && dto.suspensionYears !== undefined) throw new BadRequestException();
+    try {
+      const row = await this.db.query.grades.findFirst({
+        where: eq(grades.id, id),
+        with: {
+          student: {
+            columns: {
+              id: true,
+              facultyId: true,
+              uniNumber: true,
+              standing: true,
+              suspensionYears: true,
+            },
+          },
+          curriculum: { columns: { academicYear: true, semester: true, courseHours: true } },
+        },
+      });
+      if (!row) throw new NotFoundException();
+      assertFaculty(caller, row.student.facultyId);
+      if (!awaitsDecision(row.seatingStatus, row.cheatingResolved)) {
+        throw new ConflictException({ code: 'NOT_PENDING' });
+      }
+
+      // accepting keeps the mark; keeping the case scores the curriculum 0
+      const grade = dto.outcome === 'accept' ? Number(row.grade ?? 0) : 0;
+      const letter = letterOf(grade);
+
+      const { standing, suspensionYears } = nextStanding(
+        row.student.standing,
+        row.student.suspensionYears,
+        dto,
+      );
+
+      const updated = await this.db.transaction(async (tx) => {
+        const [next] = await tx
+          .update(grades)
+          .set({
+            grade: String(grade),
+            letter,
+            gp: gpOf(letter, row.curriculum.courseHours),
+            seatingStatus: dto.outcome === 'accept' ? 'attended' : 'cheating',
+            cheatingResolved: dto.outcome === 'zero',
+            penaltyWarning: dto.warning,
+            penaltySuspensionYears: dto.suspensionYears ?? null,
+            penaltyDismissal: dto.dismiss,
+          })
+          .where(eq(grades.id, row.id))
+          .returning();
+
+        if (standing !== row.student.standing || suspensionYears !== row.student.suspensionYears) {
+          await tx
+            .update(students)
+            .set({ standing, suspensionYears })
+            .where(eq(students.id, row.student.id));
+        }
+        return next;
+      });
+
+      // the decision itself belongs to the results the record freezes with
+      await this.rebuildSemesterGpa(
+        row.student.id,
+        row.curriculum.academicYear,
+        row.curriculum.semester,
+      );
+
+      this.logger.log(
+        `Resolved cheating case ${row.id} for ${row.student.uniNumber}: ${dto.outcome}` +
+          (standing !== row.student.standing ? `, student now ${standing}` : ''),
+      );
+      return {
+        id: updated.id,
+        studentId: updated.studentId,
+        curriculumId: updated.curriculumId,
+        grade,
+        letter,
+        seatingStatus: updated.seatingStatus,
+        cheatingResolved: updated.cheatingResolved,
+      };
+    } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof ConflictException ||
+        error instanceof NotFoundException ||
+        error instanceof UnauthorizedException
+      ) {
+        throw error;
+      }
+      this.logger.error(`Failed to resolve cheating case: ${id}`, error);
+      throw new InternalServerErrorException('Grades operation failed', {
+        cause: error,
+      });
+    }
+  }
+
   /** Deletes the grade with this id. */
   async deleteGrade(id: string, caller: GrCaller): Promise<{ status: string }> {
     try {
       const row = await this.db.query.grades.findFirst({
         where: eq(grades.id, id),
         with: {
-          student: { columns: { id: true, facultyId: true } },
+          student: { columns: { id: true, facultyId: true, standing: true } },
           curriculum: { columns: { academicYear: true, semester: true } },
         },
       });
       if (!row) throw new NotFoundException();
       assertFaculty(caller, row.student.facultyId);
+      assertNotFrozen(row.student.standing);
 
       await this.db.delete(grades).where(eq(grades.id, row.id));
       await this.refreshSemesterGpa(
@@ -711,6 +873,7 @@ export class GradesService {
     } catch (error) {
       if (
         error instanceof BadRequestException ||
+        error instanceof ConflictException ||
         error instanceof NotFoundException ||
         error instanceof UnauthorizedException
       ) {
@@ -728,10 +891,11 @@ export class GradesService {
     try {
       const student = await this.db.query.students.findFirst({
         where: eq(students.id, studentId),
-        columns: { id: true, facultyId: true, uniNumber: true },
+        columns: { id: true, facultyId: true, uniNumber: true, standing: true },
       });
       if (!student) throw new NotFoundException();
       assertFaculty(caller, student.facultyId);
+      assertNotFrozen(student.standing);
 
       await this.db.transaction(async (tx) => {
         await tx.delete(grades).where(eq(grades.studentId, student.id));
@@ -743,6 +907,7 @@ export class GradesService {
     } catch (error) {
       if (
         error instanceof BadRequestException ||
+        error instanceof ConflictException ||
         error instanceof NotFoundException ||
         error instanceof UnauthorizedException
       ) {

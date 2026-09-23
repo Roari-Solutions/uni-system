@@ -1,10 +1,11 @@
 import api from "../lib/api";
-import type { Student } from "../types/student";
+import type { Student, StudentStanding } from "../types/student";
 
 export type StudentFilters = {
 	facultyId?: string;
 	level?: number;
 	acceptanceYear?: string;
+	standing?: StudentStanding;
 	q?: string;
 };
 
@@ -50,6 +51,12 @@ export const updateStudent = async (
 		...payload,
 		...(confirmOrphanedGrades ? { confirmOrphanedGrades } : {}),
 	});
+	return data;
+};
+
+/** Lifts a suspension or reverses a dismissal; admin only. */
+export const reinstateStudent = async (id: string): Promise<Student> => {
+	const { data } = await api.post<Student>(`/gr/students/${id}/reinstate`);
 	return data;
 };
 

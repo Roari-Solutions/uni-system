@@ -79,7 +79,8 @@
       "faculty": "Faculty",
       "status": "Status",
       "nationalId": "National ID",
-      "passportNumber": "Passport number"
+      "passportNumber": "Passport number",
+      "standing": "Standing"
     },
     "filters": {
       "level": "Academic year",
@@ -89,7 +90,9 @@
       "acceptanceYear": "Acceptance year",
       "allAcceptanceYears": "All acceptance years",
       "search": "Search",
-      "searchPlaceholder": "Name, university number or ID"
+      "searchPlaceholder": "Name, university number or ID",
+      "standing": "Standing",
+      "allStandings": "All standings"
     },
     "deleteTitle": "Delete student",
     "deleteMessage": "Are you sure you want to delete \"{{name}}\"? This can't be undone."
@@ -112,7 +115,9 @@
       "level": "Current academic year",
       "acceptanceYear": "Acceptance year",
       "acceptanceType": "Acceptance type",
-      "status": "Year outcome"
+      "status": "Year outcome",
+      "standing": "Standing",
+      "warnings": "Warnings"
     },
     "columns": {
       "curriculum": "Curriculum",
@@ -125,7 +130,18 @@
     "semesterGpa": "Semester GPA",
     "annualGpa": "Annual GPA",
     "missingGrades": "Still missing curriculum grades",
-    "edit": "Edit details"
+    "edit": "Edit details",
+    "standing": {
+      "suspendedText": "Grades and results are frozen: no new marks, edits or deletions until an administrator lifts the suspension.",
+      "dismissedTitle": "Dismissed from the university",
+      "dismissedText": "This record is read-only. Only an administrator can reverse the dismissal.",
+      "lift": "Lift suspension",
+      "reverse": "Reverse dismissal",
+      "liftTitle": "Lift suspension",
+      "reverseTitle": "Reverse dismissal",
+      "liftMessage": "Lift {{name}}'s suspension? Their grades and results can be changed again and the current year's GPA is recalculated. The penalty stays on the cheating case as a record.",
+      "reverseMessage": "Reverse {{name}}'s dismissal? Their record can be changed again and the current year's GPA is recalculated. The penalty stays on the cheating case as a record."
+    }
   },
   "student": {
     "acceptanceTypes": {
@@ -152,6 +168,15 @@
     "statuses": {
       "success": "Success",
       "repeat": "Repeat"
+    },
+    "standings": {
+      "active": "Active",
+      "suspended": "Suspended",
+      "dismissed": "Dismissed"
+    },
+    "suspendedFor": {
+      "1": "Suspended for 1 academic year",
+      "2": "Suspended for 2 academic years"
     }
   },
   "semesters": {
@@ -363,7 +388,16 @@
     "action": "Resolve",
     "actionFor": "Resolve the cheating case for {{name}}",
     "pending": "Awaiting a decision; left out of the year result",
-    "resolved": "Decided"
+    "resolved": "Decided",
+    "penaltiesLegend": "Penalties on the student (optional)",
+    "suspendStudent": "Suspend the student",
+    "suspensionLength": "Suspension length",
+    "suspensionYears": {
+      "1": "1 academic year",
+      "2": "2 academic years"
+    },
+    "dismissStudent": "Dismiss the student from the university",
+    "freezeNote": "The student's grades and results are frozen until an administrator lifts this. Only one of suspension and dismissal can be chosen."
   },
   "gpaStatuses": {
     "pass": "Pass",
@@ -432,5 +466,14 @@
     "curriculumMessage": "Students in faculties that will no longer offer this curriculum already have grades in it (grades affected: {{count}}). The grades are kept as history, but they will no longer count toward those students' GPA. Save anyway?",
     "studentMessage": "This student has grades in curriculums the new faculty doesn't offer (grades affected: {{count}}). The grades are kept as history, but they will no longer count toward the student's GPA. Save anyway?",
     "confirm": "Save anyway"
+  },
+  "penalties": {
+    "label": "Penalties",
+    "warning": "Warning",
+    "suspension": {
+      "1": "Suspension: 1 academic year",
+      "2": "Suspension: 2 academic years"
+    },
+    "dismissal": "Dismissal"
   }
 }
