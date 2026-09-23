@@ -14,4 +14,6 @@ export type Grade = {
 	letter: LetterGrade;
 	// null only on grades saved before seating status existed
 	seatingStatus: SeatingStatus | null;
+	// cheating only: false while the case is still waiting on a decision
+	cheatingResolved: boolean;
 };

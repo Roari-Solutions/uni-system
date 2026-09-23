@@ -5,9 +5,13 @@ import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import DataTable, { type Column } from "../../../components/dataTable";
 import useFaculties from "../../../hooks/useFaculties";
 import { fetchStudent } from "../../../api/students";
-import { fetchStudentYearGrades, type StudentYearGrade } from "../../../api/grades";
+import { fetchStudentYearGrades, updateGrade, type StudentYearGrade } from "../../../api/grades";
+import { SeatingStatusTag } from "../../../components/seatingStatusSelect";
+import ResolveCheatingDialog, {
+	type CheatingResolution,
+} from "../../../components/resolveCheatingDialog";
 import type { Student } from "../../../types/student";
-import { cardClass } from "../../../styles/form";
+import { cardClass, smallSecondaryButtonClass } from "../../../styles/form";
 import { SEMESTERS } from "../../../utils/academicYears";
 
 // one label/value pair of the registered data
@@ -28,6 +32,9 @@ const StudentDetails = () => {
 	const [grades, setGrades] = useState<StudentYearGrade[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [failed, setFailed] = useState(false);
+	// the cheating curriculum being decided, if any
+	const [resolving, setResolving] = useState<StudentYearGrade | null>(null);
+	const [saving, setSaving] = useState(false);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -51,6 +58,28 @@ const StudentDetails = () => {
 	}, [studentId]);
 
 	const facultyName = (id: string) => faculties.find((f) => f.id === id)?.name[lang] ?? "";
+
+	const awaitsDecision = (g: StudentYearGrade) =>
+		g.seatingStatus === "cheating" && !g.cheatingResolved;
+
+	const handleResolve = async ({ outcome }: CheatingResolution) => {
+		if (!resolving?.gradeId) return;
+		setSaving(true);
+		try {
+			await updateGrade(
+				resolving.gradeId,
+				outcome === "accept"
+					? { seatingStatus: "attended" }
+					: { seatingStatus: "cheating", grade: 0, cheatingResolved: true },
+			);
+			setGrades(await fetchStudentYearGrades(studentId));
+			setResolving(null);
+		} catch {
+			setFailed(true);
+		} finally {
+			setSaving(false);
+		}
+	};
 
 	const columns: Column<StudentYearGrade>[] = [
 		{ key: "name", header: t("studentDetails.columns.curriculum"), render: (g) => g.name[lang] },
@@ -78,6 +107,28 @@ const StudentDetails = () => {
 			key: "letter",
 			header: t("studentDetails.columns.letter"),
 			render: (g) => (g.letter ? <span dir="ltr" className="font-semibold">{g.letter}</span> : "—"),
+		},
+		{
+			key: "seatingStatus",
+			header: t("studentDetails.columns.seatingStatus"),
+			render: (g) => (
+				<div className="flex flex-col items-start gap-1">
+					<SeatingStatusTag status={g.seatingStatus} />
+					{awaitsDecision(g) && (
+						<>
+							<span className="text-body-sm text-error">{t("resolveCheating.pending")}</span>
+							<button
+								type="button"
+								onClick={() => setResolving(g)}
+								aria-label={t("resolveCheating.actionFor", { name: g.name[lang] })}
+								className={smallSecondaryButtonClass}
+							>
+								{t("resolveCheating.action")}
+							</button>
+						</>
+					)}
+				</div>
+			),
 		},
 	];
 
@@ -150,6 +201,8 @@ const StudentDetails = () => {
 										rows={grades.filter((g) => g.semester === semester)}
 										getRowId={(g) => g.curriculumId}
 										emptyText={t("studentDetails.noCurriculums")}
+										// §39 — the tint repeats what the status cell already says
+										rowClassName={(g) => (awaitsDecision(g) ? "bg-error/8" : "")}
 									/>
 								</div>
 							))}
@@ -157,6 +210,15 @@ const StudentDetails = () => {
 					</section>
 				</>
 			)}
+
+			<ResolveCheatingDialog
+				open={resolving !== null}
+				curriculumName={resolving ? resolving.name[lang] : ""}
+				grade={resolving?.grade ?? null}
+				saving={saving}
+				onResolve={(resolution) => void handleResolve(resolution)}
+				onCancel={() => setResolving(null)}
+			/>
 		</div>
 	);
 };

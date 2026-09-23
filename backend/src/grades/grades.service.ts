@@ -27,11 +27,18 @@ import {
   type AcademicYear,
 } from 'src/common/academic-year';
 
-/** Seating statuses that void the mark: the grade is stored as 0, so its letter is F. */
-const ZEROED_STATUSES: readonly SeatingStatus[] = ['absent', 'cheating'];
-
+/** Absence voids the mark: the grade is stored as 0, so its letter is F. */
 function voidsMark(status: SeatingStatus | null): boolean {
-  return status !== null && ZEROED_STATUSES.includes(status);
+  return status === 'absent';
+}
+
+/**
+ * A cheating case waits on a decision: staff either accept the mark (moving the
+ * row to attended) or keep the cheating and record a 0. Until then the mark is
+ * left out of the academic year entirely.
+ */
+function awaitsDecision(status: SeatingStatus | null, resolved: boolean): boolean {
+  return status === 'cheating' && !resolved;
 }
 
 /** A grade as the views consume it; `letter` is derived, never stored. */
@@ -43,6 +50,7 @@ export interface GradeView {
   letter: LetterGrade;
   // null only on rows saved before seating status existed
   seatingStatus: SeatingStatus | null;
+  cheatingResolved: boolean;
 }
 
 /** A curriculum's entry sheet: the curriculum and the students still without a grade for it. */
@@ -60,6 +68,8 @@ export interface PendingGradesView {
 
 /** One curriculum of a student's current year, with the mark if one is entered. */
 export interface StudentYearGradeView {
+  /** The grade row, so the views can edit it; null until a mark is entered. */
+  gradeId: string | null;
   curriculumId: string;
   name: { en: string; ar: string };
   abbreviation: string | null;
@@ -69,6 +79,7 @@ export interface StudentYearGradeView {
   letter: LetterGrade | null;
   // null when no grade row exists yet, or on rows saved before seating status existed
   seatingStatus: SeatingStatus | null;
+  cheatingResolved: boolean;
 }
 
 /** CRUD for grades and per-academic-year results, with faculty scoping. */
@@ -96,6 +107,8 @@ export class GradesService {
   /**
    * Coverage of one academic year: true once every curriculum the student's
    * faculty offers for that year carries a mark, plus the average of those marks.
+   * Undecided cheating cases are skipped on both counts, so the year can still
+   * complete around them and their marks stay out of the average.
    */
   async yearCoverage(studentId: string, academicYear: AcademicYear) {
     const student = await this.db.query.students.findFirst({
@@ -123,11 +136,19 @@ export class GradesService {
       ),
     });
 
-    const filledIds = new Set(marked.map((g) => g.curriculumId));
-    const complete = curriculumIds.every((id) => filledIds.has(id));
-    if (!complete) return { complete, average: null as number | null };
+    // a cheating case that staff have not decided yet counts neither way
+    const pending = new Set(
+      marked
+        .filter((g) => awaitsDecision(g.seatingStatus, g.cheatingResolved))
+        .map((g) => g.curriculumId),
+    );
+    const counted = marked.filter((g) => !pending.has(g.curriculumId));
 
-    const average = marked.reduce((acc, cur) => acc + Number(cur.grade), 0) / marked.length;
+    const filledIds = new Set(counted.map((g) => g.curriculumId));
+    const complete = curriculumIds.every((id) => filledIds.has(id) || pending.has(id));
+    if (!complete || !counted.length) return { complete: false, average: null as number | null };
+
+    const average = counted.reduce((acc, cur) => acc + Number(cur.grade), 0) / counted.length;
     return { complete, average };
   }
 
@@ -189,6 +210,7 @@ export class GradesService {
         .filter((row) => !facultyId || row.student.facultyId === facultyId)
         .filter((row) => !query.curriculumId || row.curriculumId === query.curriculumId)
         .filter((row) => !query.academicYear || row.curriculum.academicYear === query.academicYear)
+        .filter((row) => !query.seatingStatus || row.seatingStatus === query.seatingStatus)
         .map((row) => {
           const grade = Number(row.grade);
           return {
@@ -198,6 +220,7 @@ export class GradesService {
             grade,
             letter: letterOf(grade),
             seatingStatus: row.seatingStatus,
+            cheatingResolved: row.cheatingResolved,
           };
         });
 
@@ -302,7 +325,13 @@ export class GradesService {
             yearCurriculums.map((c) => c.id),
           ),
         ),
-        columns: { curriculumId: true, grade: true, seatingStatus: true },
+        columns: {
+          id: true,
+          curriculumId: true,
+          grade: true,
+          seatingStatus: true,
+          cheatingResolved: true,
+        },
       });
       const markOf = new Map(marks.map((m) => [m.curriculumId, m]));
 
@@ -312,6 +341,7 @@ export class GradesService {
           const grade =
             mark === undefined || mark.grade === null ? null : Number(mark.grade);
           return {
+            gradeId: mark?.id ?? null,
             curriculumId: c.id,
             name: { en: c.nameEn, ar: c.nameAr },
             abbreviation: c.abbreviation,
@@ -320,6 +350,7 @@ export class GradesService {
             grade,
             letter: grade === null ? null : letterOf(grade),
             seatingStatus: mark?.seatingStatus ?? null,
+            cheatingResolved: mark?.cheatingResolved ?? false,
           };
         })
         .sort(
@@ -355,7 +386,7 @@ export class GradesService {
       });
       if (existing) throw new ConflictException();
 
-      // absent or cheating stores 0 whatever mark was sent
+      // an absence stores 0 whatever mark was sent
       const grade = voidsMark(dto.seatingStatus) ? 0 : dto.grade;
       const [created] = await this.db
         .insert(grades)
@@ -364,6 +395,7 @@ export class GradesService {
           curriculumId: curriculum.id,
           grade: String(grade),
           seatingStatus: dto.seatingStatus,
+          cheatingResolved: dto.seatingStatus === 'cheating' && (dto.cheatingResolved ?? false),
         })
         .returning();
 
@@ -377,6 +409,7 @@ export class GradesService {
         grade,
         letter: letterOf(grade),
         seatingStatus: created.seatingStatus,
+        cheatingResolved: created.cheatingResolved,
       };
     } catch (error) {
       if (
@@ -411,6 +444,13 @@ export class GradesService {
         throw new BadRequestException();
       }
 
+      // a mark is only ever re-entered while a cheating case is open; every
+      // settled row (attended, absent, or a decided case) keeps the mark it has
+      if (dto.grade !== undefined && !awaitsDecision(row.seatingStatus, row.cheatingResolved)) {
+        this.logger.warn(`Rejected grade change on a settled row: ${row.id}`);
+        throw new BadRequestException();
+      }
+
       let curriculumId = row.curriculumId;
       let academicYear = row.curriculum.academicYear;
       if (dto.curriculumId !== undefined && dto.curriculumId !== row.curriculumId) {
@@ -426,8 +466,12 @@ export class GradesService {
       }
 
       // judge the status the row ends up with: a PATCH may send only one of grade and status.
-      // Absent or cheating stores 0; switching back to attended keeps 0 until a new mark is sent.
-      const nextGrade = voidsMark(dto.seatingStatus ?? row.seatingStatus) ? 0 : dto.grade;
+      // An absence stores 0; switching back off it keeps the 0 until a new mark is sent.
+      const seatingStatus = dto.seatingStatus ?? row.seatingStatus;
+      const nextGrade = voidsMark(seatingStatus) ? 0 : dto.grade;
+      // only a cheating row can carry a decision; any other status drops it
+      const cheatingResolved =
+        seatingStatus === 'cheating' ? (dto.cheatingResolved ?? row.cheatingResolved) : false;
 
       const [updated] = await this.db
         .update(grades)
@@ -435,6 +479,7 @@ export class GradesService {
           curriculumId,
           ...(nextGrade !== undefined ? { grade: String(nextGrade) } : {}),
           ...(dto.seatingStatus !== undefined ? { seatingStatus: dto.seatingStatus } : {}),
+          cheatingResolved,
         })
         .where(eq(grades.id, row.id))
         .returning();
@@ -453,6 +498,7 @@ export class GradesService {
         grade,
         letter: letterOf(grade),
         seatingStatus: updated.seatingStatus,
+        cheatingResolved: updated.cheatingResolved,
       };
     } catch (error) {
       if (

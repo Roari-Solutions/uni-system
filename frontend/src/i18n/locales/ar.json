@@ -106,7 +106,8 @@
       "abbreviation": "الاختصار",
       "requirementType": "نوع المتطلب",
       "grade": "الدرجة",
-      "letter": "التقدير"
+      "letter": "التقدير",
+      "seatingStatus": "حالة الجلوس"
     }
   },
   "student": {
@@ -199,8 +200,11 @@
       "curriculum": "المنهج",
       "allCurriculums": "جميع المناهج",
       "letter": "التقدير",
-      "allLetters": "جميع التقديرات"
-    }
+      "allLetters": "جميع التقديرات",
+      "seatingStatus": "حالة الجلوس",
+      "allSeatingStatuses": "كل حالات الجلوس"
+    },
+    "gradeFor": "درجة {{name}}"
   },
   "gradeEntry": {
     "title": "إدخال الدرجات",
@@ -246,7 +250,7 @@
       "alreadyGraded": "هذا الطالب لديه درجة مسجلة في هذا المنهج"
     },
     "seatingStatusFor": "حالة الجلوس لـ {{name}}",
-    "voidedGrade": "تُسجَّل حالتا الغياب والغش بالدرجة 0 (راسب)."
+    "voidedGrade": "يُسجَّل الغياب بالدرجة 0 (راسب)."
   },
   "roles": {
     "admin": "مسؤول",
@@ -319,5 +323,17 @@
     "attended": "حضور",
     "cheating": "حالة غش",
     "absent": "غائب"
+  },
+  "resolveCheating": {
+    "title": "حسم حالة الغش",
+    "legend": "كيف تُحسم هذه الحالة؟",
+    "accept": "قبول الدرجة ({{grade}}) وتسجيل الطالب حاضراً",
+    "zero": "الإبقاء على حالة الغش وتسجيل 0 لهذا المنهج",
+    "warnStudent": "توجيه إنذار للطالب",
+    "confirm": "حسم",
+    "action": "حسم",
+    "actionFor": "حسم حالة الغش لـ {{name}}",
+    "pending": "بانتظار الحسم؛ مستثناة من نتيجة السنة",
+    "resolved": "محسومة"
   }
 }

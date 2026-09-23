@@ -106,7 +106,8 @@
       "abbreviation": "Abbreviation",
       "requirementType": "Requirement type",
       "grade": "Grade",
-      "letter": "Letter grade"
+      "letter": "Letter grade",
+      "seatingStatus": "Seating status"
     }
   },
   "student": {
@@ -199,8 +200,11 @@
       "curriculum": "Curriculum",
       "allCurriculums": "All curriculums",
       "letter": "Letter grade",
-      "allLetters": "All letter grades"
-    }
+      "allLetters": "All letter grades",
+      "seatingStatus": "Seating status",
+      "allSeatingStatuses": "All seating statuses"
+    },
+    "gradeFor": "Grade for {{name}}"
   },
   "gradeEntry": {
     "title": "Enter grades",
@@ -246,7 +250,7 @@
       "alreadyGraded": "This student already has a grade for this curriculum"
     },
     "seatingStatusFor": "Seating status for {{name}}",
-    "voidedGrade": "Absent and cheating are recorded as 0 (F)."
+    "voidedGrade": "An absence is recorded as 0 (F)."
   },
   "roles": {
     "admin": "Administrator",
@@ -319,5 +323,17 @@
     "attended": "Attended",
     "cheating": "Cheating case",
     "absent": "Absent"
+  },
+  "resolveCheating": {
+    "title": "Resolve cheating case",
+    "legend": "How does this case end?",
+    "accept": "Accept the mark ({{grade}}) and record the student as attended",
+    "zero": "Keep the cheating case and record 0 for this curriculum",
+    "warnStudent": "Place a warning on the student",
+    "confirm": "Resolve",
+    "action": "Resolve",
+    "actionFor": "Resolve the cheating case for {{name}}",
+    "pending": "Awaiting a decision; left out of the year result",
+    "resolved": "Decided"
   }
 }

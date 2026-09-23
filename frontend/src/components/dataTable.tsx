@@ -13,9 +13,18 @@ type DataTableProps<T> = {
 	emptyText: string;
 	// makes the whole row a pointer target; keyboard users need a link inside the row too
 	onRowClick?: (row: T) => void;
+	// marks a row as needing attention; the row must say why in its cells too (§39)
+	rowClassName?: (row: T) => string;
 };
 
-const DataTable = <T,>({ columns, rows, getRowId, emptyText, onRowClick }: DataTableProps<T>) => {
+const DataTable = <T,>({
+	columns,
+	rows,
+	getRowId,
+	emptyText,
+	onRowClick,
+	rowClassName,
+}: DataTableProps<T>) => {
 	const handleRowClick = (e: MouseEvent<HTMLTableRowElement>, row: T) => {
 		// controls inside the row keep their own behaviour
 		if ((e.target as HTMLElement).closest("a, button, input, select, textarea")) return;
@@ -47,7 +56,7 @@ const DataTable = <T,>({ columns, rows, getRowId, emptyText, onRowClick }: DataT
 							<tr
 								key={getRowId(row)}
 								onClick={onRowClick ? (e) => handleRowClick(e, row) : undefined}
-								className={`transition-colors duration-150 ease-out hover:bg-background ${onRowClick ? "cursor-pointer" : ""}`}
+								className={`transition-colors duration-150 ease-out hover:bg-background ${onRowClick ? "cursor-pointer" : ""} ${rowClassName?.(row) ?? ""}`}
 							>
 								{columns.map((col) => (
 									<td key={col.key} className="px-4 py-4">

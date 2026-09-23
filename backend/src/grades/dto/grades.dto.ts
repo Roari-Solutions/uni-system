@@ -1,4 +1,4 @@
-import { IsIn, IsNumber, IsOptional, IsUUID, Max, Min } from 'class-validator';
+import { IsBoolean, IsIn, IsNumber, IsOptional, IsUUID, Max, Min } from 'class-validator';
 import { PartialType } from '@nestjs/mapped-types';
 import {
   ACADEMIC_YEARS,
@@ -26,6 +26,11 @@ export class CreateGradeDto {
 
   @IsIn(SEATING_STATUSES)
   seatingStatus!: SeatingStatus;
+
+  /** Cheating only: staff have decided the case, so the mark counts toward the year. */
+  @IsOptional()
+  @IsBoolean()
+  cheatingResolved?: boolean;
 }
 
 /** Body for patching a grade (all fields optional). */
@@ -50,4 +55,8 @@ export class ListGradesQueryDto {
   @IsOptional()
   @IsIn(LETTER_GRADES)
   letter?: LetterGrade;
+
+  @IsOptional()
+  @IsIn(SEATING_STATUSES)
+  seatingStatus?: SeatingStatus;
 }

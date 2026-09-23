@@ -33,8 +33,9 @@ const IDLE: RowState = { mode: "idle" };
 // the common case, so a row opens ready for the grade alone
 const DEFAULT_STATUS: SeatingStatus = "attended";
 
-// absent and cheating score 0; the API enforces this too
-const voidsMark = (status: SeatingStatus) => status !== "attended";
+// an absence scores 0; the API enforces this too. A cheating case keeps its
+// mark and is decided later from the grades list or the student's page.
+const voidsMark = (status: SeatingStatus) => status === "absent";
 
 // step two of grade entry: one curriculum's students, each graded in its own row
 const GradeSheet = () => {

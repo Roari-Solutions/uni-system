@@ -254,6 +254,8 @@ export const grades = pgTable(
       .references(() => curriculums.id),
     grade: numeric('grade', { precision: 5, scale: 2 }),
     seatingStatus: seatingStatusEnum('seating_status'),
+    /** Cheating only: false until staff decide the case, and the mark is left out of the year until then. */
+    cheatingResolved: boolean('cheating_resolved').notNull().default(false),
     ...timestamps(),
   },
   (t) => [unique('student_curriculum_unique').on(t.studentId, t.curriculumId)],
