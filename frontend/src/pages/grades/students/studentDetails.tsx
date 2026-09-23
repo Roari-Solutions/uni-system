@@ -5,7 +5,13 @@ import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import DataTable, { type Column } from "../../../components/dataTable";
 import useFaculties from "../../../hooks/useFaculties";
 import { fetchStudent } from "../../../api/students";
-import { fetchStudentYearGrades, updateGrade, type StudentYearGrade } from "../../../api/grades";
+import {
+	fetchStudentGpas,
+	fetchStudentYearGrades,
+	updateGrade,
+	type StudentGpas,
+	type StudentYearGrade,
+} from "../../../api/grades";
 import { SeatingStatusTag } from "../../../components/seatingStatusSelect";
 import ResolveCheatingDialog, {
 	type CheatingResolution,
@@ -30,6 +36,7 @@ const StudentDetails = () => {
 
 	const [student, setStudent] = useState<Student | null>(null);
 	const [grades, setGrades] = useState<StudentYearGrade[]>([]);
+	const [gpas, setGpas] = useState<StudentGpas | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [failed, setFailed] = useState(false);
 	// the cheating curriculum being decided, if any
@@ -38,11 +45,16 @@ const StudentDetails = () => {
 
 	useEffect(() => {
 		let cancelled = false;
-		Promise.all([fetchStudent(studentId), fetchStudentYearGrades(studentId)])
-			.then(([studentRow, gradeRows]) => {
+		Promise.all([
+			fetchStudent(studentId),
+			fetchStudentYearGrades(studentId),
+			fetchStudentGpas(studentId),
+		])
+			.then(([studentRow, gradeRows, gpaRows]) => {
 				if (cancelled) return;
 				setStudent(studentRow);
 				setGrades(gradeRows);
+				setGpas(gpaRows);
 				setFailed(false);
 			})
 			.catch(() => {
@@ -59,6 +71,9 @@ const StudentDetails = () => {
 
 	const facultyName = (id: string) => faculties.find((f) => f.id === id)?.name[lang] ?? "";
 
+	const semesterGpa = (semester: number) =>
+		gpas?.semesters.find((s) => s.semester === semester) ?? null;
+
 	const awaitsDecision = (g: StudentYearGrade) =>
 		g.seatingStatus === "cheating" && !g.cheatingResolved;
 
@@ -72,7 +87,12 @@ const StudentDetails = () => {
 					? { seatingStatus: "attended" }
 					: { seatingStatus: "cheating", grade: 0, cheatingResolved: true },
 			);
-			setGrades(await fetchStudentYearGrades(studentId));
+			const [gradeRows, gpaRows] = await Promise.all([
+				fetchStudentYearGrades(studentId),
+				fetchStudentGpas(studentId),
+			]);
+			setGrades(gradeRows);
+			setGpas(gpaRows);
 			setResolving(null);
 		} catch {
 			setFailed(true);
@@ -189,13 +209,47 @@ const StudentDetails = () => {
 					</section>
 
 					<section aria-labelledby="yearGrades">
-						<h2 id="yearGrades" className="mb-6 text-heading-4 text-accent-deep">
-							{t("studentDetails.yearGrades", { year: t(`student.levels.${student.level}`) })}
-						</h2>
+						<div className="mb-6 flex flex-wrap items-baseline justify-between gap-3">
+							<h2 id="yearGrades" className="text-heading-4 text-accent-deep">
+								{t("studentDetails.yearGrades", { year: t(`student.levels.${student.level}`) })}
+							</h2>
+							{gpas?.annual !== null && gpas !== null && (
+								<p className="text-body-md text-foreground">
+									{t("studentDetails.annualGpa")}{" "}
+									<span dir="ltr" className="text-heading-5 font-semibold text-accent-deep">
+										{gpas.annual.toFixed(2)}
+									</span>
+								</p>
+							)}
+						</div>
 						<div className="flex flex-col gap-8">
 							{SEMESTERS.map((semester) => (
 								<div key={semester}>
-									<h3 className="mb-4 text-heading-5 text-accent-deep">{t(`semesters.${semester}`)}</h3>
+									<div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
+										<h3 className="text-heading-5 text-accent-deep">{t(`semesters.${semester}`)}</h3>
+										{semesterGpa(semester) && (
+											<p className="text-body-sm text-foreground">
+												{t("studentDetails.semesterGpa")}{" "}
+												<span dir="ltr" className="font-semibold">
+													{semesterGpa(semester)?.gpa.toFixed(2)}
+												</span>
+												{semesterGpa(semester)?.status && (
+													<>
+														{" · "}
+														<span
+															className={
+																semesterGpa(semester)?.status === "pass"
+																	? "text-success"
+																	: "text-error"
+															}
+														>
+															{t(`gpaStatuses.${semesterGpa(semester)?.status ?? "pass"}`)}
+														</span>
+													</>
+												)}
+											</p>
+										)}
+									</div>
 									<DataTable
 										columns={columns}
 										rows={grades.filter((g) => g.semester === semester)}

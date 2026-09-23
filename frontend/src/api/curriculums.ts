@@ -18,6 +18,7 @@ export type CurriculumPayload = {
 	academicYear: number;
 	semester: number;
 	requirementType: RequirementType;
+	courseHours: number;
 };
 
 export const fetchCurriculums = async (

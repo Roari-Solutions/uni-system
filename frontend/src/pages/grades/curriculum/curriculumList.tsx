@@ -80,6 +80,11 @@ const CurriculumList = () => {
 			render: (c) => (c.requirementType ? t(`requirementTypes.${c.requirementType}`) : t("curriculumList.notSet")),
 		},
 		{
+			key: "courseHours",
+			header: t("curriculumList.columns.courseHours"),
+			render: (c) => <span dir="ltr">{c.courseHours}</span>,
+		},
+		{
 			key: "actions",
 			header: t("common.actions"),
 			render: (c) => (

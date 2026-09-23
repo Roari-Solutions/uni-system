@@ -38,6 +38,9 @@ export const studyLevelEnum = pgEnum('study_level', ['1', '2', '3', '4', '5', '6
 /** Exams seating status */
 export const seatingStatusEnum = pgEnum('seating_status', ['attended', 'absent', 'cheating']);
 
+/** The grading scale, best first; a mark's letter decides its grade points. */
+export const letterGradeEnum = pgEnum('letter_grade', ['A', 'B+', 'B', 'C+', 'C', 'D', 'F']);
+
 /** Semester within an academic year; every curriculum runs in exactly one. */
 export const semesterEnum = pgEnum('semester', ['1', '2']);
 
@@ -253,6 +256,10 @@ export const grades = pgTable(
       .notNull()
       .references(() => curriculums.id),
     grade: numeric('grade', { precision: 5, scale: 2 }),
+    /** Derived from the mark on every write, and stored so the GPA can be rebuilt from rows alone. */
+    letter: letterGradeEnum('letter'),
+    /** Grade points for this curriculum: the letter's points x the curriculum's course hours. */
+    gp: numeric('gp', { precision: 6, scale: 2 }),
     seatingStatus: seatingStatusEnum('seating_status'),
     /** Cheating only: false until staff decide the case, and the mark is left out of the year until then. */
     cheatingResolved: boolean('cheating_resolved').notNull().default(false),
@@ -261,21 +268,25 @@ export const grades = pgTable(
   (t) => [unique('student_curriculum_unique').on(t.studentId, t.curriculumId)],
 );
 
-/** Per-student per-academic-year aggregate results (one row each). */
-export const results = pgTable(
-  'results',
+/** Per-student per-semester GPA (one row each); the annual figure averages these on read. */
+export const gpas = pgTable(
+  'gpas',
   {
     id: uuid('id').primaryKey().defaultRandom(),
     studentId: uuid('student_id')
       .notNull()
       .references(() => students.id),
     academicYear: studyLevelEnum('academic_year').notNull(),
-    result: numeric('result', { precision: 6, scale: 2 }).notNull(),
+    semester: semesterEnum('semester').notNull(),
+    /** Sum of the semester's grade points, kept so the figure can be audited. */
+    gpSum: numeric('gp_sum', { precision: 7, scale: 2 }).notNull(),
+    /** Course hours behind that sum; an undecided cheating case counts in neither. */
+    courseHours: integer('course_hours').notNull(),
     gpa: numeric('gpa', { precision: 3, scale: 2 }).notNull(),
     status: studentStatusEnum('status'),
     ...timestamps(),
   },
-  (t) => [unique('unique_result_student_year').on(t.studentId, t.academicYear)],
+  (t) => [unique('unique_gpa_student_year_semester').on(t.studentId, t.academicYear, t.semester)],
 );
 
 // ============================================== CMS ==============================================
@@ -452,14 +463,14 @@ export const facultyCurriculumsRelations = relations(facultyCurriculums, ({ one 
   }),
 }));
 
-/** Relations for students: faculty, grades, results. */
+/** Relations for students: faculty, grades, GPAs. */
 export const studentsRelations = relations(students, ({ one, many }) => ({
   faculty: one(faculties, {
     fields: [students.facultyId],
     references: [faculties.id],
   }),
   grades: many(grades),
-  results: many(results),
+  gpas: many(gpas),
 }));
 
 /** Relations for grades: student, curriculum. */
@@ -474,10 +485,10 @@ export const gradesRelations = relations(grades, ({ one }) => ({
   }),
 }));
 
-/** Relations for results: student. */
-export const resultsRelations = relations(results, ({ one }) => ({
+/** Relations for GPAs: student. */
+export const gpasRelations = relations(gpas, ({ one }) => ({
   student: one(students, {
-    fields: [results.studentId],
+    fields: [gpas.studentId],
     references: [students.id],
   }),
 }));

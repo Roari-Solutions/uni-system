@@ -9,7 +9,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { and, eq, inArray, isNotNull } from 'drizzle-orm';
-import { curriculums, facultyCurriculums, grades, results, students } from 'schema';
+import { curriculums, facultyCurriculums, gpas, grades, students } from 'schema';
 import { DATABASE, type Db } from 'src/database/database.module';
 import { GrCaller } from 'src/gr-gurd/gr-gurd.guard';
 import {
@@ -18,13 +18,14 @@ import {
   UpdateGradeDto,
   type SeatingStatus,
 } from './dto/grades.dto';
-import { letterOf, type LetterGrade } from './letter-grade';
+import { letterOf, pointsOf, type LetterGrade } from './letter-grade';
 import { assertFaculty, scopeFacultyId } from 'src/gr-scope/gr-scope';
 import type { RequirementType } from 'src/common/requirement-type';
 import {
   academicYearToNumber,
   semesterToNumber,
   type AcademicYear,
+  type Semester,
 } from 'src/common/academic-year';
 
 /** Absence voids the mark: the grade is stored as 0, so its letter is F. */
@@ -41,7 +42,26 @@ function awaitsDecision(status: SeatingStatus | null, resolved: boolean): boolea
   return status === 'cheating' && !resolved;
 }
 
-/** A grade as the views consume it; `letter` is derived, never stored. */
+/** A student's stored semester GPAs for one academic year, plus the annual average. */
+export interface StudentGpasView {
+  academicYear: number;
+  semesters: {
+    semester: number;
+    gpSum: number;
+    courseHours: number;
+    gpa: number;
+    status: 'pass' | 'fail' | null;
+  }[];
+  /** The plain average of the semesters above; null until a semester is stored. */
+  annual: number | null;
+}
+
+/** Grade points for one curriculum: the letter's points weighted by its course hours. */
+function gpOf(letter: LetterGrade, courseHours: number): string {
+  return (pointsOf(letter) * courseHours).toFixed(2);
+}
+
+/** A grade as the views consume it; `letter` comes from the mark on every write. */
 export interface GradeView {
   id: string;
   studentId: string;
@@ -82,13 +102,13 @@ export interface StudentYearGradeView {
   cheatingResolved: boolean;
 }
 
-/** CRUD for grades and per-academic-year results, with faculty scoping. */
+/** CRUD for grades and per-semester GPAs, with faculty scoping. */
 @Injectable()
 export class GradesService {
   private readonly logger = new Logger(GradesService.name);
 
-  /** The year result's pass threshold; single grades carry a letter instead (letterOf). */
-  static readonly PASS_MARK = 50;
+  /** A semester passes at this GPA; single grades carry a letter instead (letterOf). */
+  static readonly PASS_GPA = 2;
 
   constructor(@Inject(DATABASE) private readonly db: Db) {}
 
@@ -105,12 +125,14 @@ export class GradesService {
   }
 
   /**
-   * Coverage of one academic year: true once every curriculum the student's
-   * faculty offers for that year carries a mark, plus the average of those marks.
-   * Undecided cheating cases are skipped on both counts, so the year can still
-   * complete around them and their marks stay out of the average.
+   * One semester's grade points for a student: the rows that count, the course
+   * hours behind them, and whether the semester is fully marked. An undecided
+   * cheating case is skipped on every count, so the semester can complete around
+   * it and its points stay out until staff settle the case.
    */
-  async yearCoverage(studentId: string, academicYear: AcademicYear) {
+  async semesterCoverage(studentId: string, academicYear: AcademicYear, semester: Semester) {
+    const empty = { complete: false, gpSum: 0, courseHours: 0 };
+
     const student = await this.db.query.students.findFirst({
       where: eq(students.id, studentId),
       columns: { facultyId: true },
@@ -119,70 +141,167 @@ export class GradesService {
 
     const links = await this.db.query.facultyCurriculums.findMany({
       where: eq(facultyCurriculums.facultyId, student.facultyId),
-      with: { curriculum: { columns: { id: true, academicYear: true } } },
+      with: {
+        curriculum: {
+          columns: { id: true, academicYear: true, semester: true, courseHours: true },
+        },
+      },
     });
-    // only the curriculums of this academic year count toward it
-    const curriculumIds = links
-      .filter((link) => link.curriculum.academicYear === academicYear)
-      .map((link) => link.curriculumId);
-
-    if (!curriculumIds.length) return { complete: false, average: null as number | null };
+    // only this academic year's curriculums, and only this semester's
+    const offered = links
+      .map((link) => link.curriculum)
+      .filter((c) => c.academicYear === academicYear && c.semester === semester);
+    if (!offered.length) return empty;
 
     const marked = await this.db.query.grades.findMany({
       where: and(
         eq(grades.studentId, studentId),
-        inArray(grades.curriculumId, curriculumIds),
-        isNotNull(grades.grade),
+        inArray(
+          grades.curriculumId,
+          offered.map((c) => c.id),
+        ),
+        isNotNull(grades.gp),
       ),
     });
 
-    // a cheating case that staff have not decided yet counts neither way
+    const counted = marked.filter((g) => !awaitsDecision(g.seatingStatus, g.cheatingResolved));
     const pending = new Set(
       marked
         .filter((g) => awaitsDecision(g.seatingStatus, g.cheatingResolved))
         .map((g) => g.curriculumId),
     );
-    const counted = marked.filter((g) => !pending.has(g.curriculumId));
 
-    const filledIds = new Set(counted.map((g) => g.curriculumId));
-    const complete = curriculumIds.every((id) => filledIds.has(id) || pending.has(id));
-    if (!complete || !counted.length) return { complete: false, average: null as number | null };
+    const countedIds = new Set(counted.map((g) => g.curriculumId));
+    const complete = offered.every((c) => countedIds.has(c.id) || pending.has(c.id));
+    if (!complete || !counted.length) return empty;
 
-    const average = counted.reduce((acc, cur) => acc + Number(cur.grade), 0) / counted.length;
-    return { complete, average };
-  }
+    const gpSum = counted.reduce((acc, g) => acc + Number(g.gp), 0);
+    const courseHours = offered
+      .filter((c) => countedIds.has(c.id))
+      .reduce((acc, c) => acc + c.courseHours, 0);
+    if (!courseHours) return empty;
 
-  /** True when every curriculum of that academic year carries a mark. */
-  async areGradesComplete(studentId: string, academicYear: AcademicYear): Promise<boolean> {
-    const { complete } = await this.yearCoverage(studentId, academicYear);
-    return complete;
+    return { complete, gpSum, courseHours };
   }
 
   /**
-   * Recomputes and stores the academic year's result: upserts when complete,
-   * removes any stale row when incomplete.
+   * Recomputes and stores one semester's GPA: upserts when the semester is
+   * fully marked, and drops any stale row when it is not.
    */
-  private async refreshYearResult(
+  private async refreshSemesterGpa(
     studentId: string,
     academicYear: AcademicYear,
+    semester: Semester,
   ): Promise<void> {
-    const { complete, average } = await this.yearCoverage(studentId, academicYear);
-    if (!complete || average === null) {
-      await this.db
-        .delete(results)
-        .where(and(eq(results.studentId, studentId), eq(results.academicYear, academicYear)));
+    const { complete, gpSum, courseHours } = await this.semesterCoverage(
+      studentId,
+      academicYear,
+      semester,
+    );
+    const where = and(
+      eq(gpas.studentId, studentId),
+      eq(gpas.academicYear, academicYear),
+      eq(gpas.semester, semester),
+    );
+    if (!complete) {
+      await this.db.delete(gpas).where(where);
       return;
     }
-    const result = average.toFixed(2);
-    const gpa = Math.min(average / 25, 4).toFixed(2);
-    const status = average >= GradesService.PASS_MARK ? 'pass' : 'fail';
+
+    const value = gpSum / courseHours;
+    const gpa = value.toFixed(2);
+    const status = value >= GradesService.PASS_GPA ? 'pass' : 'fail';
     await this.db
-      .insert(results)
-      .values({ studentId, academicYear, result, gpa, status })
+      .insert(gpas)
+      .values({
+        studentId,
+        academicYear,
+        semester,
+        gpSum: gpSum.toFixed(2),
+        courseHours,
+        gpa,
+        status,
+      })
       .onConflictDoUpdate({
-        target: [results.studentId, results.academicYear],
-        set: { result, gpa, status },
+        target: [gpas.studentId, gpas.academicYear, gpas.semester],
+        set: { gpSum: gpSum.toFixed(2), courseHours, gpa, status },
       });
+  }
+
+  /**
+   * Rebuilds the stored grade points of every grade in one curriculum, then the
+   * GPA of each student behind them. Called when the curriculum's course hours
+   * change, since those hours weight the points.
+   */
+  async recomputeCurriculum(curriculumId: string): Promise<void> {
+    const curriculum = await this.db.query.curriculums.findFirst({
+      where: eq(curriculums.id, curriculumId),
+      columns: { id: true, academicYear: true, semester: true, courseHours: true },
+    });
+    if (!curriculum) return;
+
+    const rows = await this.db.query.grades.findMany({
+      where: eq(grades.curriculumId, curriculum.id),
+      columns: { id: true, studentId: true, letter: true },
+    });
+
+    for (const row of rows) {
+      if (!row.letter) continue;
+      await this.db
+        .update(grades)
+        .set({ gp: gpOf(row.letter, curriculum.courseHours) })
+        .where(eq(grades.id, row.id));
+    }
+
+    for (const studentId of new Set(rows.map((r) => r.studentId))) {
+      await this.refreshSemesterGpa(studentId, curriculum.academicYear, curriculum.semester);
+    }
+    this.logger.log(`Recomputed grade points for curriculum: ${curriculum.id}`);
+  }
+
+  /**
+   * A student's stored semester GPAs for one academic year, plus the annual
+   * figure: the plain average of those semesters, computed here and never stored.
+   */
+  async studentGpas(studentId: string, caller: GrCaller): Promise<StudentGpasView> {
+    try {
+      const student = await this.db.query.students.findFirst({
+        where: eq(students.id, studentId),
+        columns: { id: true, facultyId: true, academicYear: true },
+      });
+      if (!student) throw new NotFoundException();
+      assertFaculty(caller, student.facultyId);
+
+      const rows = await this.db.query.gpas.findMany({
+        where: and(eq(gpas.studentId, student.id), eq(gpas.academicYear, student.academicYear)),
+      });
+
+      const semesters = rows
+        .map((row) => ({
+          semester: semesterToNumber(row.semester),
+          gpSum: Number(row.gpSum),
+          courseHours: row.courseHours,
+          gpa: Number(row.gpa),
+          status: row.status,
+        }))
+        .sort((a, b) => a.semester - b.semester);
+
+      const annual = semesters.length
+        ? Number(
+            (semesters.reduce((acc, s) => acc + s.gpa, 0) / semesters.length).toFixed(2),
+          )
+        : null;
+
+      return { academicYear: academicYearToNumber(student.academicYear), semesters, annual };
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof UnauthorizedException) {
+        throw error;
+      }
+      this.logger.error(`Failed to read GPAs: ${studentId}`, error);
+      throw new InternalServerErrorException('Grades operation failed', {
+        cause: error,
+      });
+    }
   }
 
   /**
@@ -388,18 +507,21 @@ export class GradesService {
 
       // an absence stores 0 whatever mark was sent
       const grade = voidsMark(dto.seatingStatus) ? 0 : dto.grade;
+      const letter = letterOf(grade);
       const [created] = await this.db
         .insert(grades)
         .values({
           studentId: student.id,
           curriculumId: curriculum.id,
           grade: String(grade),
+          letter,
+          gp: gpOf(letter, curriculum.courseHours),
           seatingStatus: dto.seatingStatus,
           cheatingResolved: dto.seatingStatus === 'cheating' && (dto.cheatingResolved ?? false),
         })
         .returning();
 
-      await this.refreshYearResult(student.id, curriculum.academicYear);
+      await this.refreshSemesterGpa(student.id, curriculum.academicYear, curriculum.semester);
 
       this.logger.log(`Created grade for student: ${student.uniNumber}`);
       return {
@@ -407,7 +529,7 @@ export class GradesService {
         studentId: created.studentId,
         curriculumId: created.curriculumId,
         grade,
-        letter: letterOf(grade),
+        letter,
         seatingStatus: created.seatingStatus,
         cheatingResolved: created.cheatingResolved,
       };
@@ -434,7 +556,9 @@ export class GradesService {
         where: eq(grades.id, id),
         with: {
           student: { columns: { id: true, facultyId: true } },
-          curriculum: { columns: { id: true, academicYear: true } },
+          curriculum: {
+            columns: { id: true, academicYear: true, semester: true, courseHours: true },
+          },
         },
       });
       if (!row) throw new NotFoundException();
@@ -453,9 +577,14 @@ export class GradesService {
 
       let curriculumId = row.curriculumId;
       let academicYear = row.curriculum.academicYear;
+      let semester = row.curriculum.semester;
+      // the course hours weight the grade points, so they follow the curriculum
+      let courseHours = row.curriculum.courseHours;
       if (dto.curriculumId !== undefined && dto.curriculumId !== row.curriculumId) {
         const curriculum = await this.curriculumOrThrow(dto.curriculumId, true);
         curriculumId = curriculum.id;
+        semester = curriculum.semester;
+        courseHours = curriculum.courseHours;
         academicYear = curriculum.academicYear;
 
         const clash = await this.db.query.grades.findFirst({
@@ -473,6 +602,10 @@ export class GradesService {
       const cheatingResolved =
         seatingStatus === 'cheating' ? (dto.cheatingResolved ?? row.cheatingResolved) : false;
 
+      // the letter and its points are stored, so they are rebuilt on every write
+      const mark = nextGrade ?? Number(row.grade ?? 0);
+      const letter = letterOf(mark);
+
       const [updated] = await this.db
         .update(grades)
         .set({
@@ -480,13 +613,19 @@ export class GradesService {
           ...(nextGrade !== undefined ? { grade: String(nextGrade) } : {}),
           ...(dto.seatingStatus !== undefined ? { seatingStatus: dto.seatingStatus } : {}),
           cheatingResolved,
+          letter,
+          gp: gpOf(letter, courseHours),
         })
         .where(eq(grades.id, row.id))
         .returning();
 
-      await this.refreshYearResult(row.studentId, academicYear);
-      if (academicYear !== row.curriculum.academicYear) {
-        await this.refreshYearResult(row.studentId, row.curriculum.academicYear);
+      await this.refreshSemesterGpa(row.studentId, academicYear, semester);
+      if (academicYear !== row.curriculum.academicYear || semester !== row.curriculum.semester) {
+        await this.refreshSemesterGpa(
+          row.studentId,
+          row.curriculum.academicYear,
+          row.curriculum.semester,
+        );
       }
 
       const grade = Number(updated.grade);
@@ -496,7 +635,7 @@ export class GradesService {
         studentId: updated.studentId,
         curriculumId: updated.curriculumId,
         grade,
-        letter: letterOf(grade),
+        letter,
         seatingStatus: updated.seatingStatus,
         cheatingResolved: updated.cheatingResolved,
       };
@@ -523,14 +662,18 @@ export class GradesService {
         where: eq(grades.id, id),
         with: {
           student: { columns: { id: true, facultyId: true } },
-          curriculum: { columns: { academicYear: true } },
+          curriculum: { columns: { academicYear: true, semester: true } },
         },
       });
       if (!row) throw new NotFoundException();
       assertFaculty(caller, row.student.facultyId);
 
       await this.db.delete(grades).where(eq(grades.id, row.id));
-      await this.refreshYearResult(row.studentId, row.curriculum.academicYear);
+      await this.refreshSemesterGpa(
+        row.studentId,
+        row.curriculum.academicYear,
+        row.curriculum.semester,
+      );
 
       this.logger.log(`Deleted grade: ${row.id}`);
       return { status: 'Ok' };
@@ -549,7 +692,7 @@ export class GradesService {
     }
   }
 
-  /** Deletes every grade and result belonging to one student. */
+  /** Deletes every grade and GPA belonging to one student. */
   async deleteAllGrades(studentId: string, caller: GrCaller): Promise<{ status: string }> {
     try {
       const student = await this.db.query.students.findFirst({
@@ -561,7 +704,7 @@ export class GradesService {
 
       await this.db.transaction(async (tx) => {
         await tx.delete(grades).where(eq(grades.studentId, student.id));
-        await tx.delete(results).where(eq(results.studentId, student.id));
+        await tx.delete(gpas).where(eq(gpas.studentId, student.id));
       });
 
       this.logger.log(`Deleted all grades for student: ${student.uniNumber}`);

@@ -66,3 +66,24 @@ export const updateGrade = async (id: string, payload: Partial<GradePayload>): P
 	return data;
 };
 
+
+// a stored semester GPA; the annual figure averages the semesters on read
+export type SemesterGpa = {
+	semester: number;
+	gpSum: number;
+	courseHours: number;
+	gpa: number;
+	status: "pass" | "fail" | null;
+};
+
+export type StudentGpas = {
+	academicYear: number;
+	semesters: SemesterGpa[];
+	// null until a semester of that year is complete
+	annual: number | null;
+};
+
+export const fetchStudentGpas = async (studentId: string): Promise<StudentGpas> => {
+	const { data } = await api.get<StudentGpas>(`/gr/grades/student/${studentId}/gpa`);
+	return data;
+};

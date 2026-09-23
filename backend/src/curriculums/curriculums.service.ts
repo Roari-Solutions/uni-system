@@ -16,6 +16,7 @@ import { assertFaculty, assertFacultyExists, scopeFacultyId } from 'src/gr-scope
 import { academicYearToNumber, semesterToNumber } from 'src/common/academic-year';
 import { MISSING_NAME } from 'src/common/dto/localized-name.dto';
 import type { RequirementType } from 'src/common/requirement-type';
+import { GradesService } from 'src/grades/grades.service';
 import {
   CreateCurriculumDto,
   ListCurriculumsQueryDto,
@@ -34,6 +35,8 @@ export interface CurriculumView {
   semester: number;
   /** Null only on curriculums created before requirement types existed. */
   requirementType: RequirementType | null;
+  /** Credit hours; they weight this curriculum's grade points in the GPA. */
+  courseHours: number;
 }
 
 /** CRUD for curriculums with faculty scoping. */
@@ -41,7 +44,10 @@ export interface CurriculumView {
 export class CurriculumsService {
   private readonly logger = new Logger(CurriculumsService.name);
 
-  constructor(@Inject(DATABASE) private readonly db: Db) {}
+  constructor(
+    @Inject(DATABASE) private readonly db: Db,
+    @Inject() private readonly gradesService: GradesService,
+  ) {}
 
   /** Resolves the curriculum plus the faculty that offers it, or throws. */
   private async offeringOrThrow(id: string) {
@@ -93,6 +99,7 @@ export class CurriculumsService {
           academicYear: academicYearToNumber(link.curriculum.academicYear),
           semester: semesterToNumber(link.curriculum.semester),
           requirementType: link.curriculum.requirementType,
+          courseHours: link.curriculum.courseHours,
         });
       }
 
@@ -218,6 +225,7 @@ export class CurriculumsService {
           academicYear: dto.academicYear,
           semester: dto.semester,
           requirementType: dto.requirementType,
+          courseHours: dto.courseHours,
           abbreviation,
         })
         .returning();
@@ -233,6 +241,7 @@ export class CurriculumsService {
         academicYear: academicYearToNumber(created.academicYear),
         semester: semesterToNumber(created.semester),
         requirementType: created.requirementType,
+        courseHours: created.courseHours,
       };
     } catch (error) {
       if (
@@ -280,10 +289,17 @@ export class CurriculumsService {
           ...(dto.academicYear !== undefined ? { academicYear: dto.academicYear } : {}),
           ...(dto.semester !== undefined ? { semester: dto.semester } : {}),
           ...(dto.requirementType !== undefined ? { requirementType: dto.requirementType } : {}),
+          ...(dto.courseHours !== undefined ? { courseHours: dto.courseHours } : {}),
           ...(abbreviation !== undefined ? { abbreviation } : {}),
         })
         .where(eq(curriculums.id, row.id))
         .returning();
+
+      // the hours weight this curriculum's grade points, so its grades and the
+      // GPAs behind them are rebuilt whenever they move
+      if (dto.courseHours !== undefined && dto.courseHours !== row.courseHours) {
+        await this.gradesService.recomputeCurriculum(row.id);
+      }
 
       let facultyId = link.facultyId;
       if (dto.facultyId !== undefined && dto.facultyId !== link.facultyId) {
@@ -321,6 +337,7 @@ export class CurriculumsService {
         academicYear: academicYearToNumber(updated.academicYear),
         semester: semesterToNumber(updated.semester),
         requirementType: updated.requirementType,
+        courseHours: updated.courseHours,
       };
     } catch (error) {
       if (

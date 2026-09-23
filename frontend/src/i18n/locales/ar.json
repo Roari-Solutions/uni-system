@@ -25,10 +25,13 @@
     "submit": "حفظ",
     "errors": {
       "required": "هذا الحقل مطلوب",
-      "abbreviationFormat": "استخدم الصيغة XXXX-0000، مثل ENCR-1101"
+      "abbreviationFormat": "استخدم الصيغة XXXX-0000، مثل ENCR-1101",
+      "courseHoursNumber": "يجب أن تكون الساعات المعتمدة رقماً",
+      "courseHoursRange": "يجب أن تكون الساعات المعتمدة بين 1 و 12"
     },
     "nameAr": "اسم المقرر بالعربية",
-    "nameEn": "اسم المقرر بالإنجليزية"
+    "nameEn": "اسم المقرر بالإنجليزية",
+    "courseHours": "الساعات المعتمدة"
   },
   "curriculumList": {
     "title": "المناهج",
@@ -48,7 +51,8 @@
       "abbreviation": "الاختصار",
       "academicYear": "السنة الدراسية",
       "semester": "الفصل الدراسي",
-      "requirementType": "نوع المتطلب"
+      "requirementType": "نوع المتطلب",
+      "courseHours": "الساعات المعتمدة"
     },
     "deleteTitle": "حذف المنهج",
     "deleteMessage": "هل أنت متأكد من حذف \"{{name}}\"؟ لا يمكن التراجع عن هذا الإجراء."
@@ -108,7 +112,9 @@
       "grade": "الدرجة",
       "letter": "التقدير",
       "seatingStatus": "حالة الجلوس"
-    }
+    },
+    "semesterGpa": "معدل الفصل",
+    "annualGpa": "المعدل السنوي"
   },
   "student": {
     "acceptanceTypes": {
@@ -335,5 +341,9 @@
     "actionFor": "حسم حالة الغش لـ {{name}}",
     "pending": "بانتظار الحسم؛ مستثناة من نتيجة السنة",
     "resolved": "محسومة"
+  },
+  "gpaStatuses": {
+    "pass": "ناجح",
+    "fail": "راسب"
   }
 }

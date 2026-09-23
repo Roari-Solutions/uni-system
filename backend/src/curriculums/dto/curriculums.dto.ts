@@ -1,11 +1,14 @@
 import { Type } from 'class-transformer';
 import {
   IsIn,
+  IsInt,
   IsOptional,
   IsString,
   IsUUID,
   Matches,
+  Max,
   MaxLength,
+  Min,
   ValidateNested,
 } from 'class-validator';
 import { PartialType } from '@nestjs/mapped-types';
@@ -48,6 +51,12 @@ export class CreateCurriculumDto {
   /** University, faculty or major requirement. */
   @IsIn(REQUIREMENT_TYPES)
   requirementType!: RequirementType;
+
+  /** Credit hours; they weight this curriculum's grade points in the GPA. */
+  @IsInt()
+  @Min(1)
+  @Max(12)
+  courseHours!: number;
 }
 
 /** Body for patching a curriculum (all fields optional). */

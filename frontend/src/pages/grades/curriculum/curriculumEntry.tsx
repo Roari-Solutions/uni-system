@@ -27,6 +27,19 @@ const curriculumSchema = z.object({
 		.string()
 		.min(1, "curriculumEntry.errors.required")
 		.pipe(z.enum(REQUIREMENT_TYPES)),
+	// credit hours; they weight the curriculum's grade points in the GPA
+	courseHours: z
+		.string()
+		.trim()
+		.min(1, "curriculumEntry.errors.required")
+		.transform(Number)
+		.pipe(
+			z
+				.number({ error: "curriculumEntry.errors.courseHoursNumber" })
+				.int("curriculumEntry.errors.courseHoursRange")
+				.min(1, "curriculumEntry.errors.courseHoursRange")
+				.max(12, "curriculumEntry.errors.courseHoursRange"),
+		),
 });
 
 type CurriculumForm = z.input<typeof curriculumSchema>;
@@ -40,6 +53,7 @@ const EMPTY_FORM: CurriculumForm = {
 	academicYear: "",
 	semester: "",
 	requirementType: "",
+	courseHours: "",
 };
 
 const CurriculumEntry = () => {
@@ -117,6 +131,7 @@ const CurriculumEntry = () => {
 				academicYear: result.data.academicYear,
 				semester: result.data.semester,
 				requirementType: result.data.requirementType,
+				courseHours: result.data.courseHours,
 			});
 			setForm({ ...EMPTY_FORM, facultyId: form.facultyId });
 			setAbbreviationEdited(false);
@@ -179,6 +194,24 @@ const CurriculumEntry = () => {
 							</option>
 						))}
 					</select>
+				</FormField>
+
+				<FormField
+					id="courseHours"
+					label={t("curriculumEntry.courseHours")}
+					error={errors.courseHours?.[0]}
+				>
+					<input
+						id="courseHours"
+						type="number"
+						min={1}
+						max={12}
+						dir="ltr"
+						value={form.courseHours}
+						onChange={(e) => setField("courseHours", e.target.value)}
+						aria-invalid={!!errors.courseHours}
+						className={inputClass(!!errors.courseHours)}
+					/>
 				</FormField>
 
 				<FacultyField

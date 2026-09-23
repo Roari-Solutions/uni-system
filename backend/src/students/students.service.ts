@@ -9,7 +9,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { and, eq, SQL } from 'drizzle-orm';
-import { grades, results, students } from 'schema';
+import { gpas, grades, students } from 'schema';
 import { DATABASE, type Db } from 'src/database/database.module';
 import { GrCaller } from 'src/gr-gurd/gr-gurd.guard';
 import { assertFaculty, assertFacultyExists, scopeFacultyId } from 'src/gr-scope/gr-scope';
@@ -298,7 +298,7 @@ export class StudentsService {
     }
   }
 
-  /** Deletes the student with this id, plus their grades and results. */
+  /** Deletes the student with this id, plus their grades and GPAs. */
   async deleteStudent(id: string, caller: GrCaller): Promise<{ status: string }> {
     try {
       const row = await this.db.query.students.findFirst({
@@ -310,7 +310,7 @@ export class StudentsService {
 
       await this.db.transaction(async (tx) => {
         await tx.delete(grades).where(eq(grades.studentId, row.id));
-        await tx.delete(results).where(eq(results.studentId, row.id));
+        await tx.delete(gpas).where(eq(gpas.studentId, row.id));
         await tx.delete(students).where(eq(students.id, row.id));
       });
 

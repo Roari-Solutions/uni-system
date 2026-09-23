@@ -25,10 +25,13 @@
     "submit": "Save",
     "errors": {
       "required": "This field is required",
-      "abbreviationFormat": "Use the format XXXX-0000, e.g. ENCR-1101"
+      "abbreviationFormat": "Use the format XXXX-0000, e.g. ENCR-1101",
+      "courseHoursNumber": "Course hours must be a number",
+      "courseHoursRange": "Course hours must be between 1 and 12"
     },
     "nameAr": "Curriculum name (Arabic)",
-    "nameEn": "Curriculum name (English)"
+    "nameEn": "Curriculum name (English)",
+    "courseHours": "Course hours"
   },
   "curriculumList": {
     "title": "Curriculums",
@@ -48,7 +51,8 @@
       "abbreviation": "Abbreviation",
       "academicYear": "Academic year",
       "semester": "Semester",
-      "requirementType": "Requirement type"
+      "requirementType": "Requirement type",
+      "courseHours": "Course hours"
     },
     "deleteTitle": "Delete curriculum",
     "deleteMessage": "Are you sure you want to delete \"{{name}}\"? This can't be undone."
@@ -108,7 +112,9 @@
       "grade": "Grade",
       "letter": "Letter grade",
       "seatingStatus": "Seating status"
-    }
+    },
+    "semesterGpa": "Semester GPA",
+    "annualGpa": "Annual GPA"
   },
   "student": {
     "acceptanceTypes": {
@@ -335,5 +341,9 @@
     "actionFor": "Resolve the cheating case for {{name}}",
     "pending": "Awaiting a decision; left out of the year result",
     "resolved": "Decided"
+  },
+  "gpaStatuses": {
+    "pass": "Pass",
+    "fail": "Fail"
   }
 }

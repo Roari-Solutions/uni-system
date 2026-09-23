@@ -16,4 +16,6 @@ export type Curriculum = {
 	semester: (typeof SEMESTERS)[number];
 	// null only on curriculums created before requirement types existed
 	requirementType: RequirementType | null;
+	// credit hours; they weight this curriculum's grade points in the GPA
+	courseHours: number;
 };
