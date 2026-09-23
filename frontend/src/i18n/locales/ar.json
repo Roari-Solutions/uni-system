@@ -348,5 +348,16 @@
   "gpaStatuses": {
     "pass": "ناجح",
     "fail": "راسب"
+  },
+  "editGrade": {
+    "title": "تعديل الدرجة",
+    "grade": "الدرجة",
+    "seatingStatus": "حالة الجلوس",
+    "save": "حفظ",
+    "action": "تعديل",
+    "actionFor": "تعديل درجة {{name}}",
+    "confirmTitle": "تأكيد التعديل",
+    "confirmMessage": "{{name}}: تتغير الدرجة من {{fromGrade}} ({{fromStatus}}) إلى {{toGrade}} ({{toStatus}}).",
+    "confirm": "حفظ التعديل"
   }
 }

@@ -348,5 +348,16 @@
   "gpaStatuses": {
     "pass": "Pass",
     "fail": "Fail"
+  },
+  "editGrade": {
+    "title": "Edit grade",
+    "grade": "Grade",
+    "seatingStatus": "Seating status",
+    "save": "Save",
+    "action": "Edit",
+    "actionFor": "Edit the grade for {{name}}",
+    "confirmTitle": "Confirm the change",
+    "confirmMessage": "{{name}}: {{fromGrade}} ({{fromStatus}}) becomes {{toGrade}} ({{toStatus}}).",
+    "confirm": "Save the change"
   }
 }

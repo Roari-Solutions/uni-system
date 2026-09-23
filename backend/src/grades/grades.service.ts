@@ -594,12 +594,6 @@ export class GradesService {
         throw new BadRequestException();
       }
 
-      // a mark is only ever re-entered while a cheating case is open; every
-      // settled row (attended, absent, or a decided case) keeps the mark it has
-      if (dto.grade !== undefined && !awaitsDecision(row.seatingStatus, row.cheatingResolved)) {
-        this.logger.warn(`Rejected grade change on a settled row: ${row.id}`);
-        throw new BadRequestException();
-      }
 
       let curriculumId = row.curriculumId;
       let academicYear = row.curriculum.academicYear;

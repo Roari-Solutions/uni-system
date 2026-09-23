@@ -16,8 +16,11 @@ import { SeatingStatusTag } from "../../../components/seatingStatusSelect";
 import ResolveCheatingDialog, {
 	type CheatingResolution,
 } from "../../../components/resolveCheatingDialog";
+import EditGradeDialog, { type GradeEdit } from "../../../components/editGradeDialog";
+import ConfirmDialog from "../../../components/confirmDialog";
+import { smallSecondaryButtonClass } from "../../../styles/form";
 import type { Student } from "../../../types/student";
-import { cardClass, smallSecondaryButtonClass } from "../../../styles/form";
+import { cardClass } from "../../../styles/form";
 import { SEMESTERS } from "../../../utils/academicYears";
 
 // one label/value pair of the registered data
@@ -41,6 +44,9 @@ const StudentDetails = () => {
 	const [failed, setFailed] = useState(false);
 	// the cheating curriculum being decided, if any
 	const [resolving, setResolving] = useState<StudentYearGrade | null>(null);
+	// the row being edited, then the edit waiting to be confirmed
+	const [editing, setEditing] = useState<StudentYearGrade | null>(null);
+	const [pending, setPending] = useState<{ row: StudentYearGrade; edit: GradeEdit } | null>(null);
 	const [saving, setSaving] = useState(false);
 
 	useEffect(() => {
@@ -83,6 +89,33 @@ const StudentDetails = () => {
 	const awaitsDecision = (g: StudentYearGrade) =>
 		g.seatingStatus === "cheating" && !g.cheatingResolved;
 
+	const reload = async () => {
+		const [gradeRows, gpaRows] = await Promise.all([
+			fetchStudentYearGrades(studentId),
+			fetchStudentGpas(studentId),
+		]);
+		setGrades(gradeRows);
+		setGpas(gpaRows);
+	};
+
+	// the edit is written only once the second dialog confirms it
+	const handleEditConfirm = async () => {
+		if (!pending?.row.gradeId) return;
+		setSaving(true);
+		try {
+			await updateGrade(pending.row.gradeId, {
+				grade: pending.edit.grade,
+				seatingStatus: pending.edit.seatingStatus,
+			});
+			await reload();
+			setPending(null);
+		} catch {
+			setFailed(true);
+		} finally {
+			setSaving(false);
+		}
+	};
+
 	const handleResolve = async ({ outcome }: CheatingResolution) => {
 		if (!resolving?.gradeId) return;
 		setSaving(true);
@@ -93,12 +126,7 @@ const StudentDetails = () => {
 					? { seatingStatus: "attended" }
 					: { seatingStatus: "cheating", grade: 0, cheatingResolved: true },
 			);
-			const [gradeRows, gpaRows] = await Promise.all([
-				fetchStudentYearGrades(studentId),
-				fetchStudentGpas(studentId),
-			]);
-			setGrades(gradeRows);
-			setGpas(gpaRows);
+			await reload();
 			setResolving(null);
 		} catch {
 			setFailed(true);
@@ -133,6 +161,22 @@ const StudentDetails = () => {
 			key: "letter",
 			header: t("studentDetails.columns.letter"),
 			render: (g) => (g.letter ? <span dir="ltr" className="font-semibold">{g.letter}</span> : "—"),
+		},
+		{
+			key: "actions",
+			header: t("common.actions"),
+			// only a curriculum that carries a mark can have it edited
+			render: (g) =>
+				g.gradeId === null ? null : (
+					<button
+						type="button"
+						onClick={() => setEditing(g)}
+						aria-label={t("editGrade.actionFor", { name: g.name[lang] })}
+						className={smallSecondaryButtonClass}
+					>
+						{t("editGrade.action")}
+					</button>
+				),
 		},
 		{
 			key: "seatingStatus",
@@ -282,6 +326,38 @@ const StudentDetails = () => {
 					</section>
 				</>
 			)}
+
+			<EditGradeDialog
+				open={editing !== null}
+				curriculumName={editing ? editing.name[lang] : ""}
+				grade={editing?.grade ?? null}
+				seatingStatus={editing?.seatingStatus ?? null}
+				onSave={(edit) => {
+					if (editing) setPending({ row: editing, edit });
+					setEditing(null);
+				}}
+				onCancel={() => setEditing(null)}
+			/>
+
+			<ConfirmDialog
+				open={pending !== null}
+				title={t("editGrade.confirmTitle")}
+				message={
+					pending
+						? t("editGrade.confirmMessage", {
+								name: pending.row.name[lang],
+								fromGrade: pending.row.grade ?? "—",
+								fromStatus: t(`seatingStatuses.${pending.row.seatingStatus ?? "attended"}`),
+								toGrade: pending.edit.grade,
+								toStatus: t(`seatingStatuses.${pending.edit.seatingStatus}`),
+							})
+						: ""
+				}
+				confirmLabel={saving ? t("common.saving") : t("editGrade.confirm")}
+				cancelLabel={t("common.cancel")}
+				onConfirm={() => void handleEditConfirm()}
+				onCancel={() => setPending(null)}
+			/>
 
 			<ResolveCheatingDialog
 				open={resolving !== null}
