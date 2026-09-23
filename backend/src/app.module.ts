@@ -12,6 +12,7 @@ import { FacultiesModule } from './faculties/faculties.module';
 import { AdminModule } from './admin/admin.module';
 import { GrGurdGuard } from './gr-gurd/gr-gurd.guard';
 import { MainCmsModule } from './main-cms/main-cms.module';
+import { ContactUsCmsModule } from './contact-us-cms/contact-us-cms.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { MainCmsModule } from './main-cms/main-cms.module';
     AuthModule,
     DatabaseModule,
     MainCmsModule,
+    ContactUsCmsModule,
   ],
   controllers: [AppController],
   providers: [AppService, GrGurdGuard],
