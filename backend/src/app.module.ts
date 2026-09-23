@@ -11,6 +11,7 @@ import { CurriculumsModule } from './curriculums/curriculums.module';
 import { FacultiesModule } from './faculties/faculties.module';
 import { AdminModule } from './admin/admin.module';
 import { GrGurdGuard } from './gr-gurd/gr-gurd.guard';
+import { DeanshipCmsModule } from './deanship-cms/deanship-cms.module';
 import { MainCmsModule } from './main-cms/main-cms.module';
 import { ContactUsCmsModule } from './contact-us-cms/contact-us-cms.module';
 
@@ -28,6 +29,7 @@ import { ContactUsCmsModule } from './contact-us-cms/contact-us-cms.module';
     AdminModule,
     AuthModule,
     DatabaseModule,
+    DeanshipCmsModule,
     MainCmsModule,
     ContactUsCmsModule,
   ],
