@@ -31,7 +31,9 @@
     },
     "nameAr": "Curriculum name (Arabic)",
     "nameEn": "Curriculum name (English)",
-    "courseHours": "Course hours"
+    "courseHours": "Course hours",
+    "allFaculties": "All faculties",
+    "universityFaculties": "A university requirement is offered by every faculty."
   },
   "curriculumList": {
     "title": "Curriculums",

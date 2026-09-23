@@ -31,7 +31,9 @@
     },
     "nameAr": "اسم المقرر بالعربية",
     "nameEn": "اسم المقرر بالإنجليزية",
-    "courseHours": "الساعات المعتمدة"
+    "courseHours": "الساعات المعتمدة",
+    "allFaculties": "جميع الكليات",
+    "universityFaculties": "متطلب الجامعة تقدمه جميع الكليات."
   },
   "curriculumList": {
     "title": "المناهج",

@@ -9,6 +9,7 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import { PartialType } from '@nestjs/mapped-types';
@@ -30,6 +31,8 @@ export class CreateCurriculumDto {
   @Type(() => OptionalEnglishNameDto)
   name!: OptionalEnglishNameDto;
 
+  /** A university requirement belongs to every faculty, so it names none. */
+  @ValidateIf((dto: CreateCurriculumDto) => dto.requirementType !== 'university')
   @IsUUID()
   facultyId!: string;
 
@@ -91,6 +94,8 @@ export class ListCurriculumsQueryDto {
 
 /** Query for GET /gr/curriculum/suggest-abbreviation: the inputs the code is built from. */
 export class SuggestAbbreviationQueryDto {
+  /** Not needed for a university requirement: its letters carry no faculty. */
+  @ValidateIf((dto: SuggestAbbreviationQueryDto) => dto.requirementType !== 'university')
   @IsUUID()
   facultyId!: string;
 
