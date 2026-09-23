@@ -11,6 +11,7 @@ import { CurriculumsModule } from './curriculums/curriculums.module';
 import { FacultiesModule } from './faculties/faculties.module';
 import { AdminModule } from './admin/admin.module';
 import { GrGurdGuard } from './gr-gurd/gr-gurd.guard';
+import { MainCmsModule } from './main-cms/main-cms.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { GrGurdGuard } from './gr-gurd/gr-gurd.guard';
     AdminModule,
     AuthModule,
     DatabaseModule,
+    MainCmsModule,
   ],
   controllers: [AppController],
   providers: [AppService, GrGurdGuard],

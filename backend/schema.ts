@@ -186,6 +186,14 @@ export const news = pgTable('news', {
   content: text('content').notNull(),
   ...timestamps(),
 });
+/** Stored content images, deduped by sha256 hash. */
+export const images = pgTable('images', {
+  hash: text('hash').primaryKey(),
+  ext: text('ext').notNull(),
+  mime: text('mime').notNull(),
+  size: integer('size').notNull(),
+  ...timestamps(),
+});
 // ============================================== ACADEMIC TABLES ==============================================
 
 /** Course curriculums with credit weight. */
@@ -194,7 +202,7 @@ export const curriculums = pgTable('curriculums', {
   nameEn: text('name_en').notNull(),
   nameAr: text('name_ar').notNull(),
   /** The curriculum's identifier; names are free text. */
-  abbreviation: text('code').unique(),
+  abbreviation: text().unique(),
   academicYear: studyLevelEnum('academic_year').notNull(),
   /** Defaults to 1 only so rows that predate semesters get one; the API requires it. */
   semester: semesterEnum('semester').notNull().default('1'),

@@ -1,9 +1,4 @@
-import {
-  CanActivate,
-  ExecutionContext,
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable, Logger } from '@nestjs/common';
 import { AuthedRequest } from '../auth/auth.guard';
 /** Allows only the site-content-employee role to mutate content. */
 @Injectable()
