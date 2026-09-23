@@ -13,11 +13,13 @@ export type CurriculumFilters = {
 export type CurriculumPayload = {
 	// English may be omitted; the API records "-" in its place
 	name: { ar: string; en?: string };
-	facultyId: string;
+	// omitted for a university requirement: the API links every faculty
+	facultyId?: string;
 	abbreviation: string;
 	academicYear: number;
 	semester: number;
 	requirementType: RequirementType;
+	courseHours: number;
 };
 
 export const fetchCurriculums = async (
@@ -28,7 +30,8 @@ export const fetchCurriculums = async (
 };
 
 export type AbbreviationInputs = {
-	facultyId: string;
+	// omitted for a university requirement, whose letters carry no faculty
+	facultyId?: string;
 	academicYear: number;
 	semester: number;
 	requirementType: RequirementType;

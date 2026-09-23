@@ -6,6 +6,7 @@ import ConfirmDialog from "../../../components/confirmDialog";
 import DataTable, { type Column } from "../../../components/dataTable";
 import DeleteButton from "../../../components/deleteButton";
 import FilterSelect from "../../../components/filterSelect";
+import SearchField from "../../../components/searchField";
 import useFaculties from "../../../hooks/useFaculties";
 import { deleteStudent, fetchStudents } from "../../../api/students";
 import type { Student } from "../../../types/student";
@@ -25,6 +26,7 @@ const StudentList = () => {
 	const [level, setLevel] = useState("");
 	const [facultyId, setFacultyId] = useState("");
 	const [acceptanceYear, setAcceptanceYear] = useState("");
+	const [search, setSearch] = useState("");
 	const [hiddenColumns, setHiddenColumns] = useState<string[]>([]);
 	const [pendingDelete, setPendingDelete] = useState<Student | null>(null);
 
@@ -38,6 +40,7 @@ const StudentList = () => {
 			facultyId: effectiveFacultyId || undefined,
 			level: level ? Number(level) : undefined,
 			acceptanceYear: acceptanceYear || undefined,
+			q: search.trim() || undefined,
 		})
 			.then((rows) => {
 				if (cancelled) return;
@@ -54,7 +57,7 @@ const StudentList = () => {
 		return () => {
 			cancelled = true;
 		};
-	}, [effectiveFacultyId, level, acceptanceYear]);
+	}, [effectiveFacultyId, level, acceptanceYear, search]);
 
 	const toggleColumn = (key: string) => {
 		setHiddenColumns((prev) =>
@@ -125,6 +128,13 @@ const StudentList = () => {
 			</h1>
 
 			<div className="mb-6 flex flex-wrap items-end gap-6">
+				<SearchField
+					id="studentSearch"
+					label={t("studentList.filters.search")}
+					placeholder={t("studentList.filters.searchPlaceholder")}
+					value={search}
+					onChange={setSearch}
+				/>
 				<FilterSelect
 					id="levelFilter"
 					label={t("studentList.filters.level")}

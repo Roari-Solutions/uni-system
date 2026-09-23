@@ -47,6 +47,15 @@ export class GradesController {
     return await this.gradesService.studentYearGrades(studentId, req.grCaller);
   }
 
+  /** GET /gr/grades/student/:studentId/gpa — the student's semester GPAs and annual average. */
+  @Get('student/:studentId/gpa')
+  async GetStudentGpas(
+    @Req() req: GrRequest,
+    @Param('studentId', ParseUUIDPipe) studentId: string,
+  ) {
+    return await this.gradesService.studentGpas(studentId, req.grCaller);
+  }
+
   @Post()
   async CreateGrade(@Req() req: GrRequest, @Body() dto: CreateGradeDto) {
     return await this.gradesService.createGrade(dto, req.grCaller);

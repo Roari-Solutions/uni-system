@@ -1,6 +1,6 @@
 import api from "../lib/api";
 import type { Curriculum } from "../types/curriculum";
-import type { Grade } from "../types/grade";
+import type { Grade, SeatingStatus } from "../types/grade";
 import type { Student } from "../types/student";
 
 export type GradeFilters = {
@@ -8,12 +8,15 @@ export type GradeFilters = {
 	curriculumId?: string;
 	academicYear?: number;
 	letter?: Grade["letter"];
+	seatingStatus?: SeatingStatus;
 };
 
 export type GradePayload = {
 	studentId: string;
 	curriculumId: string;
 	grade: number;
+	seatingStatus: SeatingStatus;
+	cheatingResolved?: boolean;
 };
 
 export const fetchGrades = async (filters: GradeFilters = {}): Promise<Grade[]> => {
@@ -32,8 +35,10 @@ export const fetchPendingGrades = async (curriculumId: string): Promise<PendingG
 	return data;
 };
 
-// one curriculum of the student's current year; grade and letter are null until entered
+// one curriculum of the student's current year; the marks are null until entered
 export type StudentYearGrade = {
+	// the grade row behind this curriculum; null until a mark is entered
+	gradeId: string | null;
 	curriculumId: string;
 	name: Curriculum["name"];
 	abbreviation: string | null;
@@ -41,6 +46,8 @@ export type StudentYearGrade = {
 	requirementType: Curriculum["requirementType"];
 	grade: number | null;
 	letter: Grade["letter"] | null;
+	seatingStatus: SeatingStatus | null;
+	cheatingResolved: boolean;
 };
 
 export const fetchStudentYearGrades = async (studentId: string): Promise<StudentYearGrade[]> => {
@@ -50,5 +57,33 @@ export const fetchStudentYearGrades = async (studentId: string): Promise<Student
 
 export const createGrade = async (payload: GradePayload): Promise<Grade> => {
 	const { data } = await api.post<Grade>("/gr/grades", payload);
+	return data;
+};
+
+// PATCH is partial: send only the fields being changed
+export const updateGrade = async (id: string, payload: Partial<GradePayload>): Promise<Grade> => {
+	const { data } = await api.patch<Grade>(`/gr/grades/${id}`, payload);
+	return data;
+};
+
+
+// a stored semester GPA; the annual figure averages the semesters on read
+export type SemesterGpa = {
+	semester: number;
+	gpSum: number;
+	courseHours: number;
+	gpa: number;
+	status: "pass" | "fail" | null;
+};
+
+export type StudentGpas = {
+	academicYear: number;
+	semesters: SemesterGpa[];
+	// null until a semester of that year is complete
+	annual: number | null;
+};
+
+export const fetchStudentGpas = async (studentId: string): Promise<StudentGpas> => {
+	const { data } = await api.get<StudentGpas>(`/gr/grades/student/${studentId}/gpa`);
 	return data;
 };

@@ -16,6 +16,7 @@ import { assertFaculty, assertFacultyExists, scopeFacultyId } from 'src/gr-scope
 import { academicYearToNumber, semesterToNumber } from 'src/common/academic-year';
 import { MISSING_NAME } from 'src/common/dto/localized-name.dto';
 import type { RequirementType } from 'src/common/requirement-type';
+import { GradesService } from 'src/grades/grades.service';
 import {
   CreateCurriculumDto,
   ListCurriculumsQueryDto,
@@ -34,6 +35,8 @@ export interface CurriculumView {
   semester: number;
   /** Null only on curriculums created before requirement types existed. */
   requirementType: RequirementType | null;
+  /** Credit hours; they weight this curriculum's grade points in the GPA. */
+  courseHours: number;
 }
 
 /** CRUD for curriculums with faculty scoping. */
@@ -41,7 +44,10 @@ export interface CurriculumView {
 export class CurriculumsService {
   private readonly logger = new Logger(CurriculumsService.name);
 
-  constructor(@Inject(DATABASE) private readonly db: Db) {}
+  constructor(
+    @Inject(DATABASE) private readonly db: Db,
+    @Inject() private readonly gradesService: GradesService,
+  ) {}
 
   /** Resolves the curriculum plus the faculty that offers it, or throws. */
   private async offeringOrThrow(id: string) {
@@ -80,11 +86,9 @@ export class CurriculumsService {
         with: { curriculum: true },
       });
 
-      const seen = new Set<string>();
+      // a university requirement is offered by every faculty, so it lists once per one
       let views: CurriculumView[] = [];
       for (const link of links) {
-        if (seen.has(link.curriculumId)) continue;
-        seen.add(link.curriculumId);
         views.push({
           id: link.curriculum.id,
           name: { en: link.curriculum.nameEn, ar: link.curriculum.nameAr },
@@ -93,6 +97,7 @@ export class CurriculumsService {
           academicYear: academicYearToNumber(link.curriculum.academicYear),
           semester: semesterToNumber(link.curriculum.semester),
           requirementType: link.curriculum.requirementType,
+          courseHours: link.curriculum.courseHours,
         });
       }
 
@@ -137,13 +142,17 @@ export class CurriculumsService {
     caller: GrCaller,
   ): Promise<{ abbreviation: string | null }> {
     try {
-      const facultyId = await assertFacultyExists(this.db, query.facultyId);
-      assertFaculty(caller, facultyId);
+      // a university requirement spans every faculty, so it names none
+      const university = query.requirementType === 'university';
+      const facultyId = university ? null : await assertFacultyExists(this.db, query.facultyId);
+      if (facultyId) assertFaculty(caller, facultyId);
 
-      const faculty = await this.db.query.faculties.findFirst({
-        where: eq(faculties.id, facultyId),
-        columns: { abbreviation: true },
-      });
+      const faculty = facultyId
+        ? await this.db.query.faculties.findFirst({
+            where: eq(faculties.id, facultyId),
+            columns: { abbreviation: true },
+          })
+        : null;
       const letters = abbreviationLetters(
         query.requirementType,
         faculty?.abbreviation ?? null,
@@ -154,12 +163,14 @@ export class CurriculumsService {
       const taken = new Set<number>();
 
       // serials this faculty already uses in the same year and semester
-      const links = await this.db.query.facultyCurriculums.findMany({
-        where: eq(facultyCurriculums.facultyId, facultyId),
-        with: {
-          curriculum: { columns: { abbreviation: true, academicYear: true, semester: true } },
-        },
-      });
+      const links = facultyId
+        ? await this.db.query.facultyCurriculums.findMany({
+            where: eq(facultyCurriculums.facultyId, facultyId),
+            with: {
+              curriculum: { columns: { abbreviation: true, academicYear: true, semester: true } },
+            },
+          })
+        : [];
       for (const { curriculum } of links) {
         if (curriculum.academicYear !== query.academicYear) continue;
         if (curriculum.semester !== query.semester) continue;
@@ -196,11 +207,20 @@ export class CurriculumsService {
     }
   }
 
-  /** Creates a curriculum plus its faculty offering link. */
+  /**
+   * Creates a curriculum plus its faculty offering links. A university
+   * requirement belongs to every faculty, so only an admin may create one.
+   */
   async createCurriculum(dto: CreateCurriculumDto, caller: GrCaller): Promise<CurriculumView> {
     try {
-      const facultyId = await assertFacultyExists(this.db, dto.facultyId);
-      assertFaculty(caller, facultyId);
+      const university = dto.requirementType === 'university';
+      if (university && scopeFacultyId(caller) !== null) {
+        this.logger.warn('Rejected a scoped caller creating a university requirement');
+        throw new UnauthorizedException();
+      }
+
+      const facultyId = university ? null : await assertFacultyExists(this.db, dto.facultyId);
+      if (facultyId) assertFaculty(caller, facultyId);
 
       // the abbreviation is the identifier; names are free text
       const abbreviation = dto.abbreviation.trim();
@@ -218,21 +238,41 @@ export class CurriculumsService {
           academicYear: dto.academicYear,
           semester: dto.semester,
           requirementType: dto.requirementType,
+          courseHours: dto.courseHours,
           abbreviation,
         })
         .returning();
 
-      await this.db.insert(facultyCurriculums).values({ facultyId, curriculumId: created.id });
+      // every faculty offers a university requirement; the rest offer one
+      const offering = facultyId
+        ? [facultyId]
+        : (await this.db.query.faculties.findMany({ columns: { id: true } })).map((f) => f.id);
+      if (!offering.length) throw new BadRequestException();
 
-      this.logger.log(`Created curriculum: ${abbreviation}`);
+      await this.db
+        .insert(facultyCurriculums)
+        .values(offering.map((id) => ({ facultyId: id, curriculumId: created.id })));
+
+      // the new curriculum leaves its semester unmarked for that cohort, so any
+      // GPA already stored for them no longer holds
+      await this.gradesService.refreshFacultiesSemester(
+        offering,
+        created.academicYear,
+        created.semester,
+      );
+
+      this.logger.log(
+        `Created curriculum: ${abbreviation}${university ? ` across ${offering.length} faculties` : ''}`,
+      );
       return {
         id: created.id,
         name: { en: created.nameEn, ar: created.nameAr },
-        facultyId,
+        facultyId: offering[0],
         abbreviation: created.abbreviation,
         academicYear: academicYearToNumber(created.academicYear),
         semester: semesterToNumber(created.semester),
         requirementType: created.requirementType,
+        courseHours: created.courseHours,
       };
     } catch (error) {
       if (
@@ -260,6 +300,13 @@ export class CurriculumsService {
       const { row, link } = await this.offeringOrThrow(id);
       assertFaculty(caller, link.facultyId);
 
+      // the type decides which faculties offer the curriculum, so it is fixed
+      // once the curriculum exists: delete and recreate it instead
+      if (dto.requirementType !== undefined && dto.requirementType !== row.requirementType) {
+        this.logger.warn(`Rejected a requirement type change: ${row.id}`);
+        throw new BadRequestException();
+      }
+
       const abbreviation = dto.abbreviation?.trim();
       if (abbreviation !== undefined && abbreviation !== row.abbreviation) {
         const clash = await this.db.query.curriculums.findFirst({
@@ -280,10 +327,17 @@ export class CurriculumsService {
           ...(dto.academicYear !== undefined ? { academicYear: dto.academicYear } : {}),
           ...(dto.semester !== undefined ? { semester: dto.semester } : {}),
           ...(dto.requirementType !== undefined ? { requirementType: dto.requirementType } : {}),
+          ...(dto.courseHours !== undefined ? { courseHours: dto.courseHours } : {}),
           ...(abbreviation !== undefined ? { abbreviation } : {}),
         })
         .where(eq(curriculums.id, row.id))
         .returning();
+
+      // the hours weight this curriculum's grade points, so its grades and the
+      // GPAs behind them are rebuilt whenever they move
+      if (dto.courseHours !== undefined && dto.courseHours !== row.courseHours) {
+        await this.gradesService.recomputeCurriculum(row.id);
+      }
 
       let facultyId = link.facultyId;
       if (dto.facultyId !== undefined && dto.facultyId !== link.facultyId) {
@@ -321,6 +375,7 @@ export class CurriculumsService {
         academicYear: academicYearToNumber(updated.academicYear),
         semester: semesterToNumber(updated.semester),
         requirementType: updated.requirementType,
+        courseHours: updated.courseHours,
       };
     } catch (error) {
       if (
@@ -344,11 +399,21 @@ export class CurriculumsService {
       const { row, link } = await this.offeringOrThrow(id);
       assertFaculty(caller, link.facultyId);
 
+      // captured before the links go: their students' GPAs are rebuilt after
+      const offering = (
+        await this.db.query.facultyCurriculums.findMany({
+          where: eq(facultyCurriculums.curriculumId, row.id),
+          columns: { facultyId: true },
+        })
+      ).map((l) => l.facultyId);
+
       await this.db.transaction(async (tx) => {
         await tx.delete(grades).where(eq(grades.curriculumId, row.id));
         await tx.delete(facultyCurriculums).where(eq(facultyCurriculums.curriculumId, row.id));
         await tx.delete(curriculums).where(eq(curriculums.id, row.id));
       });
+
+      await this.gradesService.refreshFacultiesSemester(offering, row.academicYear, row.semester);
 
       this.logger.log(`Deleted curriculum: ${row.id}`);
       return { status: 'Ok' };

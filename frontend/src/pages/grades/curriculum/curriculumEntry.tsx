@@ -8,13 +8,15 @@ import { formCardClass, inputClass, submitButtonClass } from "../../../styles/fo
 import { SEMESTERS, STUDY_LEVELS } from "../../../utils/academicYears";
 import { REQUIREMENT_TYPES, type RequirementType } from "../../../types/requirementType";
 import { ABBREVIATION_PATTERN } from "../../../types/curriculum";
+import useAuth from "../../../auth/useAuth";
 
 // messages are i18n keys, translated when rendered
 const curriculumSchema = z.object({
 	nameAr: z.string().trim().min(1, "curriculumEntry.errors.required"),
 	// optional: the API stores "-" when it is left blank
 	nameEn: z.string().trim(),
-	facultyId: z.string().min(1, "curriculumEntry.errors.required"),
+	// a university requirement belongs to every faculty, so it names none
+	facultyId: z.string(),
 	abbreviation: z
 		.string()
 		.trim()
@@ -27,6 +29,28 @@ const curriculumSchema = z.object({
 		.string()
 		.min(1, "curriculumEntry.errors.required")
 		.pipe(z.enum(REQUIREMENT_TYPES)),
+	// credit hours; they weight the curriculum's grade points in the GPA
+	courseHours: z
+		.string()
+		.trim()
+		.min(1, "curriculumEntry.errors.required")
+		.transform(Number)
+		.pipe(
+			z
+				.number({ error: "curriculumEntry.errors.courseHoursNumber" })
+				.int("curriculumEntry.errors.courseHoursRange")
+				.min(1, "curriculumEntry.errors.courseHoursRange")
+				.max(12, "curriculumEntry.errors.courseHoursRange"),
+		),
+}).superRefine((value, ctx) => {
+	// every requirement but a university one names the faculty that offers it
+	if (value.requirementType !== "university" && !value.facultyId) {
+		ctx.addIssue({
+			code: "custom",
+			path: ["facultyId"],
+			message: "curriculumEntry.errors.required",
+		});
+	}
 });
 
 type CurriculumForm = z.input<typeof curriculumSchema>;
@@ -40,10 +64,16 @@ const EMPTY_FORM: CurriculumForm = {
 	academicYear: "",
 	semester: "",
 	requirementType: "",
+	courseHours: "",
 };
 
 const CurriculumEntry = () => {
 	const { t } = useTranslation();
+	const { user } = useAuth();
+	// a university requirement spans every faculty, so only an admin may add one
+	const types = REQUIREMENT_TYPES.filter(
+		(type) => type !== "university" || user?.role === "admin",
+	);
 
 	const [form, setForm] = useState<CurriculumForm>(EMPTY_FORM);
 	const [errors, setErrors] = useState<FormErrors>({});
@@ -55,7 +85,8 @@ const CurriculumEntry = () => {
 	const [suggestion, setSuggestion] = useState<{ key: string; value: string } | null>(null);
 
 	const { facultyId, requirementType, academicYear, semester, nameEn } = form;
-	const suggestReady = !!(facultyId && requirementType && academicYear && semester);
+	const university = requirementType === "university";
+	const suggestReady = !!((facultyId || university) && requirementType && academicYear && semester);
 	// identifies the inputs a suggestion was made for, so a stale one is never shown
 	const suggestKey = suggestReady
 		? [facultyId, requirementType, academicYear, semester, nameEn.trim()].join("|")
@@ -68,7 +99,7 @@ const CurriculumEntry = () => {
 
 		let cancelled = false;
 		suggestAbbreviation({
-			facultyId,
+			facultyId: university ? undefined : facultyId,
 			academicYear: Number(academicYear),
 			semester: Number(semester),
 			requirementType: requirementType as RequirementType,
@@ -84,7 +115,16 @@ const CurriculumEntry = () => {
 		return () => {
 			cancelled = true;
 		};
-	}, [suggestReady, suggestKey, facultyId, academicYear, semester, requirementType, nameEn]);
+	}, [
+		suggestReady,
+		suggestKey,
+		university,
+		facultyId,
+		academicYear,
+		semester,
+		requirementType,
+		nameEn,
+	]);
 
 	const setField = <K extends keyof CurriculumForm>(key: K, value: CurriculumForm[K]) => {
 		setForm((prev) => ({ ...prev, [key]: value }));
@@ -112,11 +152,12 @@ const CurriculumEntry = () => {
 			await createCurriculum({
 				// English is optional; omitting it makes the API store "-"
 				name: { ar: result.data.nameAr, en: result.data.nameEn || undefined },
-				facultyId: result.data.facultyId,
+				facultyId: university ? undefined : result.data.facultyId,
 				abbreviation: result.data.abbreviation,
 				academicYear: result.data.academicYear,
 				semester: result.data.semester,
 				requirementType: result.data.requirementType,
+				courseHours: result.data.courseHours,
 			});
 			setForm({ ...EMPTY_FORM, facultyId: form.facultyId });
 			setAbbreviationEdited(false);
@@ -166,19 +207,44 @@ const CurriculumEntry = () => {
 					<select
 						id="requirementType"
 						value={form.requirementType}
-						onChange={(e) => setField("requirementType", e.target.value)}
+						onChange={(e) =>
+							setForm((prev) => ({
+								...prev,
+								requirementType: e.target.value,
+								// a university requirement carries no faculty of its own
+								facultyId: e.target.value === "university" ? "" : prev.facultyId,
+							}))
+						}
 						aria-invalid={!!errors.requirementType}
 						className={inputClass(!!errors.requirementType)}
 					>
 						<option value="" disabled>
 							{t("curriculumEntry.selectRequirementType")}
 						</option>
-						{REQUIREMENT_TYPES.map((type) => (
+						{types.map((type) => (
 							<option key={type} value={type}>
 								{t(`requirementTypes.${type}`)}
 							</option>
 						))}
 					</select>
+				</FormField>
+
+				<FormField
+					id="courseHours"
+					label={t("curriculumEntry.courseHours")}
+					error={errors.courseHours?.[0]}
+				>
+					<input
+						id="courseHours"
+						type="number"
+						min={1}
+						max={12}
+						dir="ltr"
+						value={form.courseHours}
+						onChange={(e) => setField("courseHours", e.target.value)}
+						aria-invalid={!!errors.courseHours}
+						className={inputClass(!!errors.courseHours)}
+					/>
 				</FormField>
 
 				<FacultyField
@@ -188,6 +254,14 @@ const CurriculumEntry = () => {
 					value={form.facultyId}
 					onChange={setFacultyId}
 					error={errors.facultyId?.[0]}
+					fixed={
+						university
+							? {
+									text: t("curriculumEntry.allFaculties"),
+									note: t("curriculumEntry.universityFaculties"),
+								}
+							: undefined
+					}
 				/>
 
 				<FormField

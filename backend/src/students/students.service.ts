@@ -8,8 +8,8 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { and, eq, SQL } from 'drizzle-orm';
-import { grades, results, students } from 'schema';
+import { and, eq, inArray, SQL } from 'drizzle-orm';
+import { gpas, grades, students } from 'schema';
 import { DATABASE, type Db } from 'src/database/database.module';
 import { GrCaller } from 'src/gr-gurd/gr-gurd.guard';
 import { assertFaculty, assertFacultyExists, scopeFacultyId } from 'src/gr-scope/gr-scope';
@@ -22,7 +22,24 @@ import {
   type AcceptanceType,
   type Nationality,
   type StudentStatus,
+  type BulkStudentRowDto,
+  type BulkStudentsDto,
 } from './dto/students.dto';
+
+/** What one row of a bulk import comes back as, so the preview can mark it. */
+export interface BulkRowReport {
+  rowNumber: number;
+  uniNumber: string;
+  /** i18n keys, so the views translate them; empty when the row is ready. */
+  problems: string[];
+}
+
+/** The dry run's verdict on a whole file. */
+export interface BulkCheckReport {
+  rows: BulkRowReport[];
+  ready: number;
+  blocked: number;
+}
 
 /** A student as the views consume it. */
 export interface StudentView {
@@ -202,7 +219,6 @@ export class StudentsService {
           acceptanceType: dto.acceptanceType,
           acceptanceYear: dto.acceptanceYear.trim(),
           academicYear: dto.level,
-          status: dto.status ?? null,
           facultyId,
         })
         .returning();
@@ -274,7 +290,6 @@ export class StudentsService {
             ? { acceptanceYear: dto.acceptanceYear.trim() }
             : {}),
           ...(dto.level !== undefined ? { academicYear: dto.level } : {}),
-          ...(dto.status !== undefined ? { status: dto.status } : {}),
           facultyId,
         })
         .where(eq(students.id, row.id))
@@ -298,7 +313,139 @@ export class StudentsService {
     }
   }
 
-  /** Deletes the student with this id, plus their grades and results. */
+  /**
+   * Reads one bulk import without writing anything: every row is checked for a
+   * university number or national ID already taken, in the database or by an
+   * earlier row of the same file.
+   */
+  async checkBulk(dto: BulkStudentsDto, caller: GrCaller): Promise<BulkCheckReport> {
+    try {
+      const rows = await this.reportBulk(dto.rows, caller);
+      const blocked = rows.filter((row) => row.problems.length).length;
+      return { rows, ready: rows.length - blocked, blocked };
+    } catch (error) {
+      if (error instanceof BadRequestException || error instanceof UnauthorizedException) {
+        throw error;
+      }
+      this.logger.error('Failed to check a bulk import', error);
+      throw new InternalServerErrorException('Students operation failed', {
+        cause: error,
+      });
+    }
+  }
+
+  /**
+   * Imports the rows that pass the same checks, skipping the rest. The report
+   * says which rows were left behind and why.
+   */
+  async importBulk(
+    dto: BulkStudentsDto,
+    caller: GrCaller,
+  ): Promise<{ imported: number; skipped: BulkRowReport[] }> {
+    try {
+      const reports = await this.reportBulk(dto.rows, caller);
+      const blocked = new Set(
+        reports.filter((row) => row.problems.length).map((row) => row.rowNumber),
+      );
+      const ready = dto.rows.filter((row) => !blocked.has(row.rowNumber));
+
+      if (ready.length) {
+        await this.db.insert(students).values(
+          ready.map((row) => ({
+            // an omitted English name is recorded as a dash, filled in later elsewhere
+            nameEn: row.name.en?.trim() || MISSING_NAME,
+            nameAr: row.name.ar.trim(),
+            uniNumber: row.uniNumber.trim(),
+            nationality: row.nationality,
+            nationalId: row.nationality === 'sudanese' ? row.nationalId?.trim() || null : null,
+            passportNumber:
+              row.nationality === 'foreign' ? row.passportNumber?.trim() || null : null,
+            acceptanceType: row.acceptanceType,
+            acceptanceYear: row.acceptanceYear.trim(),
+            academicYear: row.level,
+            facultyId: row.facultyId,
+          })),
+        );
+      }
+
+      this.logger.log(`Bulk imported ${ready.length} students, skipped ${blocked.size}`);
+      return {
+        imported: ready.length,
+        skipped: reports.filter((row) => row.problems.length),
+      };
+    } catch (error) {
+      if (error instanceof BadRequestException || error instanceof UnauthorizedException) {
+        throw error;
+      }
+      this.logger.error('Failed to run a bulk import', error);
+      throw new InternalServerErrorException('Students operation failed', {
+        cause: error,
+      });
+    }
+  }
+
+  /**
+   * The checks both bulk endpoints share. The taken numbers are read in two
+   * queries for the whole file rather than per row, so a large sheet stays cheap.
+   */
+  private async reportBulk(
+    rows: BulkStudentRowDto[],
+    caller: GrCaller,
+  ): Promise<BulkRowReport[]> {
+    const scope = scopeFacultyId(caller);
+
+    const uniNumbers = rows.map((row) => row.uniNumber.trim()).filter(Boolean);
+    const nationalIds = rows
+      .map((row) => row.nationalId?.trim())
+      .filter((value): value is string => !!value);
+
+    const takenUni = new Set(
+      (
+        await this.db.query.students.findMany({
+          where: inArray(students.uniNumber, uniNumbers.length ? uniNumbers : ['']),
+          columns: { uniNumber: true },
+        })
+      ).map((row) => row.uniNumber),
+    );
+    const takenNationalId = new Set(
+      (
+        await this.db.query.students.findMany({
+          where: inArray(students.nationalId, nationalIds.length ? nationalIds : ['']),
+          columns: { nationalId: true },
+        })
+      )
+        .map((row) => row.nationalId)
+        .filter((value): value is string => !!value),
+    );
+
+    const seenUni = new Set<string>();
+    const seenNationalId = new Set<string>();
+
+    return rows.map((row) => {
+      const uniNumber = row.uniNumber.trim();
+      const nationalId = row.nationalId?.trim();
+      const problems: string[] = [];
+
+      if (scope && row.facultyId !== scope) problems.push('bulkImport.problems.faculty');
+
+      if (takenUni.has(uniNumber)) problems.push('bulkImport.problems.uniNumberTaken');
+      else if (seenUni.has(uniNumber)) problems.push('bulkImport.problems.uniNumberRepeated');
+      seenUni.add(uniNumber);
+
+      if (nationalId) {
+        if (takenNationalId.has(nationalId)) {
+          problems.push('bulkImport.problems.nationalIdTaken');
+        } else if (seenNationalId.has(nationalId)) {
+          problems.push('bulkImport.problems.nationalIdRepeated');
+        }
+        seenNationalId.add(nationalId);
+      }
+
+      return { rowNumber: row.rowNumber, uniNumber, problems };
+    });
+  }
+
+  /** Deletes the student with this id, plus their grades and GPAs. */
   async deleteStudent(id: string, caller: GrCaller): Promise<{ status: string }> {
     try {
       const row = await this.db.query.students.findFirst({
@@ -310,7 +457,7 @@ export class StudentsService {
 
       await this.db.transaction(async (tx) => {
         await tx.delete(grades).where(eq(grades.studentId, row.id));
-        await tx.delete(results).where(eq(results.studentId, row.id));
+        await tx.delete(gpas).where(eq(gpas.studentId, row.id));
         await tx.delete(students).where(eq(students.id, row.id));
       });
 

@@ -1,4 +1,4 @@
-import { IsIn, IsNumber, IsOptional, IsUUID, Max, Min } from 'class-validator';
+import { IsBoolean, IsIn, IsNumber, IsOptional, IsUUID, Max, Min } from 'class-validator';
 import { PartialType } from '@nestjs/mapped-types';
 import {
   ACADEMIC_YEARS,
@@ -6,6 +6,10 @@ import {
   type AcademicYear,
 } from 'src/common/academic-year';
 import { LETTER_GRADES, type LetterGrade } from '../letter-grade';
+
+/** Mirrors seatingStatusEnum in the schema. */
+export const SEATING_STATUSES = ['attended', 'absent', 'cheating'] as const;
+export type SeatingStatus = (typeof SEATING_STATUSES)[number];
 
 /** Body for creating a grade. */
 export class CreateGradeDto {
@@ -19,6 +23,14 @@ export class CreateGradeDto {
   @Min(0)
   @Max(100)
   grade!: number;
+
+  @IsIn(SEATING_STATUSES)
+  seatingStatus!: SeatingStatus;
+
+  /** Cheating only: staff have decided the case, so the mark counts toward the year. */
+  @IsOptional()
+  @IsBoolean()
+  cheatingResolved?: boolean;
 }
 
 /** Body for patching a grade (all fields optional). */
@@ -43,4 +55,8 @@ export class ListGradesQueryDto {
   @IsOptional()
   @IsIn(LETTER_GRADES)
   letter?: LetterGrade;
+
+  @IsOptional()
+  @IsIn(SEATING_STATUSES)
+  seatingStatus?: SeatingStatus;
 }

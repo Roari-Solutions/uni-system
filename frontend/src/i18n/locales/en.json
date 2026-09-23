@@ -8,7 +8,8 @@
     "switchLanguage": "العربية",
     "logout": "Sign out",
     "toggleMenu": "Menu",
-    "users": "Users"
+    "users": "Users",
+    "import": "Bulk entry"
   },
   "curriculumEntry": {
     "title": "Add curriculum",
@@ -25,10 +26,15 @@
     "submit": "Save",
     "errors": {
       "required": "This field is required",
-      "abbreviationFormat": "Use the format XXXX-0000, e.g. ENCR-1101"
+      "abbreviationFormat": "Use the format XXXX-0000, e.g. ENCR-1101",
+      "courseHoursNumber": "Course hours must be a number",
+      "courseHoursRange": "Course hours must be between 1 and 12"
     },
     "nameAr": "Curriculum name (Arabic)",
-    "nameEn": "Curriculum name (English)"
+    "nameEn": "Curriculum name (English)",
+    "courseHours": "Course hours",
+    "allFaculties": "All faculties",
+    "universityFaculties": "A university requirement is offered by every faculty."
   },
   "curriculumList": {
     "title": "Curriculums",
@@ -48,10 +54,13 @@
       "abbreviation": "Abbreviation",
       "academicYear": "Academic year",
       "semester": "Semester",
-      "requirementType": "Requirement type"
+      "requirementType": "Requirement type",
+      "courseHours": "Course hours"
     },
     "deleteTitle": "Delete curriculum",
-    "deleteMessage": "Are you sure you want to delete \"{{name}}\"? This can't be undone."
+    "deleteMessage": "Are you sure you want to delete \"{{name}}\"? This can't be undone.",
+    "search": "Search",
+    "searchPlaceholder": "Name or abbreviation"
   },
   "studentList": {
     "title": "Students",
@@ -76,7 +85,9 @@
       "faculty": "Faculty",
       "allFaculties": "All faculties",
       "acceptanceYear": "Acceptance year",
-      "allAcceptanceYears": "All acceptance years"
+      "allAcceptanceYears": "All acceptance years",
+      "search": "Search",
+      "searchPlaceholder": "Name, university number or ID"
     },
     "deleteTitle": "Delete student",
     "deleteMessage": "Are you sure you want to delete \"{{name}}\"? This can't be undone."
@@ -106,8 +117,12 @@
       "abbreviation": "Abbreviation",
       "requirementType": "Requirement type",
       "grade": "Grade",
-      "letter": "Letter grade"
-    }
+      "letter": "Letter grade",
+      "seatingStatus": "Seating status"
+    },
+    "semesterGpa": "Semester GPA",
+    "annualGpa": "Annual GPA",
+    "missingGrades": "Still missing curriculum grades"
   },
   "student": {
     "acceptanceTypes": {
@@ -116,7 +131,8 @@
       "vacancies": "Vacancy admission",
       "teachersChildren": "Teachers' children admission",
       "international": "International students admission",
-      "arabCertificate": "Arab certificate admission"
+      "arabCertificate": "Arab certificate admission",
+      "second": "Second admission"
     },
     "nationalities": {
       "sudanese": "Sudanese",
@@ -154,7 +170,8 @@
     "saved": "Saved",
     "saveFailed": "Couldn't save. Please try again.",
     "loadFailed": "Couldn't load the data. Please try again.",
-    "facultyLocked": "Set from your account and cannot be changed."
+    "facultyLocked": "Set from your account and cannot be changed.",
+    "clearSearch": "Clear the search"
   },
   "studentEntry": {
     "title": "Add student",
@@ -190,7 +207,8 @@
       "faculty": "Faculty",
       "curriculum": "Curriculum",
       "grade": "Grade",
-      "letter": "Letter grade"
+      "letter": "Letter grade",
+      "seatingStatus": "Seating status"
     },
     "filters": {
       "faculty": "Faculty",
@@ -198,8 +216,11 @@
       "curriculum": "Curriculum",
       "allCurriculums": "All curriculums",
       "letter": "Letter grade",
-      "allLetters": "All letter grades"
-    }
+      "allLetters": "All letter grades",
+      "seatingStatus": "Seating status",
+      "allSeatingStatuses": "All seating statuses"
+    },
+    "gradeFor": "Grade for {{name}}"
   },
   "gradeEntry": {
     "title": "Enter grades",
@@ -235,14 +256,17 @@
       "uniNumber": "University number",
       "name": "Student",
       "grade": "Grade",
-      "letter": "Letter grade"
+      "letter": "Letter grade",
+      "seatingStatus": "Seating status"
     },
     "errors": {
       "required": "Enter a grade",
       "gradeNumber": "Grade must be a number",
       "gradeRange": "Grade must be between 0 and 100",
       "alreadyGraded": "This student already has a grade for this curriculum"
-    }
+    },
+    "seatingStatusFor": "Seating status for {{name}}",
+    "voidedGrade": "An absence is recorded as 0 (F)."
   },
   "roles": {
     "admin": "Administrator",
@@ -309,6 +333,85 @@
       "passwordLength": "Password must be at least 8 characters",
       "taken": "That login is already in use.",
       "unavailable": "Couldn't reach the server. Please try again in a moment."
+    }
+  },
+  "seatingStatuses": {
+    "attended": "Attended",
+    "cheating": "Cheating case",
+    "absent": "Absent"
+  },
+  "resolveCheating": {
+    "title": "Resolve cheating case",
+    "legend": "How does this case end?",
+    "accept": "Accept the mark ({{grade}}) and record the student as attended",
+    "zero": "Keep the cheating case and record 0 for this curriculum",
+    "warnStudent": "Place a warning on the student",
+    "confirm": "Resolve",
+    "action": "Resolve",
+    "actionFor": "Resolve the cheating case for {{name}}",
+    "pending": "Awaiting a decision; left out of the year result",
+    "resolved": "Decided"
+  },
+  "gpaStatuses": {
+    "pass": "Pass",
+    "fail": "Fail"
+  },
+  "editGrade": {
+    "title": "Edit grade",
+    "grade": "Grade",
+    "seatingStatus": "Seating status",
+    "save": "Save",
+    "action": "Edit",
+    "actionFor": "Edit the grade for {{name}}",
+    "confirmTitle": "Confirm the change",
+    "confirmMessage": "{{name}}: {{fromGrade}} ({{fromStatus}}) becomes {{toGrade}} ({{toStatus}}).",
+    "confirm": "Save the change"
+  },
+  "bulkImport": {
+    "title": "Bulk student entry",
+    "template": "Sheet template",
+    "templates": {
+      "ministry": "Ministry of education admissions",
+      "existing": "Existing students"
+    },
+    "faculty": "Faculty",
+    "acceptanceYear": "Acceptance year",
+    "acceptanceType": "Acceptance type",
+    "level": "Academic level",
+    "file": "Sheet file",
+    "fileHint": "Excel (.xlsx) or CSV. The file is read in your browser; nothing is saved until you confirm.",
+    "readFailed": "The file could not be read. Check that it follows the chosen template.",
+    "preview": "Preview — {{file}}",
+    "summary": "{{ready}} ready, {{blocked}} blocked",
+    "empty": "The sheet has no rows",
+    "rowReady": "Ready",
+    "import": "Import {{count}} students",
+    "imported": "{{count}} students imported.",
+    "confirmTitle": "Confirm the import",
+    "confirmMessage": "{{ready}} students will be added. {{blocked}} rows are skipped.",
+    "confirm": "Import",
+    "columns": {
+      "row": "Row",
+      "uniNumber": "University number",
+      "nameAr": "Name (Arabic)",
+      "nationalId": "National ID",
+      "faculty": "Faculty",
+      "problems": "Status"
+    },
+    "problems": {
+      "uniNumberTaken": "A student already holds this university number",
+      "uniNumberRepeated": "This university number appears twice in the sheet",
+      "uniNumberMissing": "No university number",
+      "nationalIdTaken": "A student already holds this national ID",
+      "nationalIdRepeated": "This national ID appears twice in the sheet",
+      "nameMissing": "No Arabic name",
+      "formNumberMissing": "No form number",
+      "facultyUnknown": "This faculty name matches none on record",
+      "facultyMissing": "No faculty for this row",
+      "facultyMismatch": "This row names a different faculty than the one chosen",
+      "facultyAbbreviation": "This faculty has no two-letter code, so no university number can be built",
+      "faculty": "This row is outside your faculty",
+      "acceptanceTypeUnknown": "This acceptance type matches none on record"
     }
   }
 }

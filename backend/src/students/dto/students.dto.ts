@@ -1,11 +1,16 @@
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  ArrayNotEmpty,
+  IsArray,
   IsIn,
+  IsInt,
   IsOptional,
   IsString,
   IsUUID,
   Matches,
   MaxLength,
+  Min,
   ValidateNested,
 } from 'class-validator';
 import { PartialType } from '@nestjs/mapped-types';
@@ -24,6 +29,7 @@ export const ACCEPTANCE_TYPES = [
   'teachersChildren',
   'international',
   'arabCertificate',
+  'second',
 ] as const;
 export type AcceptanceType = (typeof ACCEPTANCE_TYPES)[number];
 
@@ -77,11 +83,6 @@ export class CreateStudentDto {
   @NormaliseAcademicYear()
   @IsIn(ACADEMIC_YEARS)
   level!: AcademicYear;
-
-  /** Omit or send null while the year's outcome is undetermined. */
-  @IsOptional()
-  @IsIn([...STUDENT_STATUSES, null])
-  status?: StudentStatus | null;
 }
 
 /** Body for patching a student (all fields optional). */
@@ -108,4 +109,25 @@ export class ListStudentsQueryDto {
   @IsString()
   @MaxLength(200)
   q?: string;
+}
+
+/** The rows one bulk import may carry; the views parse the file and send these. */
+export const BULK_ROW_LIMIT = 1000;
+
+/** One parsed row, as the import preview holds it before it is written. */
+export class BulkStudentRowDto extends CreateStudentDto {
+  /** The row's place in the sheet, so the preview can point at it. */
+  @IsInt()
+  @Min(1)
+  rowNumber!: number;
+}
+
+/** Body for both bulk endpoints: the rows the preview is showing. */
+export class BulkStudentsDto {
+  @IsArray()
+  @ArrayNotEmpty()
+  @ArrayMaxSize(BULK_ROW_LIMIT)
+  @ValidateNested({ each: true })
+  @Type(() => BulkStudentRowDto)
+  rows!: BulkStudentRowDto[];
 }

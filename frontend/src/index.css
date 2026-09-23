@@ -25,6 +25,11 @@
 	--color-error: #dc2626;
 	--color-error-hover: #b91c1c;
 
+	/* §4.2 — success, the second explicit state token. Used only to mark a
+	   student as having sat an exam; never decoratively. */
+	--color-success: #16a34a;
+	--color-success-hover: #15803d;
+
 	/* §7 TYPE TOKENS + §8 LINE HEIGHT */
 	--text-display-xl: 64px;
 	--text-display-xl--line-height: 1.15;

@@ -12,6 +12,8 @@ type FacultyFieldProps = {
 	value: string;
 	onChange: (facultyId: string) => void;
 	error?: string;
+	/** Locks the field with a reason of the caller's own, e.g. a curriculum every faculty offers. */
+	fixed?: { note: string; text: string };
 };
 
 /**
@@ -28,6 +30,7 @@ const FacultyField = ({
 	value,
 	onChange,
 	error,
+	fixed,
 }: FacultyFieldProps) => {
 	const { t, i18n } = useTranslation();
 	const lang = i18n.language === "ar" ? "ar" : "en";
@@ -40,6 +43,22 @@ const FacultyField = ({
 			onChange(lockedFacultyId);
 		}
 	}, [locked, lockedFacultyId, value, onChange]);
+
+	if (fixed) {
+		return (
+			<FormField id="faculty" label={label} error={error}>
+				<input
+					id="faculty"
+					type="text"
+					readOnly
+					disabled
+					value={fixed.text}
+					className={`${inputClass(false)} disabled:bg-background disabled:text-primary-hover`}
+				/>
+				<p className="text-body-sm text-primary-hover">{fixed.note}</p>
+			</FormField>
+		);
+	}
 
 	if (locked) {
 		return (

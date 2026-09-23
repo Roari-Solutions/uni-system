@@ -8,7 +8,8 @@
     "switchLanguage": "English",
     "logout": "تسجيل الخروج",
     "toggleMenu": "القائمة",
-    "users": "المستخدمون"
+    "users": "المستخدمون",
+    "import": "إدخال بالجملة"
   },
   "curriculumEntry": {
     "title": "إضافة منهج",
@@ -25,10 +26,15 @@
     "submit": "حفظ",
     "errors": {
       "required": "هذا الحقل مطلوب",
-      "abbreviationFormat": "استخدم الصيغة XXXX-0000، مثل ENCR-1101"
+      "abbreviationFormat": "استخدم الصيغة XXXX-0000، مثل ENCR-1101",
+      "courseHoursNumber": "يجب أن تكون الساعات المعتمدة رقماً",
+      "courseHoursRange": "يجب أن تكون الساعات المعتمدة بين 1 و 12"
     },
     "nameAr": "اسم المقرر بالعربية",
-    "nameEn": "اسم المقرر بالإنجليزية"
+    "nameEn": "اسم المقرر بالإنجليزية",
+    "courseHours": "الساعات المعتمدة",
+    "allFaculties": "جميع الكليات",
+    "universityFaculties": "متطلب الجامعة تقدمه جميع الكليات."
   },
   "curriculumList": {
     "title": "المناهج",
@@ -48,10 +54,13 @@
       "abbreviation": "الاختصار",
       "academicYear": "السنة الدراسية",
       "semester": "الفصل الدراسي",
-      "requirementType": "نوع المتطلب"
+      "requirementType": "نوع المتطلب",
+      "courseHours": "الساعات المعتمدة"
     },
     "deleteTitle": "حذف المنهج",
-    "deleteMessage": "هل أنت متأكد من حذف \"{{name}}\"؟ لا يمكن التراجع عن هذا الإجراء."
+    "deleteMessage": "هل أنت متأكد من حذف \"{{name}}\"؟ لا يمكن التراجع عن هذا الإجراء.",
+    "search": "بحث",
+    "searchPlaceholder": "الاسم أو الاختصار"
   },
   "studentList": {
     "title": "الطلاب",
@@ -76,7 +85,9 @@
       "faculty": "الكلية",
       "allFaculties": "جميع الكليات",
       "acceptanceYear": "سنة القبول",
-      "allAcceptanceYears": "جميع سنوات القبول"
+      "allAcceptanceYears": "جميع سنوات القبول",
+      "search": "بحث",
+      "searchPlaceholder": "الاسم أو الرقم الجامعي أو الرقم الوطني"
     },
     "deleteTitle": "حذف الطالب",
     "deleteMessage": "هل أنت متأكد من حذف \"{{name}}\"؟ لا يمكن التراجع عن هذا الإجراء."
@@ -106,8 +117,12 @@
       "abbreviation": "الاختصار",
       "requirementType": "نوع المتطلب",
       "grade": "الدرجة",
-      "letter": "التقدير"
-    }
+      "letter": "التقدير",
+      "seatingStatus": "حالة الجلوس"
+    },
+    "semesterGpa": "معدل الفصل",
+    "annualGpa": "المعدل السنوي",
+    "missingGrades": "لا تزال هناك مناهج بدون درجات"
   },
   "student": {
     "acceptanceTypes": {
@@ -116,7 +131,8 @@
       "vacancies": "قبول شواغر",
       "teachersChildren": "قبول أبناء معلمين",
       "international": "قبول وافدين",
-      "arabCertificate": "قبول شهادة عربية"
+      "arabCertificate": "قبول شهادة عربية",
+      "second": "قبول ثاني"
     },
     "nationalities": {
       "sudanese": "سوداني",
@@ -154,7 +170,8 @@
     "saved": "تم الحفظ",
     "saveFailed": "تعذّر الحفظ. حاول مرة أخرى.",
     "loadFailed": "تعذّر تحميل البيانات. حاول مرة أخرى.",
-    "facultyLocked": "محدّدة من حسابك ولا يمكن تغييرها."
+    "facultyLocked": "محدّدة من حسابك ولا يمكن تغييرها.",
+    "clearSearch": "مسح البحث"
   },
   "studentEntry": {
     "title": "إضافة طالب",
@@ -190,7 +207,8 @@
       "faculty": "الكلية",
       "curriculum": "المنهج",
       "grade": "الدرجة",
-      "letter": "التقدير"
+      "letter": "التقدير",
+      "seatingStatus": "حالة الجلوس"
     },
     "filters": {
       "faculty": "الكلية",
@@ -198,8 +216,11 @@
       "curriculum": "المنهج",
       "allCurriculums": "جميع المناهج",
       "letter": "التقدير",
-      "allLetters": "جميع التقديرات"
-    }
+      "allLetters": "جميع التقديرات",
+      "seatingStatus": "حالة الجلوس",
+      "allSeatingStatuses": "كل حالات الجلوس"
+    },
+    "gradeFor": "درجة {{name}}"
   },
   "gradeEntry": {
     "title": "إدخال الدرجات",
@@ -235,14 +256,17 @@
       "uniNumber": "الرقم الجامعي",
       "name": "الطالب",
       "grade": "الدرجة",
-      "letter": "التقدير"
+      "letter": "التقدير",
+      "seatingStatus": "حالة الجلوس"
     },
     "errors": {
       "required": "أدخل الدرجة",
       "gradeNumber": "يجب أن تكون الدرجة رقمًا",
       "gradeRange": "يجب أن تكون الدرجة بين 0 و 100",
       "alreadyGraded": "هذا الطالب لديه درجة مسجلة في هذا المنهج"
-    }
+    },
+    "seatingStatusFor": "حالة الجلوس لـ {{name}}",
+    "voidedGrade": "يُسجَّل الغياب بالدرجة 0 (راسب)."
   },
   "roles": {
     "admin": "مسؤول",
@@ -309,6 +333,85 @@
       "passwordLength": "يجب ألا تقل كلمة المرور عن 8 أحرف",
       "taken": "اسم الدخول مستخدم بالفعل.",
       "unavailable": "تعذّر الوصول إلى الخادم. حاول مرة أخرى بعد قليل."
+    }
+  },
+  "seatingStatuses": {
+    "attended": "حضور",
+    "cheating": "حالة غش",
+    "absent": "غائب"
+  },
+  "resolveCheating": {
+    "title": "حسم حالة الغش",
+    "legend": "كيف تُحسم هذه الحالة؟",
+    "accept": "قبول الدرجة ({{grade}}) وتسجيل الطالب حاضراً",
+    "zero": "الإبقاء على حالة الغش وتسجيل 0 لهذا المنهج",
+    "warnStudent": "توجيه إنذار للطالب",
+    "confirm": "حسم",
+    "action": "حسم",
+    "actionFor": "حسم حالة الغش لـ {{name}}",
+    "pending": "بانتظار الحسم؛ مستثناة من نتيجة السنة",
+    "resolved": "محسومة"
+  },
+  "gpaStatuses": {
+    "pass": "ناجح",
+    "fail": "راسب"
+  },
+  "editGrade": {
+    "title": "تعديل الدرجة",
+    "grade": "الدرجة",
+    "seatingStatus": "حالة الجلوس",
+    "save": "حفظ",
+    "action": "تعديل",
+    "actionFor": "تعديل درجة {{name}}",
+    "confirmTitle": "تأكيد التعديل",
+    "confirmMessage": "{{name}}: تتغير الدرجة من {{fromGrade}} ({{fromStatus}}) إلى {{toGrade}} ({{toStatus}}).",
+    "confirm": "حفظ التعديل"
+  },
+  "bulkImport": {
+    "title": "إدخال الطلاب بالجملة",
+    "template": "نموذج الملف",
+    "templates": {
+      "ministry": "قبول وزارة التعليم",
+      "existing": "طلاب مسجلون"
+    },
+    "faculty": "الكلية",
+    "acceptanceYear": "سنة القبول",
+    "acceptanceType": "نوع القبول",
+    "level": "السنة الدراسية",
+    "file": "ملف الجدول",
+    "fileHint": "إكسل (.xlsx) أو CSV. تتم قراءة الملف في متصفحك، ولا يُحفظ شيء قبل التأكيد.",
+    "readFailed": "تعذّرت قراءة الملف. تأكد من مطابقته للنموذج المختار.",
+    "preview": "معاينة — {{file}}",
+    "summary": "{{ready}} جاهز، {{blocked}} متوقف",
+    "empty": "لا توجد صفوف في الجدول",
+    "rowReady": "جاهز",
+    "import": "إدخال {{count}} طالب",
+    "imported": "تم إدخال {{count}} طالب.",
+    "confirmTitle": "تأكيد الإدخال",
+    "confirmMessage": "ستتم إضافة {{ready}} طالب، وتخطّي {{blocked}} صف.",
+    "confirm": "إدخال",
+    "columns": {
+      "row": "الصف",
+      "uniNumber": "الرقم الجامعي",
+      "nameAr": "الاسم / عربي",
+      "nationalId": "الرقم الوطني",
+      "faculty": "الكلية",
+      "problems": "الحالة"
+    },
+    "problems": {
+      "uniNumberTaken": "هذا الرقم الجامعي مسجّل لطالب آخر",
+      "uniNumberRepeated": "هذا الرقم الجامعي مكرر في الجدول",
+      "uniNumberMissing": "لا يوجد رقم جامعي",
+      "nationalIdTaken": "هذا الرقم الوطني مسجّل لطالب آخر",
+      "nationalIdRepeated": "هذا الرقم الوطني مكرر في الجدول",
+      "nameMissing": "لا يوجد اسم عربي",
+      "formNumberMissing": "لا يوجد رقم استمارة",
+      "facultyUnknown": "اسم الكلية لا يطابق أي كلية مسجّلة",
+      "facultyMissing": "لا توجد كلية لهذا الصف",
+      "facultyMismatch": "هذا الصف يذكر كلية غير الكلية المختارة",
+      "facultyAbbreviation": "لا يوجد رمز من حرفين لهذه الكلية، لذا لا يمكن بناء الرقم الجامعي",
+      "faculty": "هذا الصف خارج كليتك",
+      "acceptanceTypeUnknown": "نوع القبول لا يطابق أي نوع مسجّل"
     }
   }
 }

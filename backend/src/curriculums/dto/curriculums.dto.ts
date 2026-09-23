@@ -1,11 +1,15 @@
 import { Type } from 'class-transformer';
 import {
   IsIn,
+  IsInt,
   IsOptional,
   IsString,
   IsUUID,
   Matches,
+  Max,
   MaxLength,
+  Min,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import { PartialType } from '@nestjs/mapped-types';
@@ -27,6 +31,8 @@ export class CreateCurriculumDto {
   @Type(() => OptionalEnglishNameDto)
   name!: OptionalEnglishNameDto;
 
+  /** A university requirement belongs to every faculty, so it names none. */
+  @ValidateIf((dto: CreateCurriculumDto) => dto.requirementType !== 'university')
   @IsUUID()
   facultyId!: string;
 
@@ -48,6 +54,12 @@ export class CreateCurriculumDto {
   /** University, faculty or major requirement. */
   @IsIn(REQUIREMENT_TYPES)
   requirementType!: RequirementType;
+
+  /** Credit hours; they weight this curriculum's grade points in the GPA. */
+  @IsInt()
+  @Min(1)
+  @Max(12)
+  courseHours!: number;
 }
 
 /** Body for patching a curriculum (all fields optional). */
@@ -82,6 +94,8 @@ export class ListCurriculumsQueryDto {
 
 /** Query for GET /gr/curriculum/suggest-abbreviation: the inputs the code is built from. */
 export class SuggestAbbreviationQueryDto {
+  /** Not needed for a university requirement: its letters carry no faculty. */
+  @ValidateIf((dto: SuggestAbbreviationQueryDto) => dto.requirementType !== 'university')
   @IsUUID()
   facultyId!: string;
 

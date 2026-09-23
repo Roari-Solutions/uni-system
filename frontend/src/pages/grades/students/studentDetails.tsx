@@ -5,7 +5,20 @@ import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import DataTable, { type Column } from "../../../components/dataTable";
 import useFaculties from "../../../hooks/useFaculties";
 import { fetchStudent } from "../../../api/students";
-import { fetchStudentYearGrades, type StudentYearGrade } from "../../../api/grades";
+import {
+	fetchStudentGpas,
+	fetchStudentYearGrades,
+	updateGrade,
+	type StudentGpas,
+	type StudentYearGrade,
+} from "../../../api/grades";
+import { SeatingStatusTag } from "../../../components/seatingStatusSelect";
+import ResolveCheatingDialog, {
+	type CheatingResolution,
+} from "../../../components/resolveCheatingDialog";
+import EditGradeDialog, { type GradeEdit } from "../../../components/editGradeDialog";
+import ConfirmDialog from "../../../components/confirmDialog";
+import { smallSecondaryButtonClass } from "../../../styles/form";
 import type { Student } from "../../../types/student";
 import { cardClass } from "../../../styles/form";
 import { SEMESTERS } from "../../../utils/academicYears";
@@ -26,16 +39,28 @@ const StudentDetails = () => {
 
 	const [student, setStudent] = useState<Student | null>(null);
 	const [grades, setGrades] = useState<StudentYearGrade[]>([]);
+	const [gpas, setGpas] = useState<StudentGpas | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [failed, setFailed] = useState(false);
+	// the cheating curriculum being decided, if any
+	const [resolving, setResolving] = useState<StudentYearGrade | null>(null);
+	// the row being edited, then the edit waiting to be confirmed
+	const [editing, setEditing] = useState<StudentYearGrade | null>(null);
+	const [pending, setPending] = useState<{ row: StudentYearGrade; edit: GradeEdit } | null>(null);
+	const [saving, setSaving] = useState(false);
 
 	useEffect(() => {
 		let cancelled = false;
-		Promise.all([fetchStudent(studentId), fetchStudentYearGrades(studentId)])
-			.then(([studentRow, gradeRows]) => {
+		Promise.all([
+			fetchStudent(studentId),
+			fetchStudentYearGrades(studentId),
+			fetchStudentGpas(studentId),
+		])
+			.then(([studentRow, gradeRows, gpaRows]) => {
 				if (cancelled) return;
 				setStudent(studentRow);
 				setGrades(gradeRows);
+				setGpas(gpaRows);
 				setFailed(false);
 			})
 			.catch(() => {
@@ -51,6 +76,64 @@ const StudentDetails = () => {
 	}, [studentId]);
 
 	const facultyName = (id: string) => faculties.find((f) => f.id === id)?.name[lang] ?? "";
+
+	const semesterGpa = (semester: number) =>
+		gpas?.semesters.find((s) => s.semester === semester) ?? null;
+
+	// a GPA stands only once every curriculum behind it carries a mark
+	const missingIn = (rows: StudentYearGrade[]) => rows.some((g) => g.grade === null);
+	const semesterMissing = (semester: number) =>
+		missingIn(grades.filter((g) => g.semester === semester));
+	const yearMissing = () => missingIn(grades);
+
+	const awaitsDecision = (g: StudentYearGrade) =>
+		g.seatingStatus === "cheating" && !g.cheatingResolved;
+
+	const reload = async () => {
+		const [gradeRows, gpaRows] = await Promise.all([
+			fetchStudentYearGrades(studentId),
+			fetchStudentGpas(studentId),
+		]);
+		setGrades(gradeRows);
+		setGpas(gpaRows);
+	};
+
+	// the edit is written only once the second dialog confirms it
+	const handleEditConfirm = async () => {
+		if (!pending?.row.gradeId) return;
+		setSaving(true);
+		try {
+			await updateGrade(pending.row.gradeId, {
+				grade: pending.edit.grade,
+				seatingStatus: pending.edit.seatingStatus,
+			});
+			await reload();
+			setPending(null);
+		} catch {
+			setFailed(true);
+		} finally {
+			setSaving(false);
+		}
+	};
+
+	const handleResolve = async ({ outcome }: CheatingResolution) => {
+		if (!resolving?.gradeId) return;
+		setSaving(true);
+		try {
+			await updateGrade(
+				resolving.gradeId,
+				outcome === "accept"
+					? { seatingStatus: "attended" }
+					: { seatingStatus: "cheating", grade: 0, cheatingResolved: true },
+			);
+			await reload();
+			setResolving(null);
+		} catch {
+			setFailed(true);
+		} finally {
+			setSaving(false);
+		}
+	};
 
 	const columns: Column<StudentYearGrade>[] = [
 		{ key: "name", header: t("studentDetails.columns.curriculum"), render: (g) => g.name[lang] },
@@ -78,6 +161,44 @@ const StudentDetails = () => {
 			key: "letter",
 			header: t("studentDetails.columns.letter"),
 			render: (g) => (g.letter ? <span dir="ltr" className="font-semibold">{g.letter}</span> : "—"),
+		},
+		{
+			key: "actions",
+			header: t("common.actions"),
+			// only a curriculum that carries a mark can have it edited
+			render: (g) =>
+				g.gradeId === null ? null : (
+					<button
+						type="button"
+						onClick={() => setEditing(g)}
+						aria-label={t("editGrade.actionFor", { name: g.name[lang] })}
+						className={smallSecondaryButtonClass}
+					>
+						{t("editGrade.action")}
+					</button>
+				),
+		},
+		{
+			key: "seatingStatus",
+			header: t("studentDetails.columns.seatingStatus"),
+			render: (g) => (
+				<div className="flex flex-col items-start gap-1">
+					<SeatingStatusTag status={g.seatingStatus} />
+					{awaitsDecision(g) && (
+						<>
+							<span className="text-body-sm text-error">{t("resolveCheating.pending")}</span>
+							<button
+								type="button"
+								onClick={() => setResolving(g)}
+								aria-label={t("resolveCheating.actionFor", { name: g.name[lang] })}
+								className={smallSecondaryButtonClass}
+							>
+								{t("resolveCheating.action")}
+							</button>
+						</>
+					)}
+				</div>
+			),
 		},
 	];
 
@@ -138,18 +259,66 @@ const StudentDetails = () => {
 					</section>
 
 					<section aria-labelledby="yearGrades">
-						<h2 id="yearGrades" className="mb-6 text-heading-4 text-accent-deep">
-							{t("studentDetails.yearGrades", { year: t(`student.levels.${student.level}`) })}
-						</h2>
+						<div className="mb-6 flex flex-wrap items-baseline justify-between gap-3">
+							<h2 id="yearGrades" className="text-heading-4 text-accent-deep">
+								{t("studentDetails.yearGrades", { year: t(`student.levels.${student.level}`) })}
+							</h2>
+							{yearMissing() ? (
+								<p className="text-body-md text-primary-hover">
+									{t("studentDetails.missingGrades")}
+								</p>
+							) : (
+								gpas?.annual != null && (
+									<p className="text-body-md text-foreground">
+										{t("studentDetails.annualGpa")}{" "}
+										<span dir="ltr" className="text-heading-5 font-semibold text-accent-deep">
+											{gpas.annual.toFixed(2)}
+										</span>
+									</p>
+								)
+							)}
+						</div>
 						<div className="flex flex-col gap-8">
 							{SEMESTERS.map((semester) => (
 								<div key={semester}>
-									<h3 className="mb-4 text-heading-5 text-accent-deep">{t(`semesters.${semester}`)}</h3>
+									<div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
+										<h3 className="text-heading-5 text-accent-deep">{t(`semesters.${semester}`)}</h3>
+										{semesterMissing(semester) ? (
+											<p className="text-body-sm text-primary-hover">
+												{t("studentDetails.missingGrades")}
+											</p>
+										) : (
+											semesterGpa(semester) && (
+												<p className="text-body-sm text-foreground">
+													{t("studentDetails.semesterGpa")}{" "}
+													<span dir="ltr" className="font-semibold">
+														{semesterGpa(semester)?.gpa.toFixed(2)}
+													</span>
+													{semesterGpa(semester)?.status && (
+														<>
+															{" · "}
+															<span
+																className={
+																	semesterGpa(semester)?.status === "pass"
+																		? "text-success"
+																		: "text-error"
+																}
+															>
+																{t(`gpaStatuses.${semesterGpa(semester)?.status ?? "pass"}`)}
+															</span>
+														</>
+													)}
+												</p>
+											)
+										)}
+									</div>
 									<DataTable
 										columns={columns}
 										rows={grades.filter((g) => g.semester === semester)}
 										getRowId={(g) => g.curriculumId}
 										emptyText={t("studentDetails.noCurriculums")}
+										// §39 — the tint repeats what the status cell already says
+										rowClassName={(g) => (awaitsDecision(g) ? "bg-error/8" : "")}
 									/>
 								</div>
 							))}
@@ -157,6 +326,47 @@ const StudentDetails = () => {
 					</section>
 				</>
 			)}
+
+			<EditGradeDialog
+				open={editing !== null}
+				curriculumName={editing ? editing.name[lang] : ""}
+				grade={editing?.grade ?? null}
+				seatingStatus={editing?.seatingStatus ?? null}
+				onSave={(edit) => {
+					if (editing) setPending({ row: editing, edit });
+					setEditing(null);
+				}}
+				onCancel={() => setEditing(null)}
+			/>
+
+			<ConfirmDialog
+				open={pending !== null}
+				title={t("editGrade.confirmTitle")}
+				message={
+					pending
+						? t("editGrade.confirmMessage", {
+								name: pending.row.name[lang],
+								fromGrade: pending.row.grade ?? "—",
+								fromStatus: t(`seatingStatuses.${pending.row.seatingStatus ?? "attended"}`),
+								toGrade: pending.edit.grade,
+								toStatus: t(`seatingStatuses.${pending.edit.seatingStatus}`),
+							})
+						: ""
+				}
+				confirmLabel={saving ? t("common.saving") : t("editGrade.confirm")}
+				cancelLabel={t("common.cancel")}
+				onConfirm={() => void handleEditConfirm()}
+				onCancel={() => setPending(null)}
+			/>
+
+			<ResolveCheatingDialog
+				open={resolving !== null}
+				curriculumName={resolving ? resolving.name[lang] : ""}
+				grade={resolving?.grade ?? null}
+				saving={saving}
+				onResolve={(resolution) => void handleResolve(resolution)}
+				onCancel={() => setResolving(null)}
+			/>
 		</div>
 	);
 };
