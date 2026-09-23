@@ -11,6 +11,7 @@ import { CurriculumsModule } from './curriculums/curriculums.module';
 import { FacultiesModule } from './faculties/faculties.module';
 import { AdminModule } from './admin/admin.module';
 import { GrGurdGuard } from './gr-gurd/gr-gurd.guard';
+import { DeanshipCmsModule } from './deanship-cms/deanship-cms.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { GrGurdGuard } from './gr-gurd/gr-gurd.guard';
     AdminModule,
     AuthModule,
     DatabaseModule,
+    DeanshipCmsModule,
   ],
   controllers: [AppController],
   providers: [AppService, GrGurdGuard],
