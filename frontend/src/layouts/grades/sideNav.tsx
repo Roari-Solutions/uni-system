@@ -35,6 +35,11 @@ const SECTIONS: Section[] = [
 
 const SUB_OPTIONS = ["list", "entry"] as const;
 
+// sections with an option of their own beyond the shared list/entry pair
+const EXTRA_OPTIONS: Partial<Record<Section["id"], string[]>> = {
+	students: ["import"],
+};
+
 // §18.3 — 44px tall, 12px horizontal padding, 8px gap
 const navItemClass =
 	"flex h-11 w-full items-center gap-3 rounded-sm px-3 transition-colors duration-200 ease-out hover:bg-primary-hover";
@@ -171,7 +176,7 @@ const SideNav = () => {
 									}`}
 								>
 									<ul className="flex flex-col gap-1 overflow-hidden ps-9 pt-1">
-										{SUB_OPTIONS.map((option) => (
+										{[...SUB_OPTIONS, ...(EXTRA_OPTIONS[id] ?? [])].map((option) => (
 											<li key={option}>
 												{/* §32 — active item: light surface, deep accent text, heavier weight */}
 												<NavLink

@@ -8,6 +8,7 @@ export const ACCEPTANCE_TYPES = [
 	"teachersChildren",
 	"international",
 	"arabCertificate",
+	"second",
 ] as const;
 export type AcceptanceType = (typeof ACCEPTANCE_TYPES)[number];
 

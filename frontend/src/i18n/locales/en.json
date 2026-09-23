@@ -8,7 +8,8 @@
     "switchLanguage": "العربية",
     "logout": "Sign out",
     "toggleMenu": "Menu",
-    "users": "Users"
+    "users": "Users",
+    "import": "Bulk entry"
   },
   "curriculumEntry": {
     "title": "Add curriculum",
@@ -130,7 +131,8 @@
       "vacancies": "Vacancy admission",
       "teachersChildren": "Teachers' children admission",
       "international": "International students admission",
-      "arabCertificate": "Arab certificate admission"
+      "arabCertificate": "Arab certificate admission",
+      "second": "Second admission"
     },
     "nationalities": {
       "sudanese": "Sudanese",
@@ -364,5 +366,52 @@
     "confirmTitle": "Confirm the change",
     "confirmMessage": "{{name}}: {{fromGrade}} ({{fromStatus}}) becomes {{toGrade}} ({{toStatus}}).",
     "confirm": "Save the change"
+  },
+  "bulkImport": {
+    "title": "Bulk student entry",
+    "template": "Sheet template",
+    "templates": {
+      "ministry": "Ministry of education admissions",
+      "existing": "Existing students"
+    },
+    "faculty": "Faculty",
+    "acceptanceYear": "Acceptance year",
+    "acceptanceType": "Acceptance type",
+    "level": "Academic level",
+    "file": "Sheet file",
+    "fileHint": "Excel (.xlsx) or CSV. The file is read in your browser; nothing is saved until you confirm.",
+    "readFailed": "The file could not be read. Check that it follows the chosen template.",
+    "preview": "Preview — {{file}}",
+    "summary": "{{ready}} ready, {{blocked}} blocked",
+    "empty": "The sheet has no rows",
+    "rowReady": "Ready",
+    "import": "Import {{count}} students",
+    "imported": "{{count}} students imported.",
+    "confirmTitle": "Confirm the import",
+    "confirmMessage": "{{ready}} students will be added. {{blocked}} rows are skipped.",
+    "confirm": "Import",
+    "columns": {
+      "row": "Row",
+      "uniNumber": "University number",
+      "nameAr": "Name (Arabic)",
+      "nationalId": "National ID",
+      "faculty": "Faculty",
+      "problems": "Status"
+    },
+    "problems": {
+      "uniNumberTaken": "A student already holds this university number",
+      "uniNumberRepeated": "This university number appears twice in the sheet",
+      "uniNumberMissing": "No university number",
+      "nationalIdTaken": "A student already holds this national ID",
+      "nationalIdRepeated": "This national ID appears twice in the sheet",
+      "nameMissing": "No Arabic name",
+      "formNumberMissing": "No form number",
+      "facultyUnknown": "This faculty name matches none on record",
+      "facultyMissing": "No faculty for this row",
+      "facultyMismatch": "This row names a different faculty than the one chosen",
+      "facultyAbbreviation": "This faculty has no two-letter code, so no university number can be built",
+      "faculty": "This row is outside your faculty",
+      "acceptanceTypeUnknown": "This acceptance type matches none on record"
+    }
   }
 }

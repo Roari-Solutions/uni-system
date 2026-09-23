@@ -15,6 +15,8 @@ import { scopeFacultyId } from 'src/gr-scope/gr-scope';
 export interface FacultyView {
   id: string;
   name: { en: string; ar: string };
+  /** Two letters; the bulk import builds university numbers from them. */
+  abbreviation: string | null;
 }
 
 /** Read-only faculty lookup backing the faculty selects in the grades views. */
@@ -35,6 +37,7 @@ export class FacultiesService {
       return rows.map((row) => ({
         id: row.id,
         name: { en: row.nameEn, ar: row.nameAr },
+        abbreviation: row.abbreviation,
       }));
     } catch (error) {
       if (error instanceof UnauthorizedException) throw error;

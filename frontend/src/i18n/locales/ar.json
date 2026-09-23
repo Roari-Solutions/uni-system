@@ -8,7 +8,8 @@
     "switchLanguage": "English",
     "logout": "تسجيل الخروج",
     "toggleMenu": "القائمة",
-    "users": "المستخدمون"
+    "users": "المستخدمون",
+    "import": "إدخال بالجملة"
   },
   "curriculumEntry": {
     "title": "إضافة منهج",
@@ -130,7 +131,8 @@
       "vacancies": "قبول شواغر",
       "teachersChildren": "قبول أبناء معلمين",
       "international": "قبول وافدين",
-      "arabCertificate": "قبول شهادة عربية"
+      "arabCertificate": "قبول شهادة عربية",
+      "second": "قبول ثاني"
     },
     "nationalities": {
       "sudanese": "سوداني",
@@ -364,5 +366,52 @@
     "confirmTitle": "تأكيد التعديل",
     "confirmMessage": "{{name}}: تتغير الدرجة من {{fromGrade}} ({{fromStatus}}) إلى {{toGrade}} ({{toStatus}}).",
     "confirm": "حفظ التعديل"
+  },
+  "bulkImport": {
+    "title": "إدخال الطلاب بالجملة",
+    "template": "نموذج الملف",
+    "templates": {
+      "ministry": "قبول وزارة التعليم",
+      "existing": "طلاب مسجلون"
+    },
+    "faculty": "الكلية",
+    "acceptanceYear": "سنة القبول",
+    "acceptanceType": "نوع القبول",
+    "level": "السنة الدراسية",
+    "file": "ملف الجدول",
+    "fileHint": "إكسل (.xlsx) أو CSV. تتم قراءة الملف في متصفحك، ولا يُحفظ شيء قبل التأكيد.",
+    "readFailed": "تعذّرت قراءة الملف. تأكد من مطابقته للنموذج المختار.",
+    "preview": "معاينة — {{file}}",
+    "summary": "{{ready}} جاهز، {{blocked}} متوقف",
+    "empty": "لا توجد صفوف في الجدول",
+    "rowReady": "جاهز",
+    "import": "إدخال {{count}} طالب",
+    "imported": "تم إدخال {{count}} طالب.",
+    "confirmTitle": "تأكيد الإدخال",
+    "confirmMessage": "ستتم إضافة {{ready}} طالب، وتخطّي {{blocked}} صف.",
+    "confirm": "إدخال",
+    "columns": {
+      "row": "الصف",
+      "uniNumber": "الرقم الجامعي",
+      "nameAr": "الاسم / عربي",
+      "nationalId": "الرقم الوطني",
+      "faculty": "الكلية",
+      "problems": "الحالة"
+    },
+    "problems": {
+      "uniNumberTaken": "هذا الرقم الجامعي مسجّل لطالب آخر",
+      "uniNumberRepeated": "هذا الرقم الجامعي مكرر في الجدول",
+      "uniNumberMissing": "لا يوجد رقم جامعي",
+      "nationalIdTaken": "هذا الرقم الوطني مسجّل لطالب آخر",
+      "nationalIdRepeated": "هذا الرقم الوطني مكرر في الجدول",
+      "nameMissing": "لا يوجد اسم عربي",
+      "formNumberMissing": "لا يوجد رقم استمارة",
+      "facultyUnknown": "اسم الكلية لا يطابق أي كلية مسجّلة",
+      "facultyMissing": "لا توجد كلية لهذا الصف",
+      "facultyMismatch": "هذا الصف يذكر كلية غير الكلية المختارة",
+      "facultyAbbreviation": "لا يوجد رمز من حرفين لهذه الكلية، لذا لا يمكن بناء الرقم الجامعي",
+      "faculty": "هذا الصف خارج كليتك",
+      "acceptanceTypeUnknown": "نوع القبول لا يطابق أي نوع مسجّل"
+    }
   }
 }

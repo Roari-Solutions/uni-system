@@ -20,7 +20,6 @@ export type StudentPayload = {
 	acceptanceYear: string;
 	acceptanceType: Student["acceptanceType"];
 	level: number;
-	status: Student["status"];
 };
 
 export const fetchStudents = async (filters: StudentFilters = {}): Promise<Student[]> => {
@@ -40,4 +39,37 @@ export const createStudent = async (payload: StudentPayload): Promise<Student> =
 
 export const deleteStudent = async (id: string): Promise<void> => {
 	await api.delete(`/gr/students/${id}`);
+};
+
+/** One row as the bulk endpoints take it; `rowNumber` points back at the sheet. */
+export type BulkStudentRow = StudentPayload & { rowNumber: number };
+
+/** What the API says about one row it could not take. */
+export type BulkRowReport = {
+	rowNumber: number;
+	uniNumber: string;
+	// i18n keys
+	problems: string[];
+};
+
+export type BulkCheckReport = {
+	rows: BulkRowReport[];
+	ready: number;
+	blocked: number;
+};
+
+// the dry run: nothing is written, every row comes back with its problems
+export const checkBulkStudents = async (rows: BulkStudentRow[]): Promise<BulkCheckReport> => {
+	const { data } = await api.post<BulkCheckReport>("/gr/students/bulk/check", { rows });
+	return data;
+};
+
+export const importBulkStudents = async (
+	rows: BulkStudentRow[],
+): Promise<{ imported: number; skipped: BulkRowReport[] }> => {
+	const { data } = await api.post<{ imported: number; skipped: BulkRowReport[] }>(
+		"/gr/students/bulk",
+		{ rows },
+	);
+	return data;
 };
