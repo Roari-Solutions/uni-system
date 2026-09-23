@@ -34,7 +34,8 @@
     "nameEn": "Curriculum name (English)",
     "courseHours": "Course hours",
     "allFaculties": "All faculties",
-    "universityFaculties": "A university requirement is offered by every faculty."
+    "universityFaculties": "A university requirement is offered by every faculty.",
+    "editTitle": "Edit curriculum"
   },
   "curriculumList": {
     "title": "Curriculums",
@@ -60,7 +61,8 @@
     "deleteTitle": "Delete curriculum",
     "deleteMessage": "Are you sure you want to delete \"{{name}}\"? This can't be undone.",
     "search": "Search",
-    "searchPlaceholder": "Name or abbreviation"
+    "searchPlaceholder": "Name or abbreviation",
+    "editItem": "Edit {{name}}"
   },
   "studentList": {
     "title": "Students",
@@ -421,5 +423,11 @@
       "faculty": "This row is outside your faculty",
       "acceptanceTypeUnknown": "This acceptance type matches none on record"
     }
+  },
+  "orphanedGrades": {
+    "title": "Some grades will stop counting",
+    "curriculumMessage": "Students in faculties that will no longer offer this curriculum already have grades in it (grades affected: {{count}}). The grades are kept as history, but they will no longer count toward those students' GPA. Save anyway?",
+    "studentMessage": "This student has grades in curriculums the new faculty doesn't offer (grades affected: {{count}}). The grades are kept as history, but they will no longer count toward the student's GPA. Save anyway?",
+    "confirm": "Save anyway"
   }
 }

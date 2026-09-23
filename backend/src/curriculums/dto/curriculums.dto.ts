@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import {
+  IsBoolean,
   IsIn,
   IsInt,
   IsOptional,
@@ -63,7 +64,16 @@ export class CreateCurriculumDto {
 }
 
 /** Body for patching a curriculum (all fields optional). */
-export class UpdateCurriculumDto extends PartialType(CreateCurriculumDto) {}
+export class UpdateCurriculumDto extends PartialType(CreateCurriculumDto) {
+  /**
+   * The caller has seen the GRADES_ORPHANED warning and accepts that grades held
+   * by students of faculties that stop offering the curriculum no longer count.
+   * They are kept as history either way.
+   */
+  @IsOptional()
+  @IsBoolean()
+  confirmOrphanedGrades?: boolean;
+}
 
 /** Query filters for GET /gr/curriculum, shared by the list view and the entry cascade. */
 export class ListCurriculumsQueryDto {

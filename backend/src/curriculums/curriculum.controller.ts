@@ -40,6 +40,12 @@ export class CurriculumController {
     return await this.curriculumsService.suggestAbbreviation(query, req.grCaller);
   }
 
+  /** GET /gr/curriculum/:id — one curriculum, for the edit form. */
+  @Get(':id')
+  async GetCurriculum(@Param('id', ParseUUIDPipe) id: string, @Req() req: GrRequest) {
+    return await this.curriculumsService.getCurriculum(id, req.grCaller);
+  }
+
   @Post()
   async CreateCurriculum(@Body() dto: CreateCurriculumDto, @Req() req: GrRequest) {
     return await this.curriculumsService.createCurriculum(dto, req.grCaller);

@@ -39,6 +39,7 @@ const router = createBrowserRouter([
 								children: [
 									{ path: "list", element: <CurriculumList /> },
 									{ path: "entry", element: <CurriculumEntry /> },
+									{ path: ":curriculumId/edit", element: <CurriculumEntry /> },
 								],
 							},
 							{

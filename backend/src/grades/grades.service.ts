@@ -285,6 +285,17 @@ export class GradesService {
     this.logger.log(`Refreshed GPAs for ${cohort.length} students`);
   }
 
+  /** Rebuilds one semester's stored GPA for each of these students. */
+  async refreshStudentsSemester(
+    studentIds: Iterable<string>,
+    academicYear: AcademicYear,
+    semester: Semester,
+  ): Promise<void> {
+    for (const studentId of new Set(studentIds)) {
+      await this.refreshSemesterGpa(studentId, academicYear, semester);
+    }
+  }
+
   /**
    * A student's stored semester GPAs for one academic year, plus the annual
    * figure: the plain average of those semesters, computed here and never stored.
