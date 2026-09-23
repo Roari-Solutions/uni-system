@@ -37,7 +37,7 @@ export class CreateCurriculumDto {
   @IsUUID()
   facultyId!: string;
 
-  /** XXXX-0000; see ABBREVIATION_PATTERN. */
+  /** XXXX0000; see ABBREVIATION_PATTERN. */
   @IsString()
   @Matches(ABBREVIATION_PATTERN)
   abbreviation!: string;

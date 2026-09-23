@@ -2,11 +2,11 @@ import type { AcademicYear, Semester } from 'src/common/academic-year';
 import type { RequirementType } from 'src/common/requirement-type';
 
 /**
- * XXXX-0000: two requirement letters, two course letters, then the academic
- * year (1-6), the semester (1-2) and a serial (01-99) within that
- * faculty -> year -> semester.
+ * XXXX0000, with no separator: two requirement letters, two course letters,
+ * then the academic year (1-6), the semester (1-2) and a serial (01-99) within
+ * that faculty -> year -> semester.
  */
-export const ABBREVIATION_PATTERN = /^[A-Z]{4}-[1-6][12](0[1-9]|[1-9]\d)$/;
+export const ABBREVIATION_PATTERN = /^[A-Z]{4}[1-6][12](0[1-9]|[1-9]\d)$/;
 
 /** University requirements carry this in place of a faculty abbreviation. */
 const UNIVERSITY_LETTERS = 'UT';
@@ -20,7 +20,7 @@ function courseLetters(nameEn: string | undefined): string | null {
 }
 
 /**
- * The four letters before the dash, or null when an input they need is
+ * The four letters before the digits, or null when an input they need is
  * missing (no two-letter faculty abbreviation, or no usable English name).
  */
 export function abbreviationLetters(
@@ -59,5 +59,5 @@ export function buildAbbreviation(
   semester: Semester,
   serial: number,
 ): string {
-  return `${letters}-${academicYear}${semester}${String(serial).padStart(2, '0')}`;
+  return `${letters}${academicYear}${semester}${String(serial).padStart(2, '0')}`;
 }
