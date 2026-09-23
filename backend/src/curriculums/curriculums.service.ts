@@ -253,6 +253,14 @@ export class CurriculumsService {
         .insert(facultyCurriculums)
         .values(offering.map((id) => ({ facultyId: id, curriculumId: created.id })));
 
+      // the new curriculum leaves its semester unmarked for that cohort, so any
+      // GPA already stored for them no longer holds
+      await this.gradesService.refreshFacultiesSemester(
+        offering,
+        created.academicYear,
+        created.semester,
+      );
+
       this.logger.log(
         `Created curriculum: ${abbreviation}${university ? ` across ${offering.length} faculties` : ''}`,
       );
@@ -391,11 +399,21 @@ export class CurriculumsService {
       const { row, link } = await this.offeringOrThrow(id);
       assertFaculty(caller, link.facultyId);
 
+      // captured before the links go: their students' GPAs are rebuilt after
+      const offering = (
+        await this.db.query.facultyCurriculums.findMany({
+          where: eq(facultyCurriculums.curriculumId, row.id),
+          columns: { facultyId: true },
+        })
+      ).map((l) => l.facultyId);
+
       await this.db.transaction(async (tx) => {
         await tx.delete(grades).where(eq(grades.curriculumId, row.id));
         await tx.delete(facultyCurriculums).where(eq(facultyCurriculums.curriculumId, row.id));
         await tx.delete(curriculums).where(eq(curriculums.id, row.id));
       });
+
+      await this.gradesService.refreshFacultiesSemester(offering, row.academicYear, row.semester);
 
       this.logger.log(`Deleted curriculum: ${row.id}`);
       return { status: 'Ok' };

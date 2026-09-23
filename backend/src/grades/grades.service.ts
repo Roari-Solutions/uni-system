@@ -260,6 +260,32 @@ export class GradesService {
   }
 
   /**
+   * Rebuilds the stored GPA of every student a curriculum change reaches: the
+   * students of those faculties sitting that academic year. Adding a curriculum
+   * leaves their semester incomplete, so their stale rows are dropped here.
+   */
+  async refreshFacultiesSemester(
+    facultyIds: string[],
+    academicYear: AcademicYear,
+    semester: Semester,
+  ): Promise<void> {
+    if (!facultyIds.length) return;
+
+    const cohort = await this.db.query.students.findMany({
+      where: and(
+        inArray(students.facultyId, facultyIds),
+        eq(students.academicYear, academicYear),
+      ),
+      columns: { id: true },
+    });
+
+    for (const student of cohort) {
+      await this.refreshSemesterGpa(student.id, academicYear, semester);
+    }
+    this.logger.log(`Refreshed GPAs for ${cohort.length} students`);
+  }
+
+  /**
    * A student's stored semester GPAs for one academic year, plus the annual
    * figure: the plain average of those semesters, computed here and never stored.
    */

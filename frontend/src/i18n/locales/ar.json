@@ -116,7 +116,8 @@
       "seatingStatus": "حالة الجلوس"
     },
     "semesterGpa": "معدل الفصل",
-    "annualGpa": "المعدل السنوي"
+    "annualGpa": "المعدل السنوي",
+    "missingGrades": "لا تزال هناك مناهج بدون درجات"
   },
   "student": {
     "acceptanceTypes": {

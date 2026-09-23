@@ -74,6 +74,12 @@ const StudentDetails = () => {
 	const semesterGpa = (semester: number) =>
 		gpas?.semesters.find((s) => s.semester === semester) ?? null;
 
+	// a GPA stands only once every curriculum behind it carries a mark
+	const missingIn = (rows: StudentYearGrade[]) => rows.some((g) => g.grade === null);
+	const semesterMissing = (semester: number) =>
+		missingIn(grades.filter((g) => g.semester === semester));
+	const yearMissing = () => missingIn(grades);
+
 	const awaitsDecision = (g: StudentYearGrade) =>
 		g.seatingStatus === "cheating" && !g.cheatingResolved;
 
@@ -213,13 +219,19 @@ const StudentDetails = () => {
 							<h2 id="yearGrades" className="text-heading-4 text-accent-deep">
 								{t("studentDetails.yearGrades", { year: t(`student.levels.${student.level}`) })}
 							</h2>
-							{gpas?.annual !== null && gpas !== null && (
-								<p className="text-body-md text-foreground">
-									{t("studentDetails.annualGpa")}{" "}
-									<span dir="ltr" className="text-heading-5 font-semibold text-accent-deep">
-										{gpas.annual.toFixed(2)}
-									</span>
+							{yearMissing() ? (
+								<p className="text-body-md text-primary-hover">
+									{t("studentDetails.missingGrades")}
 								</p>
+							) : (
+								gpas?.annual != null && (
+									<p className="text-body-md text-foreground">
+										{t("studentDetails.annualGpa")}{" "}
+										<span dir="ltr" className="text-heading-5 font-semibold text-accent-deep">
+											{gpas.annual.toFixed(2)}
+										</span>
+									</p>
+								)
 							)}
 						</div>
 						<div className="flex flex-col gap-8">
@@ -227,27 +239,33 @@ const StudentDetails = () => {
 								<div key={semester}>
 									<div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
 										<h3 className="text-heading-5 text-accent-deep">{t(`semesters.${semester}`)}</h3>
-										{semesterGpa(semester) && (
-											<p className="text-body-sm text-foreground">
-												{t("studentDetails.semesterGpa")}{" "}
-												<span dir="ltr" className="font-semibold">
-													{semesterGpa(semester)?.gpa.toFixed(2)}
-												</span>
-												{semesterGpa(semester)?.status && (
-													<>
-														{" · "}
-														<span
-															className={
-																semesterGpa(semester)?.status === "pass"
-																	? "text-success"
-																	: "text-error"
-															}
-														>
-															{t(`gpaStatuses.${semesterGpa(semester)?.status ?? "pass"}`)}
-														</span>
-													</>
-												)}
+										{semesterMissing(semester) ? (
+											<p className="text-body-sm text-primary-hover">
+												{t("studentDetails.missingGrades")}
 											</p>
+										) : (
+											semesterGpa(semester) && (
+												<p className="text-body-sm text-foreground">
+													{t("studentDetails.semesterGpa")}{" "}
+													<span dir="ltr" className="font-semibold">
+														{semesterGpa(semester)?.gpa.toFixed(2)}
+													</span>
+													{semesterGpa(semester)?.status && (
+														<>
+															{" · "}
+															<span
+																className={
+																	semesterGpa(semester)?.status === "pass"
+																		? "text-success"
+																		: "text-error"
+																}
+															>
+																{t(`gpaStatuses.${semesterGpa(semester)?.status ?? "pass"}`)}
+															</span>
+														</>
+													)}
+												</p>
+											)
 										)}
 									</div>
 									<DataTable

@@ -116,7 +116,8 @@
       "seatingStatus": "Seating status"
     },
     "semesterGpa": "Semester GPA",
-    "annualGpa": "Annual GPA"
+    "annualGpa": "Annual GPA",
+    "missingGrades": "Still missing curriculum grades"
   },
   "student": {
     "acceptanceTypes": {
