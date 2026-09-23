@@ -186,14 +186,7 @@ export const news = pgTable('news', {
   content: text('content').notNull(),
   ...timestamps(),
 });
-/** Stored content images, deduped by sha256 hash. */
-export const images = pgTable('images', {
-  hash: text('hash').primaryKey(),
-  ext: text('ext').notNull(),
-  mime: text('mime').notNull(),
-  size: integer('size').notNull(),
-  ...timestamps(),
-});
+
 // ============================================== ACADEMIC TABLES ==============================================
 
 /** Course curriculums with credit weight. */
