@@ -79,8 +79,7 @@
       "faculty": "الكلية",
       "status": "الحالة",
       "nationalId": "الرقم الوطني",
-      "passportNumber": "رقم الجواز",
-      "standing": "حالة القيد"
+      "passportNumber": "رقم الجواز"
     },
     "filters": {
       "level": "السنة الدراسية",
@@ -90,9 +89,7 @@
       "acceptanceYear": "سنة القبول",
       "allAcceptanceYears": "جميع سنوات القبول",
       "search": "بحث",
-      "searchPlaceholder": "الاسم أو الرقم الجامعي أو الرقم الوطني",
-      "standing": "حالة القيد",
-      "allStandings": "جميع حالات القيد"
+      "searchPlaceholder": "الاسم أو الرقم الجامعي أو الرقم الوطني"
     },
     "deleteTitle": "حذف الطالب",
     "deleteMessage": "هل أنت متأكد من حذف \"{{name}}\"؟ لا يمكن التراجع عن هذا الإجراء."
@@ -116,7 +113,6 @@
       "acceptanceYear": "سنة القبول",
       "acceptanceType": "نوع القبول",
       "status": "نتيجة السنة",
-      "standing": "حالة القيد",
       "warnings": "الإنذارات"
     },
     "columns": {
@@ -168,11 +164,6 @@
     "statuses": {
       "success": "ناجح",
       "repeat": "معيد"
-    },
-    "standings": {
-      "active": "منتظم",
-      "suspended": "موقوف",
-      "dismissed": "مفصول"
     },
     "suspendedFor": {
       "1": "موقوف لسنة دراسية واحدة",

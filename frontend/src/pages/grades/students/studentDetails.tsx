@@ -24,7 +24,7 @@ import ResolveCheatingDialog, {
 } from "../../../components/resolveCheatingDialog";
 import EditGradeDialog, { type GradeEdit } from "../../../components/editGradeDialog";
 import ConfirmDialog from "../../../components/confirmDialog";
-import { PenaltyTags, StandingTag } from "../../../components/standingTag";
+import { PenaltyTags } from "../../../components/penaltyTags";
 import useAuth from "../../../auth/useAuth";
 import { smallSecondaryButtonClass } from "../../../styles/form";
 import type { Student } from "../../../types/student";
@@ -334,9 +334,6 @@ const StudentDetails = () => {
 							</Detail>
 							<Detail label={t("studentDetails.fields.status")}>
 								{student.status ? t(`student.statuses.${student.status}`) : "—"}
-							</Detail>
-							<Detail label={t("studentDetails.fields.standing")}>
-								<StandingTag standing={student.standing} suspensionYears={student.suspensionYears} />
 							</Detail>
 							<Detail label={t("studentDetails.fields.warnings")}>
 								<span dir="ltr">{student.warnings ?? 0}</span>
