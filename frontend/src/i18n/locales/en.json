@@ -26,7 +26,7 @@
     "submit": "Save",
     "errors": {
       "required": "This field is required",
-      "abbreviationFormat": "Use the format XXXX-0000, e.g. ENCR-1101",
+      "abbreviationFormat": "Use the format XXXX0000, with no spaces or dashes, e.g. ENCR1101",
       "courseHoursNumber": "Course hours must be a number",
       "courseHoursRange": "Course hours must be between 1 and 12"
     },

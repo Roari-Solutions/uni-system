@@ -133,7 +133,7 @@ export class CurriculumsService {
   }
 
   /**
-   * Suggests the next XXXX-0000 code: the first serial free within the
+   * Suggests the next XXXX0000 code: the first serial free within the
    * faculty -> year -> semester that also yields a code no other curriculum
    * holds. Null when an input the letters need is missing or all 99 are used.
    */
@@ -180,7 +180,7 @@ export class CurriculumsService {
 
       // codes are unique university-wide; UT codes from other faculties can collide
       const sameStem = await this.db.query.curriculums.findMany({
-        where: like(curriculums.abbreviation, `${letters}-${query.academicYear}${query.semester}%`),
+        where: like(curriculums.abbreviation, `${letters}${query.academicYear}${query.semester}%`),
         columns: { abbreviation: true },
       });
       for (const row of sameStem) {

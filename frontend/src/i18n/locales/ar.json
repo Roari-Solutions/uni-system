@@ -26,7 +26,7 @@
     "submit": "حفظ",
     "errors": {
       "required": "هذا الحقل مطلوب",
-      "abbreviationFormat": "استخدم الصيغة XXXX-0000، مثل ENCR-1101",
+      "abbreviationFormat": "استخدم الصيغة XXXX0000 دون مسافات أو شرطات، مثل ENCR1101",
       "courseHoursNumber": "يجب أن تكون الساعات المعتمدة رقماً",
       "courseHoursRange": "يجب أن تكون الساعات المعتمدة بين 1 و 12"
     },

@@ -2,8 +2,8 @@ import type { Localized } from "./localized";
 import type { RequirementType } from "./requirementType";
 import type { SEMESTERS, STUDY_LEVELS } from "../utils/academicYears";
 
-// XXXX-0000: requirement letters, course letters, academic year, semester, serial
-export const ABBREVIATION_PATTERN = /^[A-Z]{4}-[1-6][12](0[1-9]|[1-9]\d)$/;
+// XXXX0000, no separator: requirement letters, course letters, academic year, semester, serial
+export const ABBREVIATION_PATTERN = /^[A-Z]{4}[1-6][12](0[1-9]|[1-9]\d)$/;
 
 export type Curriculum = {
 	id: string;

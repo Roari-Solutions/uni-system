@@ -397,10 +397,11 @@ const CurriculumEntry = () => {
 						id="abbreviation"
 						type="text"
 						dir="ltr"
-						placeholder="XXXX-0000"
+						placeholder="XXXX0000"
 						value={abbreviation}
 						onChange={(e) => {
-							const value = e.target.value.toUpperCase();
+							// codes are letters and digits only, so spaces, dashes and the like never get in
+							const value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
 							// clearing the field hands it back to the suggestion
 							setAbbreviationEdited(value !== "");
 							setField("abbreviation", value);
