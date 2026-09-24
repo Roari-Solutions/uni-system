@@ -14,6 +14,8 @@ import { GrGurdGuard } from './gr-gurd/gr-gurd.guard';
 import { DeanshipCmsModule } from './deanship-cms/deanship-cms.module';
 import { MainCmsModule } from './main-cms/main-cms.module';
 import { ContactUsCmsModule } from './contact-us-cms/contact-us-cms.module';
+import { ScientificAffairsModule } from './scientific-affairs/scientific-affairs.module';
+import { AboutCmsModule } from './about-cms/about-cms.module';
 
 @Module({
   imports: [
@@ -32,6 +34,8 @@ import { ContactUsCmsModule } from './contact-us-cms/contact-us-cms.module';
     DeanshipCmsModule,
     MainCmsModule,
     ContactUsCmsModule,
+    ScientificAffairsModule,
+    AboutCmsModule,
   ],
   controllers: [AppController],
   providers: [AppService, GrGurdGuard],
