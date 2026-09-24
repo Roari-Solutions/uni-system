@@ -191,7 +191,9 @@
     "saveFailed": "Couldn't save. Please try again.",
     "loadFailed": "Couldn't load the data. Please try again.",
     "facultyLocked": "Set from your account and cannot be changed.",
-    "clearSearch": "Clear the search"
+    "clearSearch": "Clear the search",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password"
   },
   "studentEntry": {
     "title": "Add student",
@@ -342,7 +344,7 @@
     "name": "Full name",
     "email": "Login",
     "password": "Password",
-    "passwordHint": "Shown in the clear — pass it to the user yourself.",
+    "passwordHint": "Use the eye to check it, then pass it to the user yourself.",
     "role": "Role",
     "selectRole": "Select role",
     "faculty": "Faculty",
@@ -362,7 +364,7 @@
   "editUser": {
     "title": "Edit user",
     "newPassword": "New password (optional)",
-    "passwordHint": "Leave blank to keep the current password. Shown in the clear — pass it to the user yourself.",
+    "passwordHint": "Leave blank to keep the current password. Use the eye to check it, then pass it to the user yourself.",
     "save": "Save"
   },
   "seatingStatuses": {

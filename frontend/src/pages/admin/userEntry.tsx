@@ -4,6 +4,7 @@ import { z } from "zod";
 import axios from "axios";
 import FacultyField from "../../components/facultyField";
 import FormField from "../../components/formField";
+import PasswordInput from "../../components/passwordInput";
 import { createUser, fetchRoles } from "../../api/users";
 import type { AssignableRole } from "../../types/user";
 import { formCardClass, inputClass, submitButtonClass } from "../../styles/form";
@@ -147,17 +148,15 @@ const UserEntry = () => {
 					label={t("userEntry.password")}
 					error={errors.password?.[0]}
 				>
-					<input
+					<PasswordInput
 						id="password"
-						type="text"
 						dir="ltr"
-						autoComplete="off"
+						autoComplete="new-password"
 						value={form.password}
-						onChange={(e) => setField("password", e.target.value)}
-						aria-invalid={!!errors.password}
-						className={inputClass(!!errors.password)}
+						onChange={(value) => setField("password", value)}
+						invalid={!!errors.password}
 					/>
-					{/* shown in the clear: the admin has to read it out to the user */}
+					{/* the eye lets the admin check it before reading it out to the user */}
 					<p className="text-body-sm text-primary-hover">{t("userEntry.passwordHint")}</p>
 				</FormField>
 

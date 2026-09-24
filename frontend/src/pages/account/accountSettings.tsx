@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import axios from "axios";
 import FormField from "../../components/formField";
+import PasswordInput from "../../components/passwordInput";
 import useAuth from "../../auth/useAuth";
 import { updateAccount } from "../../api/account";
 import { formCardClass, inputClass, submitButtonClass } from "../../styles/form";
@@ -108,16 +109,14 @@ const AccountSettings = () => {
 				</FormField>
 
 				<FormField id="accountNewPassword" label={t("account.newPassword")} error={errors.newPassword}>
-					<input
+					<PasswordInput
 						id="accountNewPassword"
-						type="password"
 						dir="ltr"
 						autoComplete="new-password"
 						value={newPassword}
-						onChange={(e) => setNewPassword(e.target.value)}
-						aria-invalid={!!errors.newPassword}
-						aria-describedby="accountNewPasswordHint"
-						className={inputClass(!!errors.newPassword)}
+						onChange={setNewPassword}
+						invalid={!!errors.newPassword}
+						describedBy="accountNewPasswordHint"
 					/>
 					<p id="accountNewPasswordHint" className="text-body-sm text-primary-hover">
 						{t("account.newPasswordHint")}
@@ -129,16 +128,14 @@ const AccountSettings = () => {
 					label={t("account.currentPassword")}
 					error={errors.currentPassword}
 				>
-					<input
+					<PasswordInput
 						id="accountCurrentPassword"
-						type="password"
 						dir="ltr"
 						autoComplete="current-password"
 						value={currentPassword}
-						onChange={(e) => setCurrentPassword(e.target.value)}
-						aria-invalid={!!errors.currentPassword}
-						aria-describedby="accountCurrentPasswordHint"
-						className={inputClass(!!errors.currentPassword)}
+						onChange={setCurrentPassword}
+						invalid={!!errors.currentPassword}
+						describedBy="accountCurrentPasswordHint"
 					/>
 					<p id="accountCurrentPasswordHint" className="text-body-sm text-primary-hover">
 						{t("account.currentPasswordHint")}

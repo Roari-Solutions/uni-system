@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import FormField from "./formField";
+import PasswordInput from "./passwordInput";
 import { inputClass, secondaryButtonClass, submitButtonClass } from "../styles/form";
 
 // mirrors MIN_PASSWORD_LENGTH in the API
@@ -132,18 +133,16 @@ const EditUserDialog = ({
 					label={t("editUser.newPassword")}
 					error={errors.password}
 				>
-					<input
+					<PasswordInput
 						id="editUserPassword"
-						type="text"
 						dir="ltr"
-						autoComplete="off"
+						autoComplete="new-password"
 						value={password}
-						onChange={(e) => setPassword(e.target.value)}
-						aria-invalid={!!errors.password}
-						aria-describedby="editUserPasswordHint"
-						className={inputClass(!!errors.password)}
+						onChange={setPassword}
+						invalid={!!errors.password}
+						describedBy="editUserPasswordHint"
 					/>
-					{/* shown in the clear: the admin has to read it out to the user */}
+					{/* the eye lets the admin check it before reading it out to the user */}
 					<p id="editUserPasswordHint" className="text-body-sm text-primary-hover">
 						{t("editUser.passwordHint")}
 					</p>

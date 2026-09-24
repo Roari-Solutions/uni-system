@@ -5,6 +5,7 @@ import { Navigate, useLocation, useNavigate } from "react-router";
 import { LanguageIcon } from "@heroicons/react/24/outline";
 import { z } from "zod";
 import FormField from "../../components/formField";
+import PasswordInput from "../../components/passwordInput";
 import useAuth from "../../auth/useAuth";
 import { blockSubmitButtonClass, formCardClass, inputClass } from "../../styles/form";
 
@@ -115,14 +116,12 @@ const Login = () => {
 					</FormField>
 
 					<FormField id="password" label={t("login.password")} error={errors.password?.[0]}>
-						<input
+						<PasswordInput
 							id="password"
-							type="password"
 							autoComplete="current-password"
 							value={form.password}
-							onChange={(e) => setField("password", e.target.value)}
-							aria-invalid={!!errors.password}
-							className={inputClass(!!errors.password)}
+							onChange={(value) => setField("password", value)}
+							invalid={!!errors.password}
 						/>
 					</FormField>
 
