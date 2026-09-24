@@ -9,16 +9,17 @@ import useFaculties from "../../hooks/useFaculties";
 import {
 	fetchRoles,
 	fetchUsers,
-	renameUser,
+	updateUserIdentity,
 	resetUserPassword,
 	setUserSuspended,
 } from "../../api/users";
 import type { AssignableRole, ManagedUser } from "../../types/user";
+import axios from "axios";
 
 const UserList = () => {
 	const { t, i18n } = useTranslation();
 	const lang = i18n.language === "ar" ? "ar" : "en";
-	const { user: currentUser } = useAuth();
+	const { user: currentUser, reloadUser } = useAuth();
 	const { faculties } = useFaculties();
 
 	const [users, setUsers] = useState<ManagedUser[]>([]);
@@ -77,21 +78,29 @@ const UserList = () => {
 		setEditing(u);
 	};
 
-	const saveEdit = async ({ name, password }: UserEdit) => {
+	const saveEdit = async ({ name, email, password }: UserEdit) => {
 		if (!editing) return;
 		const target = editing;
 		setEditSaving(true);
 		setEditFailure(null);
 		try {
-			if (name !== target.name) {
-				const updated = await renameUser(target.id, name);
+			const changes = {
+				...(name !== target.name ? { name } : {}),
+				...(email !== target.email ? { email } : {}),
+			};
+			if (Object.keys(changes).length) {
+				const updated = await updateUserIdentity(target.id, changes);
 				setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
+				setEditing(updated);
 			}
 			if (password) await resetUserPassword(target.id, password);
+			// the side nav shows the signed-in user's own name
+			if (target.id === currentUser?.id) await reloadUser();
 			setEditing(null);
-		} catch {
-			// the dialog stays open so nothing typed is lost
-			setEditFailure("common.saveFailed");
+		} catch (error) {
+			// the dialog stays open so nothing typed is lost; 409 means the login is taken
+			const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+			setEditFailure(status === 409 ? "userEntry.errors.taken" : "common.saveFailed");
 		} finally {
 			setEditSaving(false);
 		}

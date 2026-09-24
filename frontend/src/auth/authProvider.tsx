@@ -46,6 +46,11 @@ const AuthProvider = ({ children }: AuthProviderProps) => {
 		setStatus("authed");
 	}, []);
 
+	const reloadUser = useCallback(async () => {
+		const { data } = await api.get<AuthUser>("/auth/me");
+		setUser(data);
+	}, []);
+
 	const logout = useCallback(async () => {
 		try {
 			await api.post("/auth/logout");
@@ -62,11 +67,12 @@ const AuthProvider = ({ children }: AuthProviderProps) => {
 			status,
 			login,
 			logout,
+			reloadUser,
 			// admins work across every faculty; everyone else is pinned to their own
 			facultyLocked: user !== null && user.role !== "admin",
 			facultyId: user?.facultyId ?? null,
 		}),
-		[user, status, login, logout],
+		[user, status, login, logout, reloadUser],
 	);
 
 	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

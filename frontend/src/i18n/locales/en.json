@@ -9,7 +9,8 @@
     "logout": "Sign out",
     "toggleMenu": "Menu",
     "users": "Users",
-    "import": "Bulk entry"
+    "import": "Bulk entry",
+    "account": "My account"
   },
   "curriculumEntry": {
     "title": "Add curriculum",
@@ -465,5 +466,18 @@
       "2": "Suspension: 2 academic years"
     },
     "dismissal": "Dismissal"
+  },
+  "account": {
+    "title": "My account",
+    "newPassword": "New password (optional)",
+    "newPasswordHint": "Leave blank to keep your current password. At least 8 characters.",
+    "currentPassword": "Current password",
+    "currentPasswordHint": "Needed to save any change to your account.",
+    "submit": "Save changes",
+    "errors": {
+      "currentRequired": "Enter your current password to save",
+      "wrongPassword": "That isn't your current password",
+      "nothingChanged": "Nothing to save: change a field first."
+    }
   }
 }

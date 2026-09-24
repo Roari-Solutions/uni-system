@@ -9,6 +9,8 @@ const MIN_PASSWORD = 8;
 /** The edited values; a null password leaves the current one in place. */
 export type UserEdit = {
 	name: string;
+	// the login identifier, stored in users.email
+	email: string;
 	password: string | null;
 };
 
@@ -23,9 +25,9 @@ type EditUserDialogProps = {
 	onCancel: () => void;
 };
 
-type FieldErrors = { name?: string; password?: string };
+type FieldErrors = { name?: string; email?: string; password?: string };
 
-/** Edits a user's name and, optionally, sets a new password. */
+/** Edits a user's name and login and, optionally, sets a new password. */
 const EditUserDialog = ({
 	open,
 	name,
@@ -38,6 +40,7 @@ const EditUserDialog = ({
 	const { t } = useTranslation();
 	const ref = useRef<HTMLDialogElement>(null);
 	const [draftName, setDraftName] = useState("");
+	const [draftLogin, setDraftLogin] = useState("");
 	const [password, setPassword] = useState("");
 	const [errors, setErrors] = useState<FieldErrors>({});
 	const [wasOpen, setWasOpen] = useState(open);
@@ -47,6 +50,7 @@ const EditUserDialog = ({
 		setWasOpen(open);
 		if (open) {
 			setDraftName(name);
+			setDraftLogin(login);
 			setPassword("");
 			setErrors({});
 		}
@@ -63,14 +67,15 @@ const EditUserDialog = ({
 	const save = () => {
 		const next: FieldErrors = {};
 		if (!draftName.trim()) next.name = "userEntry.errors.required";
+		if (!draftLogin.trim()) next.email = "userEntry.errors.required";
 		// blank keeps the current password
 		if (password && password.length < MIN_PASSWORD) {
 			next.password = "userEntry.errors.passwordLength";
 		}
 		setErrors(next);
-		if (next.name || next.password) return;
+		if (next.name || next.email || next.password) return;
 
-		onSave({ name: draftName.trim(), password: password || null });
+		onSave({ name: draftName.trim(), email: draftLogin.trim(), password: password || null });
 	};
 
 	return (
@@ -106,6 +111,19 @@ const EditUserDialog = ({
 						onChange={(e) => setDraftName(e.target.value)}
 						aria-invalid={!!errors.name}
 						className={inputClass(!!errors.name)}
+					/>
+				</FormField>
+
+				<FormField id="editUserLogin" label={t("userEntry.email")} error={errors.email}>
+					<input
+						id="editUserLogin"
+						type="text"
+						dir="ltr"
+						autoComplete="off"
+						value={draftLogin}
+						onChange={(e) => setDraftLogin(e.target.value)}
+						aria-invalid={!!errors.email}
+						className={inputClass(!!errors.email)}
 					/>
 				</FormField>
 

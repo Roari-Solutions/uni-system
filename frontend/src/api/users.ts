@@ -32,8 +32,12 @@ export const createUser = async (payload: UserPayload): Promise<ManagedUser> => 
 	return data;
 };
 
-export const renameUser = async (id: string, name: string): Promise<ManagedUser> => {
-	const { data } = await api.patch<ManagedUser>(`/admin/users/${id}`, { name });
+/** Changes a user's name and/or login; a login someone else holds fails with 409. */
+export const updateUserIdentity = async (
+	id: string,
+	changes: { name?: string; email?: string },
+): Promise<ManagedUser> => {
+	const { data } = await api.patch<ManagedUser>(`/admin/users/${id}`, changes);
 	return data;
 };
 

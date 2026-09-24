@@ -1,4 +1,6 @@
 import {
+  BadRequestException,
+  ConflictException,
   ForbiddenException,
   Inject,
   Injectable,
@@ -7,6 +9,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { LoginDto } from './dto/login.dto';
+import { UpdateAccountDto } from './dto/update-account.dto';
 import { DATABASE, type Db } from 'src/database/database.module';
 import * as schema from 'schema';
 import { eq } from 'drizzle-orm';
@@ -19,6 +22,8 @@ import { Response } from 'express';
 import { JwtPayload } from './auth.guard';
 
 type AuthTokens = { accessToken: string; refreshToken: string };
+
+const BCRYPT_ROUNDS = 10;
 
 /** Login/refresh/profile plus JWT cookie handling. */
 @Injectable()
@@ -151,6 +156,52 @@ export class AuthService {
     const { password: _password, employee: _employee, ...safe } = user;
     // the views branch on role, so it travels with the profile
     return { ...safe, role: user.employee.role.name };
+  }
+
+  /**
+   * Updates the caller's own name, login and password. Any change needs the
+   * current password. A wrong one is WRONG_PASSWORD (400, not 401: a 401 would
+   * read as an expired session), and a login someone else holds is 409.
+   */
+  async updateAccount(userId: string, dto: UpdateAccountDto) {
+    const { currentPassword, ...changes } = dto;
+    // the validated body carries omitted fields as undefined, so count only real values
+    if (!Object.values(changes).some((v) => v !== undefined)) throw new BadRequestException();
+
+    const user = await this.db.query.users.findFirst({
+      where: eq(schema.users.id, userId),
+      columns: { id: true, email: true, password: true, suspended: true },
+    });
+    if (!user) throw new NotFoundException();
+    if (user.suspended) throw new ForbiddenException();
+
+    if (!(await bcrypt.compare(currentPassword, user.password))) {
+      this.logger.warn(`Account update refused: wrong current password for ${user.id}`);
+      throw new BadRequestException({ code: 'WRONG_PASSWORD' });
+    }
+
+    const email = changes.email?.trim();
+    if (email !== undefined && email !== user.email) {
+      const clash = await this.db.query.users.findFirst({
+        where: eq(schema.users.email, email),
+        columns: { id: true },
+      });
+      if (clash) throw new ConflictException();
+    }
+
+    await this.db
+      .update(schema.users)
+      .set({
+        ...(changes.name !== undefined ? { name: changes.name.trim() } : {}),
+        ...(email !== undefined ? { email } : {}),
+        ...(changes.newPassword !== undefined
+          ? { password: await bcrypt.hash(changes.newPassword, BCRYPT_ROUNDS) }
+          : {}),
+      })
+      .where(eq(schema.users.id, user.id));
+
+    this.logger.log(`User ${user.id} updated their own account`);
+    return this.me(user.id);
   }
 
   /** Clears the auth cookies; the client cannot, since they are HttpOnly. */

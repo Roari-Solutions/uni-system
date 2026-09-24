@@ -9,6 +9,8 @@ export type AuthContextValue = {
 	/** Resolves once the session is established; throws on bad credentials. */
 	login: (email: string, password: string) => Promise<void>;
 	logout: () => Promise<void>;
+	/** Re-reads the signed-in user, after their own name or login changed. */
+	reloadUser: () => Promise<void>;
 	/** True when the caller is scoped to a single faculty they cannot change. */
 	facultyLocked: boolean;
 	/** The faculty a data-entry employee is bound to; null for admins. */

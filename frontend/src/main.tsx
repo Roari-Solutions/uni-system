@@ -19,6 +19,7 @@ import GradeEntry from './pages/grades/grades/gradeEntry';
 import GradeSheet from './pages/grades/grades/gradeSheet';
 import UserList from './pages/admin/userList';
 import UserEntry from './pages/admin/userEntry';
+import AccountSettings from './pages/account/accountSettings';
 
 const router = createBrowserRouter([
 	{ path: "/", element: <Navigate to="/dashboards/grades/students/list" replace /> },
@@ -60,6 +61,8 @@ const router = createBrowserRouter([
 									{ path: "entry/:curriculumId", element: <GradeSheet /> },
 								],
 							},
+							// every signed-in user manages their own account here
+							{ path: "account", element: <AccountSettings /> },
 							{
 								// admin only; AdminGuard enforces the same rule on the API
 								element: <RequireRole allow={["admin"]} />,

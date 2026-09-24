@@ -123,8 +123,19 @@ const SideNav = () => {
 					<Bars3Icon className="size-6 shrink-0" />
 				</button>
 
-				<div className="mx-2 mb-2 flex items-center gap-3 border-b border-primary-hover px-3 pb-4">
-					<UserCircleIcon className="size-8 shrink-0" />
+				{/* the profile block opens the signed-in user's own account settings */}
+				<NavLink
+					to={`${BASE_PATH}/account`}
+					onClick={collapse}
+					title={t("gradesNav.account")}
+					className={({ isActive }) =>
+						`mx-2 mb-2 flex items-center gap-3 rounded-sm border-b border-primary-hover px-3 pt-2 pb-4 transition-colors duration-200 ease-out ${
+							isActive ? "bg-primary-hover" : "hover:bg-primary-hover"
+						}`
+					}
+				>
+					<UserCircleIcon className="size-8 shrink-0" aria-hidden />
+					<span className="sr-only">{t("gradesNav.account")}</span>
 					<div
 						className={`min-w-0 transition-opacity duration-200 ease-out ${
 							expanded ? "opacity-100" : "opacity-0"
@@ -138,7 +149,7 @@ const SideNav = () => {
 							<p className="truncate text-caption text-accent-soft">{facultyName}</p>
 						)}
 					</div>
-				</div>
+				</NavLink>
 
 				<nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-2">
 					{sections.map(({ id, icon: Icon }) => {
