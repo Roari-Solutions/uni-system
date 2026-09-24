@@ -59,6 +59,17 @@ export class ResolveCheatingDto {
   dismiss!: boolean;
 }
 
+/** Query for GET /gr/grades/pending/:curriculumId. */
+export class PendingGradesQueryDto {
+  /**
+   * The faculty whose students the sheet lists. A university requirement is
+   * offered by every faculty; omitted, an admin gets them all.
+   */
+  @IsOptional()
+  @IsUUID()
+  facultyId?: string;
+}
+
 /** Query filters for GET /gr/grades, matching the list view's filters. */
 export class ListGradesQueryDto {
   @IsOptional()

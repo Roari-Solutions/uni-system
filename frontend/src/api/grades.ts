@@ -30,8 +30,14 @@ export type PendingGrades = {
 	students: Pick<Student, "id" | "name" | "uniNumber">[];
 };
 
-export const fetchPendingGrades = async (curriculumId: string): Promise<PendingGrades> => {
-	const { data } = await api.get<PendingGrades>(`/gr/grades/pending/${curriculumId}`);
+// facultyId picks which faculty's students a shared university requirement lists
+export const fetchPendingGrades = async (
+	curriculumId: string,
+	facultyId?: string,
+): Promise<PendingGrades> => {
+	const { data } = await api.get<PendingGrades>(`/gr/grades/pending/${curriculumId}`, {
+		params: facultyId ? { facultyId } : undefined,
+	});
 	return data;
 };
 

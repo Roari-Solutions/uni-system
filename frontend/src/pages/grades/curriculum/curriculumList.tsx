@@ -174,7 +174,8 @@ const CurriculumList = () => {
 			<DataTable
 				columns={columns}
 				rows={curriculums}
-				getRowId={(c) => c.id}
+				// a university requirement is listed once per faculty, all under one id
+				getRowId={(c) => `${c.id}:${c.facultyId}`}
 				emptyText={loading ? t("common.loading") : t("curriculumList.empty")}
 			/>
 

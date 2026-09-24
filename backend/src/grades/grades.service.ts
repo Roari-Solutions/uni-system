@@ -438,23 +438,40 @@ export class GradesService {
   }
 
   /**
-   * The students of the curriculum's faculty and academic year who hold no
-   * grade row for it yet, for the entry sheet.
+   * The students of the curriculum's academic year who hold no grade row for it
+   * yet, for the entry sheet. A university requirement is offered by every
+   * faculty, so the sheet lists the faculty it was opened for: a scoped caller's
+   * own, the one asked for, or, for an admin who names none, every offering one.
    */
-  async pendingGrades(curriculumId: string, caller: GrCaller): Promise<PendingGradesView> {
+  async pendingGrades(
+    curriculumId: string,
+    caller: GrCaller,
+    requestedFacultyId?: string,
+  ): Promise<PendingGradesView> {
     try {
       const curriculum = await this.db.query.curriculums.findFirst({
         where: eq(curriculums.id, curriculumId),
         with: { facultyCurriculums: { columns: { facultyId: true } } },
       });
-      // a curriculum belongs to one faculty; older rows with several use the first
-      const facultyId = curriculum?.facultyCurriculums[0]?.facultyId;
-      if (!curriculum || !facultyId) throw new NotFoundException();
-      assertFaculty(caller, facultyId);
+      const offering = curriculum?.facultyCurriculums.map((l) => l.facultyId) ?? [];
+      if (!curriculum || !offering.length) throw new NotFoundException();
+
+      const scope = scopeFacultyId(caller);
+      if (scope && requestedFacultyId && requestedFacultyId !== scope) {
+        throw new UnauthorizedException();
+      }
+      const chosen = scope ?? requestedFacultyId;
+      if (chosen && !offering.includes(chosen)) {
+        // a scoped caller whose faculty doesn't offer it may not see it at all
+        if (scope) throw new UnauthorizedException();
+        throw new NotFoundException();
+      }
+      const facultyIds = chosen ? [chosen] : offering;
+      const facultyId = chosen ?? offering[0];
 
       const cohort = await this.db.query.students.findMany({
         where: and(
-          eq(students.facultyId, facultyId),
+          inArray(students.facultyId, facultyIds),
           eq(students.academicYear, curriculum.academicYear),
           // suspended and dismissed students take no new marks
           eq(students.standing, 'active'),

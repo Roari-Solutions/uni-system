@@ -18,6 +18,7 @@ import { GradesService } from './grades.service';
 import {
   CreateGradeDto,
   ListGradesQueryDto,
+  PendingGradesQueryDto,
   ResolveCheatingDto,
   UpdateGradeDto,
 } from './dto/grades.dto';
@@ -39,8 +40,9 @@ export class GradesController {
   async GetPendingGrades(
     @Req() req: GrRequest,
     @Param('curriculumId', ParseUUIDPipe) curriculumId: string,
+    @Query() query: PendingGradesQueryDto,
   ) {
-    return await this.gradesService.pendingGrades(curriculumId, req.grCaller);
+    return await this.gradesService.pendingGrades(curriculumId, req.grCaller, query.facultyId);
   }
 
   /** GET /gr/grades/student/:studentId — the student's current-year curriculums and marks. */
