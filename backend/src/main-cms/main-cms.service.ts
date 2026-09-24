@@ -64,7 +64,7 @@ export function mergeMainPage(
       ...card,
       pictureLink: imageUrl(stored.newsPictureByIndex[index], oldCards[index]?.pictureLink),
     }));
-    merged.newsSection = { ...(newsSrc ?? {}), cards };
+    merged.newsSection = { ...newsSrc, cards };
   }
 
   // ponytail: partial until every section patched once
