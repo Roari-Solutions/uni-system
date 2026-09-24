@@ -79,8 +79,7 @@
       "faculty": "Faculty",
       "status": "Status",
       "nationalId": "National ID",
-      "passportNumber": "Passport number",
-      "standing": "Standing"
+      "passportNumber": "Passport number"
     },
     "filters": {
       "level": "Academic year",
@@ -90,9 +89,7 @@
       "acceptanceYear": "Acceptance year",
       "allAcceptanceYears": "All acceptance years",
       "search": "Search",
-      "searchPlaceholder": "Name, university number or ID",
-      "standing": "Standing",
-      "allStandings": "All standings"
+      "searchPlaceholder": "Name, university number or ID"
     },
     "deleteTitle": "Delete student",
     "deleteMessage": "Are you sure you want to delete \"{{name}}\"? This can't be undone."
@@ -116,7 +113,6 @@
       "acceptanceYear": "Acceptance year",
       "acceptanceType": "Acceptance type",
       "status": "Year outcome",
-      "standing": "Standing",
       "warnings": "Warnings"
     },
     "columns": {
@@ -168,11 +164,6 @@
     "statuses": {
       "success": "Success",
       "repeat": "Repeat"
-    },
-    "standings": {
-      "active": "Active",
-      "suspended": "Suspended",
-      "dismissed": "Dismissed"
     },
     "suspendedFor": {
       "1": "Suspended for 1 academic year",

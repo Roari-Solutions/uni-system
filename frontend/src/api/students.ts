@@ -1,11 +1,10 @@
 import api from "../lib/api";
-import type { Student, StudentStanding } from "../types/student";
+import type { Student } from "../types/student";
 
 export type StudentFilters = {
 	facultyId?: string;
 	level?: number;
 	acceptanceYear?: string;
-	standing?: StudentStanding;
 	q?: string;
 };
 
