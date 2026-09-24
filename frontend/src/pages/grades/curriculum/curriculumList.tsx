@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router";
+import { PencilSquareIcon } from "@heroicons/react/24/outline";
 import ConfirmDialog from "../../../components/confirmDialog";
 import DataTable, { type Column } from "../../../components/dataTable";
 import DeleteButton from "../../../components/deleteButton";
 import FilterSelect from "../../../components/filterSelect";
 import SearchField from "../../../components/searchField";
+import useAuth from "../../../auth/useAuth";
 import useFaculties from "../../../hooks/useFaculties";
 import { deleteCurriculum, fetchCurriculums } from "../../../api/curriculums";
 import type { Curriculum } from "../../../types/curriculum";
@@ -15,6 +18,7 @@ const CurriculumList = () => {
 	const { t, i18n } = useTranslation();
 	const lang = i18n.language === "ar" ? "ar" : "en";
 	const { faculties, locked, lockedFacultyId } = useFaculties();
+	const { user } = useAuth();
 
 	const [curriculums, setCurriculums] = useState<Curriculum[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -91,10 +95,23 @@ const CurriculumList = () => {
 			key: "actions",
 			header: t("common.actions"),
 			render: (c) => (
-				<DeleteButton
-					label={t("common.deleteItem", { name: c.name[lang] })}
-					onClick={() => setPendingDelete(c)}
-				/>
+				<div className="flex items-center gap-1">
+					{/* a university requirement spans every faculty, so only an admin edits one */}
+					{(c.requirementType !== "university" || user?.role === "admin") && (
+						<Link
+							to={`../${c.id}/edit`}
+							aria-label={t("curriculumList.editItem", { name: c.name[lang] })}
+							title={t("curriculumList.editItem", { name: c.name[lang] })}
+							className="rounded-xs p-2 text-foreground transition-colors duration-150 ease-out hover:bg-background hover:text-primary-hover"
+						>
+							<PencilSquareIcon className="size-5" aria-hidden />
+						</Link>
+					)}
+					<DeleteButton
+						label={t("common.deleteItem", { name: c.name[lang] })}
+						onClick={() => setPendingDelete(c)}
+					/>
+				</div>
 			),
 		},
 	];
@@ -157,7 +174,8 @@ const CurriculumList = () => {
 			<DataTable
 				columns={columns}
 				rows={curriculums}
-				getRowId={(c) => c.id}
+				// a university requirement is listed once per faculty, all under one id
+				getRowId={(c) => `${c.id}:${c.facultyId}`}
 				emptyText={loading ? t("common.loading") : t("curriculumList.empty")}
 			/>
 

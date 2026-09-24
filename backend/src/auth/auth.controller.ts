@@ -3,6 +3,7 @@ import {
   Post,
   Body,
   Get,
+  Patch,
   Res,
   Req,
   UnauthorizedException,
@@ -14,6 +15,7 @@ import {
 import { AuthService } from './auth.service';
 import { Logger } from '@nestjs/common';
 import { LoginDto } from './dto/login.dto';
+import { UpdateAccountDto } from './dto/update-account.dto';
 import { type Request, type Response } from 'express';
 import { AuthGuard, CurrentUser } from './auth.guard';
 import type { JwtPayload } from './auth.guard';
@@ -71,5 +73,13 @@ export class AuthController {
   me(@CurrentUser() user: JwtPayload) {
     this.logger.log(`Fetching profile for user ${user.sub}`);
     return this.authService.me(user.sub);
+  }
+
+  /** PATCH /auth/me — the caller changes their own name, login or password. */
+  @UseGuards(AuthGuard)
+  @Patch('me')
+  @HttpCode(HttpStatus.OK)
+  async updateMe(@CurrentUser() user: JwtPayload, @Body() body: UpdateAccountDto) {
+    return await this.authService.updateAccount(user.sub, body);
   }
 }

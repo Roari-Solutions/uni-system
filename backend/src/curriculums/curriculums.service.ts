@@ -8,8 +8,8 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { and, eq, like } from 'drizzle-orm';
-import { curriculums, faculties, facultyCurriculums, grades } from 'schema';
+import { and, eq, inArray, like } from 'drizzle-orm';
+import { curriculums, faculties, facultyCurriculums, grades, students } from 'schema';
 import { DATABASE, type Db } from 'src/database/database.module';
 import { GrCaller } from 'src/gr-gurd/gr-gurd.guard';
 import { assertFaculty, assertFacultyExists, scopeFacultyId } from 'src/gr-scope/gr-scope';
@@ -133,7 +133,7 @@ export class CurriculumsService {
   }
 
   /**
-   * Suggests the next XXXX-0000 code: the first serial free within the
+   * Suggests the next XXXX0000 code: the first serial free within the
    * faculty -> year -> semester that also yields a code no other curriculum
    * holds. Null when an input the letters need is missing or all 99 are used.
    */
@@ -180,7 +180,7 @@ export class CurriculumsService {
 
       // codes are unique university-wide; UT codes from other faculties can collide
       const sameStem = await this.db.query.curriculums.findMany({
-        where: like(curriculums.abbreviation, `${letters}-${query.academicYear}${query.semester}%`),
+        where: like(curriculums.abbreviation, `${letters}${query.academicYear}${query.semester}%`),
         columns: { abbreviation: true },
       });
       for (const row of sameStem) {
@@ -289,25 +289,86 @@ export class CurriculumsService {
     }
   }
 
-  /** Updates the curriculum with this id, moving its faculty link when asked. */
+  /**
+   * One curriculum for the edit form. A university requirement is offered by
+   * every faculty; a scoped caller sees it under their own.
+   */
+  async getCurriculum(id: string, caller: GrCaller): Promise<CurriculumView> {
+    try {
+      const { row, link } = await this.offeringOrThrow(id);
+      const scope = scopeFacultyId(caller);
+      const offering = row.facultyCurriculums.map((l) => l.facultyId);
+      if (scope && !offering.includes(scope)) throw new UnauthorizedException();
+
+      return {
+        id: row.id,
+        name: { en: row.nameEn, ar: row.nameAr },
+        facultyId: scope ?? link.facultyId,
+        abbreviation: row.abbreviation,
+        academicYear: academicYearToNumber(row.academicYear),
+        semester: semesterToNumber(row.semester),
+        requirementType: row.requirementType,
+        courseHours: row.courseHours,
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof UnauthorizedException) {
+        throw error;
+      }
+      this.logger.error(`Failed to read curriculum: ${id}`, error);
+      throw new InternalServerErrorException('Grades operation failed', {
+        cause: error,
+      });
+    }
+  }
+
+  /**
+   * Updates the curriculum with this id. Every field may change; the faculties
+   * offering it follow the requirement type and faculty, and every GPA the old
+   * or new placement reaches is rebuilt.
+   *
+   * Grades are never deleted here. When faculties stop offering the curriculum,
+   * their students' grades in it stop counting but stay as history; the caller
+   * must first confirm that (GRADES_ORPHANED carries how many are affected).
+   */
   async updateCurriculum(
     id: string,
     dto: UpdateCurriculumDto,
     caller: GrCaller,
   ): Promise<CurriculumView> {
-    if (!dto || !Object.keys(dto).length) throw new BadRequestException();
+    const { confirmOrphanedGrades, ...changes } = dto ?? {};
+    if (!Object.keys(changes).length) throw new BadRequestException();
     try {
       const { row, link } = await this.offeringOrThrow(id);
+      const before = row.facultyCurriculums.map((l) => l.facultyId);
+
+      const requirementType = changes.requirementType ?? row.requirementType;
+      const wasUniversity = row.requirementType === 'university';
+      const isUniversity = requirementType === 'university';
+
+      // a university requirement spans every faculty, so only an admin may touch
+      // one, the same rule as creating it
+      if ((wasUniversity || isUniversity) && scopeFacultyId(caller) !== null) {
+        this.logger.warn(`Rejected a scoped caller editing a university requirement: ${row.id}`);
+        throw new UnauthorizedException();
+      }
       assertFaculty(caller, link.facultyId);
 
-      // the type decides which faculties offer the curriculum, so it is fixed
-      // once the curriculum exists: delete and recreate it instead
-      if (dto.requirementType !== undefined && dto.requirementType !== row.requirementType) {
-        this.logger.warn(`Rejected a requirement type change: ${row.id}`);
-        throw new BadRequestException();
+      let after: string[];
+      if (isUniversity) {
+        after = (await this.db.query.faculties.findMany({ columns: { id: true } })).map(
+          (f) => f.id,
+        );
+      } else {
+        // leaving "university" has to say which single faculty keeps it
+        const target = changes.facultyId ?? (wasUniversity ? undefined : link.facultyId);
+        if (!target) throw new BadRequestException();
+        const facultyId = await assertFacultyExists(this.db, target);
+        assertFaculty(caller, facultyId);
+        after = [facultyId];
       }
+      if (!after.length) throw new BadRequestException();
 
-      const abbreviation = dto.abbreviation?.trim();
+      const abbreviation = changes.abbreviation?.trim();
       if (abbreviation !== undefined && abbreviation !== row.abbreviation) {
         const clash = await this.db.query.curriculums.findFirst({
           where: eq(curriculums.abbreviation, abbreviation),
@@ -315,62 +376,95 @@ export class CurriculumsService {
         if (clash) throw new ConflictException();
       }
 
-      const [updated] = await this.db
-        .update(curriculums)
-        .set({
-          ...(dto.name !== undefined
-            ? {
-                nameEn: dto.name.en?.trim() || MISSING_NAME,
-                nameAr: dto.name.ar.trim(),
-              }
-            : {}),
-          ...(dto.academicYear !== undefined ? { academicYear: dto.academicYear } : {}),
-          ...(dto.semester !== undefined ? { semester: dto.semester } : {}),
-          ...(dto.requirementType !== undefined ? { requirementType: dto.requirementType } : {}),
-          ...(dto.courseHours !== undefined ? { courseHours: dto.courseHours } : {}),
-          ...(abbreviation !== undefined ? { abbreviation } : {}),
-        })
-        .where(eq(curriculums.id, row.id))
-        .returning();
+      const dropped = before.filter((f) => !after.includes(f));
+      const added = after.filter((f) => !before.includes(f));
+      if (dropped.length && !confirmOrphanedGrades) {
+        const orphaned = await this.db
+          .select({ id: grades.id })
+          .from(grades)
+          .innerJoin(students, eq(students.id, grades.studentId))
+          .where(and(eq(grades.curriculumId, row.id), inArray(students.facultyId, dropped)));
+        if (orphaned.length) {
+          throw new ConflictException({ code: 'GRADES_ORPHANED', count: orphaned.length });
+        }
+      }
 
-      // the hours weight this curriculum's grade points, so its grades and the
-      // GPAs behind them are rebuilt whenever they move
-      if (dto.courseHours !== undefined && dto.courseHours !== row.courseHours) {
+      const updated = await this.db.transaction(async (tx) => {
+        const [next] = await tx
+          .update(curriculums)
+          .set({
+            ...(changes.name !== undefined
+              ? {
+                  nameEn: changes.name.en?.trim() || MISSING_NAME,
+                  nameAr: changes.name.ar.trim(),
+                }
+              : {}),
+            ...(changes.academicYear !== undefined ? { academicYear: changes.academicYear } : {}),
+            ...(changes.semester !== undefined ? { semester: changes.semester } : {}),
+            ...(changes.courseHours !== undefined ? { courseHours: changes.courseHours } : {}),
+            requirementType,
+            ...(abbreviation !== undefined ? { abbreviation } : {}),
+          })
+          .where(eq(curriculums.id, row.id))
+          .returning();
+
+        if (dropped.length) {
+          await tx
+            .delete(facultyCurriculums)
+            .where(
+              and(
+                eq(facultyCurriculums.curriculumId, row.id),
+                inArray(facultyCurriculums.facultyId, dropped),
+              ),
+            );
+        }
+        if (added.length) {
+          await tx
+            .insert(facultyCurriculums)
+            .values(added.map((facultyId) => ({ facultyId, curriculumId: row.id })));
+        }
+        return next;
+      });
+
+      // the hours weight each grade's points, so those are rebuilt first
+      if (updated.courseHours !== row.courseHours) {
         await this.gradesService.recomputeCurriculum(row.id);
       }
 
-      let facultyId = link.facultyId;
-      if (dto.facultyId !== undefined && dto.facultyId !== link.facultyId) {
-        const destId = await assertFacultyExists(this.db, dto.facultyId);
-        assertFaculty(caller, destId);
+      // rebuild every GPA the old or the new placement reaches: the cohorts that
+      // sit it, and anyone already graded in it (their grades may be history)
+      const moved =
+        dropped.length > 0 ||
+        added.length > 0 ||
+        updated.academicYear !== row.academicYear ||
+        updated.semester !== row.semester;
+      if (moved) {
+        const graded = (
+          await this.db.query.grades.findMany({
+            where: eq(grades.curriculumId, row.id),
+            columns: { studentId: true },
+          })
+        ).map((g) => g.studentId);
 
-        await this.db
-          .delete(facultyCurriculums)
-          .where(
-            and(
-              eq(facultyCurriculums.curriculumId, row.id),
-              eq(facultyCurriculums.facultyId, link.facultyId),
-            ),
-          );
-        const destLink = await this.db.query.facultyCurriculums.findFirst({
-          where: and(
-            eq(facultyCurriculums.curriculumId, row.id),
-            eq(facultyCurriculums.facultyId, destId),
-          ),
-        });
-        if (!destLink) {
-          await this.db
-            .insert(facultyCurriculums)
-            .values({ facultyId: destId, curriculumId: row.id });
-        }
-        facultyId = destId;
+        await this.gradesService.refreshFacultiesSemester(before, row.academicYear, row.semester);
+        await this.gradesService.refreshStudentsSemester(graded, row.academicYear, row.semester);
+        await this.gradesService.refreshFacultiesSemester(
+          after,
+          updated.academicYear,
+          updated.semester,
+        );
+        await this.gradesService.refreshStudentsSemester(
+          graded,
+          updated.academicYear,
+          updated.semester,
+        );
       }
 
       this.logger.log(`Updated curriculum: ${row.id}`);
       return {
         id: updated.id,
         name: { en: updated.nameEn, ar: updated.nameAr },
-        facultyId,
+        facultyId: after[0],
         abbreviation: updated.abbreviation,
         academicYear: academicYearToNumber(updated.academicYear),
         semester: semesterToNumber(updated.semester),

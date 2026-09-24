@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import DataTable, { type Column } from "../../../components/dataTable";
 import FilterSelect from "../../../components/filterSelect";
 import useFaculties from "../../../hooks/useFaculties";
-import { fetchGrades, updateGrade } from "../../../api/grades";
+import { fetchGrades, resolveCheating, updateGrade } from "../../../api/grades";
 import { SeatingStatusTag } from "../../../components/seatingStatusSelect";
 import ResolveCheatingDialog, {
 	type CheatingResolution,
@@ -81,11 +81,18 @@ const GradeList = () => {
 
 	const changeFaculty = (id: string) => {
 		setFacultyId(id);
-		// drop a curriculum selection that doesn't belong to the new faculty
-		if (id && curriculums.find((c) => c.id === curriculumId)?.facultyId !== id) {
+		// drop a curriculum selection the new faculty doesn't offer; every faculty
+		// offers a university requirement, so that selection always stays
+		const selected = curriculums.find((c) => c.id === curriculumId);
+		if (id && selected && selected.requirementType !== "university" && selected.facultyId !== id) {
 			setCurriculumId("");
 		}
 	};
+
+	// the filter lists each curriculum once, however many faculties offer it
+	const curriculumOptions = curriculums.filter(
+		(c, index) => curriculums.findIndex((other) => other.id === c.id) === index,
+	);
 
 	const replaceRow = (updated: Grade) =>
 		setGrades((prev) => prev.map((row) => (row.id === updated.id ? updated : row)));
@@ -97,17 +104,13 @@ const GradeList = () => {
 	};
 
 	// accepting the mark moves the row to attended; the other outcome keeps the
-	// cheating on record and scores 0. Either way the mark rejoins the year result.
-	const handleResolve = async ({ outcome }: CheatingResolution) => {
+	// cheating on record and scores 0. Either way the mark rejoins the year result,
+	// and any penalties land on the case and the student.
+	const handleResolve = async (resolution: CheatingResolution) => {
 		if (!resolving) return;
 		setSaving(true);
 		try {
-			const updated = await updateGrade(
-				resolving.id,
-				outcome === "accept"
-					? { seatingStatus: "attended" }
-					: { seatingStatus: "cheating", grade: 0, cheatingResolved: true },
-			);
+			const updated = await resolveCheating(resolving.id, resolution);
 			replaceRow(updated);
 			setResolving(null);
 		} catch {
@@ -189,7 +192,7 @@ const GradeList = () => {
 					value={curriculumId}
 					onChange={setCurriculumId}
 					allLabel={t("gradeList.filters.allCurriculums")}
-					options={curriculums.map((c) => ({ value: c.id, label: c.name[lang] }))}
+					options={curriculumOptions.map((c) => ({ value: c.id, label: c.name[lang] }))}
 				/>
 				<FilterSelect
 					id="seatingStatusFilter"

@@ -1,5 +1,5 @@
 import { useEffect, useState, type KeyboardEvent } from "react";
-import { Link, useParams } from "react-router";
+import { Link, useParams, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import axios from "axios";
 import { z } from "zod";
@@ -42,6 +42,9 @@ const GradeSheet = () => {
 	const { t, i18n } = useTranslation();
 	const lang = i18n.language === "ar" ? "ar" : "en";
 	const { curriculumId = "" } = useParams();
+	// a shared university requirement lists the students of the faculty it was opened from
+	const [searchParams] = useSearchParams();
+	const facultyId = searchParams.get("facultyId") ?? undefined;
 
 	const [sheet, setSheet] = useState<PendingGrades | null>(null);
 	const [loading, setLoading] = useState(true);
@@ -50,7 +53,7 @@ const GradeSheet = () => {
 
 	useEffect(() => {
 		let cancelled = false;
-		fetchPendingGrades(curriculumId)
+		fetchPendingGrades(curriculumId, facultyId)
 			.then((data) => {
 				if (cancelled) return;
 				setSheet(data);
@@ -67,7 +70,7 @@ const GradeSheet = () => {
 		return () => {
 			cancelled = true;
 		};
-	}, [curriculumId]);
+	}, [curriculumId, facultyId]);
 
 	const rowOf = (id: string) => rows[id] ?? IDLE;
 	const setRow = (id: string, next: RowState) => setRows((prev) => ({ ...prev, [id]: next }));

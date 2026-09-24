@@ -9,7 +9,8 @@
     "logout": "Sign out",
     "toggleMenu": "Menu",
     "users": "Users",
-    "import": "Bulk entry"
+    "import": "Bulk entry",
+    "account": "My account"
   },
   "curriculumEntry": {
     "title": "Add curriculum",
@@ -26,7 +27,7 @@
     "submit": "Save",
     "errors": {
       "required": "This field is required",
-      "abbreviationFormat": "Use the format XXXX-0000, e.g. ENCR-1101",
+      "abbreviationFormat": "Use the format XXXX0000, with no spaces or dashes, e.g. ENCR1101",
       "courseHoursNumber": "Course hours must be a number",
       "courseHoursRange": "Course hours must be between 1 and 12"
     },
@@ -34,7 +35,8 @@
     "nameEn": "Curriculum name (English)",
     "courseHours": "Course hours",
     "allFaculties": "All faculties",
-    "universityFaculties": "A university requirement is offered by every faculty."
+    "universityFaculties": "A university requirement is offered by every faculty.",
+    "editTitle": "Edit curriculum"
   },
   "curriculumList": {
     "title": "Curriculums",
@@ -60,7 +62,8 @@
     "deleteTitle": "Delete curriculum",
     "deleteMessage": "Are you sure you want to delete \"{{name}}\"? This can't be undone.",
     "search": "Search",
-    "searchPlaceholder": "Name or abbreviation"
+    "searchPlaceholder": "Name or abbreviation",
+    "editItem": "Edit {{name}}"
   },
   "studentList": {
     "title": "Students",
@@ -110,7 +113,8 @@
       "level": "Current academic year",
       "acceptanceYear": "Acceptance year",
       "acceptanceType": "Acceptance type",
-      "status": "Year outcome"
+      "status": "Year outcome",
+      "warnings": "Warnings"
     },
     "columns": {
       "curriculum": "Curriculum",
@@ -122,7 +126,19 @@
     },
     "semesterGpa": "Semester GPA",
     "annualGpa": "Annual GPA",
-    "missingGrades": "Still missing curriculum grades"
+    "missingGrades": "Still missing curriculum grades",
+    "edit": "Edit details",
+    "standing": {
+      "suspendedText": "Grades and results are frozen: no new marks, edits or deletions until an administrator lifts the suspension.",
+      "dismissedTitle": "Dismissed from the university",
+      "dismissedText": "This record is read-only. Only an administrator can reverse the dismissal.",
+      "lift": "Lift suspension",
+      "reverse": "Reverse dismissal",
+      "liftTitle": "Lift suspension",
+      "reverseTitle": "Reverse dismissal",
+      "liftMessage": "Lift {{name}}'s suspension? Their grades and results can be changed again and the current year's GPA is recalculated. The penalty stays on the cheating case as a record.",
+      "reverseMessage": "Reverse {{name}}'s dismissal? Their record can be changed again and the current year's GPA is recalculated. The penalty stays on the cheating case as a record."
+    }
   },
   "student": {
     "acceptanceTypes": {
@@ -149,6 +165,10 @@
     "statuses": {
       "success": "Success",
       "repeat": "Repeat"
+    },
+    "suspendedFor": {
+      "1": "Suspended for 1 academic year",
+      "2": "Suspended for 2 academic years"
     }
   },
   "semesters": {
@@ -171,7 +191,9 @@
     "saveFailed": "Couldn't save. Please try again.",
     "loadFailed": "Couldn't load the data. Please try again.",
     "facultyLocked": "Set from your account and cannot be changed.",
-    "clearSearch": "Clear the search"
+    "clearSearch": "Clear the search",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password"
   },
   "studentEntry": {
     "title": "Add student",
@@ -191,12 +213,14 @@
     "submit": "Save",
     "errors": {
       "required": "This field is required",
-      "uniNumberFormat": "Use letters, digits and dashes only"
+      "uniNumberFormat": "Use letters, digits and dashes only",
+      "taken": "That university number, national ID or passport number is already registered to another student."
     },
     "nameAr": "Student name (Arabic)",
     "nameEn": "Student name (English)",
     "nationalId": "National ID",
-    "passportNumber": "Passport number"
+    "passportNumber": "Passport number",
+    "editTitle": "Edit student"
   },
   "gradeList": {
     "title": "Grades",
@@ -311,14 +335,16 @@
       "allFaculties": "All faculties",
       "role": "Role",
       "allRoles": "All roles"
-    }
+    },
+    "edit": "Edit",
+    "editItem": "Edit {{name}}"
   },
   "userEntry": {
     "title": "Add user",
     "name": "Full name",
     "email": "Login",
     "password": "Password",
-    "passwordHint": "Shown in the clear — pass it to the user yourself.",
+    "passwordHint": "Use the eye to check it, then pass it to the user yourself.",
     "role": "Role",
     "selectRole": "Select role",
     "faculty": "Faculty",
@@ -335,6 +361,12 @@
       "unavailable": "Couldn't reach the server. Please try again in a moment."
     }
   },
+  "editUser": {
+    "title": "Edit user",
+    "newPassword": "New password (optional)",
+    "passwordHint": "Leave blank to keep the current password. Use the eye to check it, then pass it to the user yourself.",
+    "save": "Save"
+  },
   "seatingStatuses": {
     "attended": "Attended",
     "cheating": "Cheating case",
@@ -345,12 +377,20 @@
     "legend": "How does this case end?",
     "accept": "Accept the mark ({{grade}}) and record the student as attended",
     "zero": "Keep the cheating case and record 0 for this curriculum",
-    "warnStudent": "Place a warning on the student",
     "confirm": "Resolve",
     "action": "Resolve",
     "actionFor": "Resolve the cheating case for {{name}}",
     "pending": "Awaiting a decision; left out of the year result",
-    "resolved": "Decided"
+    "resolved": "Decided",
+    "penaltiesLegend": "What penalty does the student receive?",
+    "freezeNote": "The student's grades and results are frozen until an administrator lifts this.",
+    "penalties": {
+      "none": "No penalty",
+      "warning": "Place a warning on the student",
+      "suspendOneYear": "Suspend the student for 1 academic year",
+      "suspendTwoYears": "Suspend the student for 2 academic years",
+      "dismiss": "Dismiss the student from the university"
+    }
   },
   "gpaStatuses": {
     "pass": "Pass",
@@ -412,6 +452,34 @@
       "facultyAbbreviation": "This faculty has no two-letter code, so no university number can be built",
       "faculty": "This row is outside your faculty",
       "acceptanceTypeUnknown": "This acceptance type matches none on record"
+    }
+  },
+  "orphanedGrades": {
+    "title": "Some grades will stop counting",
+    "curriculumMessage": "Students in faculties that will no longer offer this curriculum already have grades in it (grades affected: {{count}}). The grades are kept as history, but they will no longer count toward those students' GPA. Save anyway?",
+    "studentMessage": "This student has grades in curriculums the new faculty doesn't offer (grades affected: {{count}}). The grades are kept as history, but they will no longer count toward the student's GPA. Save anyway?",
+    "confirm": "Save anyway"
+  },
+  "penalties": {
+    "label": "Penalties",
+    "warning": "Warning",
+    "suspension": {
+      "1": "Suspension: 1 academic year",
+      "2": "Suspension: 2 academic years"
+    },
+    "dismissal": "Dismissal"
+  },
+  "account": {
+    "title": "My account",
+    "newPassword": "New password (optional)",
+    "newPasswordHint": "Leave blank to keep your current password. At least 8 characters.",
+    "currentPassword": "Current password",
+    "currentPasswordHint": "Needed to save any change to your account.",
+    "submit": "Save changes",
+    "errors": {
+      "currentRequired": "Enter your current password to save",
+      "wrongPassword": "That isn't your current password",
+      "nothingChanged": "Nothing to save: change a field first."
     }
   }
 }

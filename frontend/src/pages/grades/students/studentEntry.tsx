@@ -1,9 +1,18 @@
-import { useCallback, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate, useParams } from "react-router";
 import { z } from "zod";
+import axios from "axios";
+import ConfirmDialog from "../../../components/confirmDialog";
 import FacultyField from "../../../components/facultyField";
 import FormField from "../../../components/formField";
-import { createStudent } from "../../../api/students";
+import {
+	createStudent,
+	fetchStudent,
+	updateStudent,
+	type StudentPayload,
+} from "../../../api/students";
+import { orphanedGradeCount } from "../../../utils/orphanedGrades";
 import { formCardClass, inputClass, submitButtonClass } from "../../../styles/form";
 import { ACCEPTANCE_TYPES, NATIONALITIES } from "../../../types/student";
 import { ACCEPTANCE_YEARS, STUDY_LEVELS } from "../../../utils/academicYears";
@@ -45,14 +54,56 @@ const EMPTY_FORM: StudentForm = {
 	facultyId: "",
 };
 
+/** Adds a student, or edits one when the route carries its id. */
 const StudentEntry = () => {
 	const { t } = useTranslation();
+	const navigate = useNavigate();
+	const { studentId } = useParams();
+	const editing = studentId !== undefined;
 
 	const [form, setForm] = useState<StudentForm>(EMPTY_FORM);
 	const [errors, setErrors] = useState<FormErrors>({});
 	const [submitting, setSubmitting] = useState(false);
 	const [saved, setSaved] = useState(false);
-	const [failed, setFailed] = useState(false);
+	const [failure, setFailure] = useState<"taken" | "failed" | null>(null);
+	const [loadState, setLoadState] = useState<"loading" | "ready" | "failed">(
+		editing ? "loading" : "ready",
+	);
+	// an edit the API held back because it would leave grades behind
+	const [pendingOrphans, setPendingOrphans] = useState<{
+		count: number;
+		payload: StudentPayload;
+	} | null>(null);
+
+	useEffect(() => {
+		if (!studentId) return;
+
+		let cancelled = false;
+		fetchStudent(studentId)
+			.then((s) => {
+				if (cancelled) return;
+				setForm({
+					nameAr: s.name.ar,
+					// the API stores "-" for a missing English name
+					nameEn: s.name.en === "-" ? "" : s.name.en,
+					uniNumber: s.uniNumber,
+					nationality: s.nationality,
+					documentNumber:
+						(s.nationality === "foreign" ? s.passportNumber : s.nationalId) ?? "",
+					acceptanceYear: s.acceptanceYear,
+					acceptanceType: s.acceptanceType,
+					level: String(s.level),
+					facultyId: s.facultyId,
+				});
+				setLoadState("ready");
+			})
+			.catch(() => {
+				if (!cancelled) setLoadState("failed");
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, [studentId]);
 
 	const setField = <K extends keyof StudentForm>(key: K, value: StudentForm[K]) => {
 		setForm((prev) => ({ ...prev, [key]: value }));
@@ -73,36 +124,73 @@ const StudentEntry = () => {
 		}
 
 		setErrors({});
+		// on an edit a blank document number clears the stored one; omitting it would keep it
+		const documentNumber = result.data.documentNumber || (editing ? "" : undefined);
+		await save({
+			// English is optional; omitting it makes the API store "-"
+			name: { ar: result.data.nameAr, en: result.data.nameEn || undefined },
+			uniNumber: result.data.uniNumber,
+			nationality: result.data.nationality,
+			...(result.data.nationality === "sudanese"
+				? { nationalId: documentNumber }
+				: { passportNumber: documentNumber }),
+			facultyId: result.data.facultyId,
+			acceptanceYear: result.data.acceptanceYear,
+			acceptanceType: result.data.acceptanceType,
+			level: result.data.level,
+		});
+	};
+
+	const save = async (payload: StudentPayload, confirmOrphanedGrades = false) => {
 		setSaved(false);
-		setFailed(false);
+		setFailure(null);
 		setSubmitting(true);
 		try {
-			await createStudent({
-				// English is optional; omitting it makes the API store "-"
-				name: { ar: result.data.nameAr, en: result.data.nameEn || undefined },
-				uniNumber: result.data.uniNumber,
-				nationality: result.data.nationality,
-				...(result.data.nationality === "sudanese"
-					? { nationalId: result.data.documentNumber || undefined }
-					: { passportNumber: result.data.documentNumber || undefined }),
-				facultyId: result.data.facultyId,
-				acceptanceYear: result.data.acceptanceYear,
-				acceptanceType: result.data.acceptanceType,
-				level: result.data.level,
-			});
+			if (studentId) {
+				await updateStudent(studentId, payload, confirmOrphanedGrades);
+				// back to the profile, which shows what was saved
+				void navigate("..", { relative: "path" });
+				return;
+			}
+			await createStudent(payload);
 			setForm({ ...EMPTY_FORM, facultyId: form.facultyId });
 			setSaved(true);
-		} catch {
-			setFailed(true);
+		} catch (error) {
+			const count = orphanedGradeCount(error);
+			if (count !== null) {
+				setPendingOrphans({ count, payload });
+				return;
+			}
+			// any other 409 is a university number or document someone else holds
+			const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+			setFailure(status === 409 ? "taken" : "failed");
 		} finally {
 			setSubmitting(false);
 		}
 	};
 
+	const confirmOrphans = () => {
+		if (!pendingOrphans) return;
+		const { payload } = pendingOrphans;
+		setPendingOrphans(null);
+		void save(payload, true);
+	};
+
+	if (loadState !== "ready") {
+		return (
+			<p
+				role={loadState === "failed" ? "alert" : "status"}
+				className={`text-body-sm ${loadState === "failed" ? "text-error" : "text-primary-hover"}`}
+			>
+				{t(loadState === "failed" ? "common.loadFailed" : "common.loading")}
+			</p>
+		);
+	}
+
 	return (
 		<div className="w-full">
 			<h1 className="mb-8 border-s-3 border-primary ps-4 text-heading-3 text-accent-deep">
-				{t("studentEntry.title")}
+				{t(editing ? "studentEntry.editTitle" : "studentEntry.title")}
 			</h1>
 
 			<form noValidate onSubmit={(e) => void handleSubmit(e)} className={formCardClass}>
@@ -262,9 +350,9 @@ const StudentEntry = () => {
 						{t("common.saved")}
 					</p>
 				)}
-				{failed && (
+				{failure && (
 					<p role="alert" className="text-body-sm text-error">
-						{t("common.saveFailed")}
+						{t(failure === "taken" ? "studentEntry.errors.taken" : "common.saveFailed")}
 					</p>
 				)}
 
@@ -272,6 +360,16 @@ const StudentEntry = () => {
 					{submitting ? t("common.saving") : t("studentEntry.submit")}
 				</button>
 			</form>
+
+			<ConfirmDialog
+				open={pendingOrphans !== null}
+				title={t("orphanedGrades.title")}
+				message={t("orphanedGrades.studentMessage", { count: pendingOrphans?.count ?? 0 })}
+				confirmLabel={t("orphanedGrades.confirm")}
+				cancelLabel={t("common.cancel")}
+				onConfirm={confirmOrphans}
+				onCancel={() => setPendingOrphans(null)}
+			/>
 		</div>
 	);
 };

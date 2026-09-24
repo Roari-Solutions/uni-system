@@ -20,6 +20,14 @@ export const STUDENT_STATUSES = ["success", "repeat"] as const;
 // null until the year's result is determined
 export type StudentStatus = (typeof STUDENT_STATUSES)[number] | null;
 
+// suspended and dismissed students' grades and results are frozen
+export const STUDENT_STANDINGS = ["active", "suspended", "dismissed"] as const;
+export type StudentStanding = (typeof STUDENT_STANDINGS)[number];
+
+// a suspension is served in academic years
+export const SUSPENSION_YEARS = [1, 2] as const;
+export type SuspensionYears = (typeof SUSPENSION_YEARS)[number];
+
 export type Student = {
 	id: string;
 	name: Localized;
@@ -34,4 +42,9 @@ export type Student = {
 	level: (typeof STUDY_LEVELS)[number];
 	facultyId: string;
 	status: StudentStatus;
+	standing: StudentStanding;
+	// suspended students only
+	suspensionYears: SuspensionYears | null;
+	// cheating cases that warned the student; only a single student's fetch carries it
+	warnings?: number;
 };

@@ -3,6 +3,7 @@ import {
   ArrayMaxSize,
   ArrayNotEmpty,
   IsArray,
+  IsBoolean,
   IsIn,
   IsInt,
   IsOptional,
@@ -20,6 +21,7 @@ import {
   NormaliseAcademicYear,
   type AcademicYear,
 } from 'src/common/academic-year';
+import { STUDENT_STANDINGS, type StudentStanding } from 'src/common/student-standing';
 
 /** Admission routes offered to students; mirrors ACCEPTANCE_TYPES in the views. */
 export const ACCEPTANCE_TYPES = [
@@ -86,7 +88,16 @@ export class CreateStudentDto {
 }
 
 /** Body for patching a student (all fields optional). */
-export class UpdateStudentDto extends PartialType(CreateStudentDto) {}
+export class UpdateStudentDto extends PartialType(CreateStudentDto) {
+  /**
+   * The caller has seen the GRADES_ORPHANED warning and accepts that grades in
+   * curriculums the new faculty doesn't offer stop counting. They are kept as
+   * history either way.
+   */
+  @IsOptional()
+  @IsBoolean()
+  confirmOrphanedGrades?: boolean;
+}
 
 /** Query filters for GET /gr/students, shared by the list view and the entry cascade. */
 export class ListStudentsQueryDto {
@@ -103,6 +114,10 @@ export class ListStudentsQueryDto {
   @IsString()
   @Matches(/^\d{4}$/)
   acceptanceYear?: string;
+
+  @IsOptional()
+  @IsIn(STUDENT_STANDINGS)
+  standing?: StudentStanding;
 
   /** Free-text match against either language's name or the university number. */
   @IsOptional()

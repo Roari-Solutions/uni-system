@@ -112,12 +112,14 @@ const StudentList = () => {
 		{
 			key: "actions",
 			header: t("common.actions"),
-			render: (s) => (
-				<DeleteButton
-					label={t("common.deleteItem", { name: s.name[lang] })}
-					onClick={() => setPendingDelete(s)}
-				/>
-			),
+			// a frozen record is kept until an admin reinstates the student
+			render: (s) =>
+				s.standing !== "active" ? null : (
+					<DeleteButton
+						label={t("common.deleteItem", { name: s.name[lang] })}
+						onClick={() => setPendingDelete(s)}
+					/>
+				),
 		},
 	];
 

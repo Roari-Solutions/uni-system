@@ -1,9 +1,18 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
+import { useParams } from "react-router";
 import { z } from "zod";
+import ConfirmDialog from "../../../components/confirmDialog";
 import FacultyField from "../../../components/facultyField";
 import FormField from "../../../components/formField";
-import { createCurriculum, suggestAbbreviation } from "../../../api/curriculums";
+import {
+	createCurriculum,
+	fetchCurriculum,
+	suggestAbbreviation,
+	updateCurriculum,
+	type CurriculumPayload,
+} from "../../../api/curriculums";
+import { orphanedGradeCount } from "../../../utils/orphanedGrades";
 import { formCardClass, inputClass, submitButtonClass } from "../../../styles/form";
 import { SEMESTERS, STUDY_LEVELS } from "../../../utils/academicYears";
 import { REQUIREMENT_TYPES, type RequirementType } from "../../../types/requirementType";
@@ -67,9 +76,12 @@ const EMPTY_FORM: CurriculumForm = {
 	courseHours: "",
 };
 
+/** Adds a curriculum, or edits one when the route carries its id. */
 const CurriculumEntry = () => {
 	const { t } = useTranslation();
 	const { user } = useAuth();
+	const { curriculumId } = useParams();
+	const editing = curriculumId !== undefined;
 	// a university requirement spans every faculty, so only an admin may add one
 	const types = REQUIREMENT_TYPES.filter(
 		(type) => type !== "university" || user?.role === "admin",
@@ -83,6 +95,44 @@ const CurriculumEntry = () => {
 	// the abbreviation follows the suggestion until the user types their own
 	const [abbreviationEdited, setAbbreviationEdited] = useState(false);
 	const [suggestion, setSuggestion] = useState<{ key: string; value: string } | null>(null);
+	const [loadState, setLoadState] = useState<"loading" | "ready" | "failed">(
+		editing ? "loading" : "ready",
+	);
+	// an edit the API held back because it would leave grades behind
+	const [pendingOrphans, setPendingOrphans] = useState<{
+		count: number;
+		payload: CurriculumPayload;
+	} | null>(null);
+
+	useEffect(() => {
+		if (!curriculumId) return;
+
+		let cancelled = false;
+		fetchCurriculum(curriculumId)
+			.then((c) => {
+				if (cancelled) return;
+				setForm({
+					nameAr: c.name.ar,
+					// the API stores "-" for a missing English name
+					nameEn: c.name.en === "-" ? "" : c.name.en,
+					facultyId: c.requirementType === "university" ? "" : c.facultyId,
+					abbreviation: c.abbreviation ?? "",
+					academicYear: String(c.academicYear),
+					semester: String(c.semester),
+					requirementType: c.requirementType ?? "",
+					courseHours: String(c.courseHours),
+				});
+				// the existing code stays unless the user clears it for a suggestion
+				setAbbreviationEdited(true);
+				setLoadState("ready");
+			})
+			.catch(() => {
+				if (!cancelled) setLoadState("failed");
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, [curriculumId]);
 
 	const { facultyId, requirementType, academicYear, semester, nameEn } = form;
 	const university = requirementType === "university";
@@ -145,35 +195,63 @@ const CurriculumEntry = () => {
 		}
 
 		setErrors({});
+		await save({
+			// English is optional; omitting it makes the API store "-"
+			name: { ar: result.data.nameAr, en: result.data.nameEn || undefined },
+			facultyId: university ? undefined : result.data.facultyId,
+			abbreviation: result.data.abbreviation,
+			academicYear: result.data.academicYear,
+			semester: result.data.semester,
+			requirementType: result.data.requirementType,
+			courseHours: result.data.courseHours,
+		});
+	};
+
+	const save = async (payload: CurriculumPayload, confirmOrphanedGrades = false) => {
 		setSaved(false);
 		setFailed(false);
 		setSubmitting(true);
 		try {
-			await createCurriculum({
-				// English is optional; omitting it makes the API store "-"
-				name: { ar: result.data.nameAr, en: result.data.nameEn || undefined },
-				facultyId: university ? undefined : result.data.facultyId,
-				abbreviation: result.data.abbreviation,
-				academicYear: result.data.academicYear,
-				semester: result.data.semester,
-				requirementType: result.data.requirementType,
-				courseHours: result.data.courseHours,
-			});
-			setForm({ ...EMPTY_FORM, facultyId: form.facultyId });
-			setAbbreviationEdited(false);
-			setSuggestion(null);
+			if (curriculumId) {
+				await updateCurriculum(curriculumId, payload, confirmOrphanedGrades);
+			} else {
+				await createCurriculum(payload);
+				setForm({ ...EMPTY_FORM, facultyId: form.facultyId });
+				setAbbreviationEdited(false);
+				setSuggestion(null);
+			}
 			setSaved(true);
-		} catch {
-			setFailed(true);
+		} catch (error) {
+			const count = orphanedGradeCount(error);
+			if (count !== null) setPendingOrphans({ count, payload });
+			else setFailed(true);
 		} finally {
 			setSubmitting(false);
 		}
 	};
 
+	const confirmOrphans = () => {
+		if (!pendingOrphans) return;
+		const { payload } = pendingOrphans;
+		setPendingOrphans(null);
+		void save(payload, true);
+	};
+
+	if (loadState !== "ready") {
+		return (
+			<p
+				role={loadState === "failed" ? "alert" : "status"}
+				className={`text-body-sm ${loadState === "failed" ? "text-error" : "text-primary-hover"}`}
+			>
+				{t(loadState === "failed" ? "common.loadFailed" : "common.loading")}
+			</p>
+		);
+	}
+
 	return (
 		<div className="mx-auto max-w-xl">
 			<h1 className="mb-8 border-s-3 border-primary ps-4 text-heading-3 text-accent-deep">
-				{t("curriculumEntry.title")}
+				{t(editing ? "curriculumEntry.editTitle" : "curriculumEntry.title")}
 			</h1>
 
 			<form noValidate onSubmit={(e) => void handleSubmit(e)} className={formCardClass}>
@@ -319,10 +397,11 @@ const CurriculumEntry = () => {
 						id="abbreviation"
 						type="text"
 						dir="ltr"
-						placeholder="XXXX-0000"
+						placeholder="XXXX0000"
 						value={abbreviation}
 						onChange={(e) => {
-							const value = e.target.value.toUpperCase();
+							// codes are letters and digits only, so spaces, dashes and the like never get in
+							const value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
 							// clearing the field hands it back to the suggestion
 							setAbbreviationEdited(value !== "");
 							setField("abbreviation", value);
@@ -347,6 +426,16 @@ const CurriculumEntry = () => {
 					{submitting ? t("common.saving") : t("curriculumEntry.submit")}
 				</button>
 			</form>
+
+			<ConfirmDialog
+				open={pendingOrphans !== null}
+				title={t("orphanedGrades.title")}
+				message={t("orphanedGrades.curriculumMessage", { count: pendingOrphans?.count ?? 0 })}
+				confirmLabel={t("orphanedGrades.confirm")}
+				cancelLabel={t("common.cancel")}
+				onConfirm={confirmOrphans}
+				onCancel={() => setPendingOrphans(null)}
+			/>
 		</div>
 	);
 };

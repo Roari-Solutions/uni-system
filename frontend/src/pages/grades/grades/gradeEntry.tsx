@@ -64,7 +64,8 @@ const GradeEntry = () => {
 			header: t("common.actions"),
 			render: (c) => (
 				<Link
-					to={c.id}
+					// the sheet lists the students of the faculty this row belongs to
+					to={`${c.id}?facultyId=${c.facultyId}`}
 					aria-label={t("gradeEntry.enterGradesFor", { name: c.name[lang] })}
 					className={`whitespace-nowrap ${smallSecondaryButtonClass}`}
 				>
@@ -118,7 +119,8 @@ const GradeEntry = () => {
 			<DataTable
 				columns={columns}
 				rows={curriculums}
-				getRowId={(c) => c.id}
+				// a university requirement is listed once per faculty, all under one id
+				getRowId={(c) => `${c.id}:${c.facultyId}`}
 				emptyText={loading ? t("common.loading") : t("gradeEntry.empty")}
 			/>
 		</div>

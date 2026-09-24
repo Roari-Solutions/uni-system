@@ -2,25 +2,31 @@ import type { AcademicYear, Semester } from 'src/common/academic-year';
 import type { RequirementType } from 'src/common/requirement-type';
 
 /**
- * XXXX-0000: two requirement letters, two course letters, then the academic
- * year (1-6), the semester (1-2) and a serial (01-99) within that
- * faculty -> year -> semester.
+ * XXXX0000, with no separator: two requirement letters, two course letters,
+ * then the academic year (1-6), the semester (1-2) and a serial (01-99) within
+ * that faculty -> year -> semester.
  */
-export const ABBREVIATION_PATTERN = /^[A-Z]{4}-[1-6][12](0[1-9]|[1-9]\d)$/;
+export const ABBREVIATION_PATTERN = /^[A-Z]{4}[1-6][12](0[1-9]|[1-9]\d)$/;
 
 /** University requirements carry this in place of a faculty abbreviation. */
 const UNIVERSITY_LETTERS = 'UT';
 /** Faculty requirements carry this in place of the course letters. */
 const FACULTY_COURSE_LETTERS = 'CR';
 
-/** The first two letters of the English name, or null when it has fewer. */
+/**
+ * Two letters from the English name: the first letters of its first two words
+ * ("Civil Law" -> CL), or the first two letters of a one-word name
+ * ("Arabic" -> AR). A word is a run of letters, so digits, hyphens and other
+ * symbols separate words. Null when the name has fewer than two letters.
+ */
 function courseLetters(nameEn: string | undefined): string | null {
-  const letters = (nameEn ?? '').toUpperCase().match(/[A-Z]/g);
-  return letters && letters.length >= 2 ? letters[0] + letters[1] : null;
+  const [first = '', second = ''] = (nameEn ?? '').toUpperCase().match(/[A-Z]+/g) ?? [];
+  if (second) return first.charAt(0) + second.charAt(0);
+  return first.length >= 2 ? first.slice(0, 2) : null;
 }
 
 /**
- * The four letters before the dash, or null when an input they need is
+ * The four letters before the digits, or null when an input they need is
  * missing (no two-letter faculty abbreviation, or no usable English name).
  */
 export function abbreviationLetters(
@@ -59,5 +65,5 @@ export function buildAbbreviation(
   semester: Semester,
   serial: number,
 ): string {
-  return `${letters}-${academicYear}${semester}${String(serial).padStart(2, '0')}`;
+  return `${letters}${academicYear}${semester}${String(serial).padStart(2, '0')}`;
 }
