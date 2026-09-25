@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from 'src/auth/auth.module';
 import { DatabaseModule } from 'src/database/database.module';
-import { ImagesModule } from 'src/images/images.module';
+import { MediaModule } from 'src/media/media.module';
 import { MainCmsController } from './main-cms.controller';
 import { MainCmsService } from './main-cms.service';
 
 @Module({
-  imports: [AuthModule, DatabaseModule, ImagesModule],
+  imports: [AuthModule, DatabaseModule, MediaModule],
   controllers: [MainCmsController],
   providers: [MainCmsService],
 })

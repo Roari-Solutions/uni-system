@@ -15,6 +15,7 @@ import { validateSync } from 'class-validator';
 import { UpdateAboutCmDto } from './dto/update-about-cm.dto';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { DynamicContentGuard } from 'src/dynamic_content/dynamic_content.guard';
+import { MAX_MEDIA_BYTES, type MediaFile } from 'src/media/media.service';
 @Controller('/cms/about')
 export class AboutCmsController {
   constructor(private readonly aboutCmsService: AboutCmsService) {}
@@ -26,11 +27,8 @@ export class AboutCmsController {
 
   @Patch()
   @UseGuards(AuthGuard, DynamicContentGuard)
-  @UseInterceptors(AnyFilesInterceptor())
-  update(
-    @Body() body: Record<string, unknown>,
-    @UploadedFiles() files: Array<Express.Multer.File> = [],
-  ) {
+  @UseInterceptors(AnyFilesInterceptor({ limits: { fileSize: MAX_MEDIA_BYTES } }))
+  update(@Body() body: Record<string, unknown>, @UploadedFiles() files: MediaFile[] = []) {
     // strict {body} wrapper only; missing/empty is 400, never a silent no-op
     const { body: payload } = Object.fromEntries(
       Object.entries(body ?? {}).map(([k, v]) => {
