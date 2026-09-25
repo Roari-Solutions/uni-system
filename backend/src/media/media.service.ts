@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -36,6 +41,8 @@ const IMAGE_EXT_BY_MIME: Record<string, string> = {
 /** Stores CMS images and PDFs on local disk; returns the public URL. */
 @Injectable()
 export class MediaService {
+  private readonly logger = new Logger(MediaService.name);
+
   /** Stores an image and returns its `/images/...` URL. */
   async storeImage(buffer: Buffer, mime: string): Promise<string> {
     const ext = IMAGE_EXT_BY_MIME[mime];
@@ -72,6 +79,7 @@ export class MediaService {
 
       return `${prefix}/${filename}`;
     } catch (error) {
+      this.logger.error('Media store failed', error);
       throw new InternalServerErrorException('Media store failed', {
         cause: error,
       });
