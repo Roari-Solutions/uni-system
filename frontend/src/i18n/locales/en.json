@@ -269,14 +269,13 @@
   "gradeSheet": {
     "title": "Enter grades",
     "back": "Back to curriculums",
-    "empty": "Every student in this curriculum's year already has a grade",
+    "empty": "No active students in this curriculum's year",
     "notEntered": "Not entered",
     "enterGrade": "Enter grade",
     "enterGradeFor": "Enter grade for {{name}}",
     "gradeFor": "Grade for {{name}}",
     "save": "Save",
     "saveFor": "Save grade for {{name}}",
-    "cancelFor": "Cancel grade for {{name}}",
     "columns": {
       "uniNumber": "University number",
       "name": "Student",
@@ -291,7 +290,23 @@
       "alreadyGraded": "This student already has a grade for this curriculum"
     },
     "seatingStatusFor": "Seating status for {{name}}",
-    "voidedGrade": "An absence is recorded as 0 (F)."
+    "voidedGrade": "An absence is recorded as 0 (F).",
+    "noMatches": "No students match the search or filter",
+    "progress": "{{entered}} of {{total}} entered",
+    "search": "Search",
+    "searchPlaceholder": "Name or university number",
+    "markFilter": "Grade",
+    "markFilters": {
+      "all": "All students",
+      "notEntered": "Not entered",
+      "entered": "Entered"
+    },
+    "discard": "Discard",
+    "discardFor": "Discard {{name}}'s grade",
+    "deleteFor": "Delete {{name}}'s grade",
+    "deleteTitle": "Delete grade",
+    "deleteMessage": "Delete {{name}}'s grade ({{grade}}) in this curriculum? The semester GPA is recalculated, and the grade can be entered again later.",
+    "deleteFailed": "Couldn't delete the grade. Try again."
   },
   "singleEntry": {
     "title": "Enter a student's grades",

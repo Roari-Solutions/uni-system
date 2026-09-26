@@ -269,14 +269,13 @@
   "gradeSheet": {
     "title": "إدخال الدرجات",
     "back": "العودة إلى المناهج",
-    "empty": "جميع طلاب سنة هذا المنهج لديهم درجات مسجلة",
+    "empty": "لا يوجد طلاب نشطون في سنة هذا المنهج",
     "notEntered": "لم تُدخل",
     "enterGrade": "إدخال الدرجة",
     "enterGradeFor": "إدخال درجة {{name}}",
     "gradeFor": "درجة {{name}}",
     "save": "حفظ",
     "saveFor": "حفظ درجة {{name}}",
-    "cancelFor": "إلغاء درجة {{name}}",
     "columns": {
       "uniNumber": "الرقم الجامعي",
       "name": "الطالب",
@@ -291,7 +290,23 @@
       "alreadyGraded": "هذا الطالب لديه درجة مسجلة في هذا المنهج"
     },
     "seatingStatusFor": "حالة الجلوس لـ {{name}}",
-    "voidedGrade": "يُسجَّل الغياب بالدرجة 0 (راسب)."
+    "voidedGrade": "يُسجَّل الغياب بالدرجة 0 (راسب).",
+    "noMatches": "لا يوجد طلاب يطابقون البحث أو عامل التصفية",
+    "progress": "أُدخلت {{entered}} من {{total}}",
+    "search": "بحث",
+    "searchPlaceholder": "الاسم أو الرقم الجامعي",
+    "markFilter": "الدرجة",
+    "markFilters": {
+      "all": "جميع الطلاب",
+      "notEntered": "لم تُدخل",
+      "entered": "مُدخلة"
+    },
+    "discard": "تراجع",
+    "discardFor": "التراجع عن درجة {{name}}",
+    "deleteFor": "حذف درجة {{name}}",
+    "deleteTitle": "حذف الدرجة",
+    "deleteMessage": "حذف درجة {{name}} ({{grade}}) في هذا المنهج؟ يُعاد حساب المعدل الفصلي، ويمكن إدخال الدرجة من جديد لاحقًا.",
+    "deleteFailed": "تعذّر حذف الدرجة. حاول مرة أخرى."
   },
   "singleEntry": {
     "title": "إدخال درجات طالب",
