@@ -16,6 +16,7 @@ import { MainCmsModule } from './main-cms/main-cms.module';
 import { ContactUsCmsModule } from './contact-us-cms/contact-us-cms.module';
 import { ScientificAffairsModule } from './scientific-affairs/scientific-affairs.module';
 import { AboutCmsModule } from './about-cms/about-cms.module';
+import { FacultyCmsModule } from './faculty-cms/faculty-cms.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { AboutCmsModule } from './about-cms/about-cms.module';
     ContactUsCmsModule,
     ScientificAffairsModule,
     AboutCmsModule,
+    FacultyCmsModule,
   ],
   controllers: [AppController],
   providers: [AppService, GrGurdGuard],
