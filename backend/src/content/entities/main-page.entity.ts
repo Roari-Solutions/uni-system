@@ -1,8 +1,8 @@
 export type MainPageContent = {
   heroSection: {
     backgroundImages: string[];
-    mainHeading: string;
-    subHeading: string;
+    mainHead: string;
+    subHead: string;
   };
   managerWordSection: {
     managerPicture: string;

@@ -23,7 +23,7 @@ export class FacultyHeroSectionDto {
 
   @IsString()
   @IsNotEmpty()
-  subHeading!: string;
+  subHead!: string;
 }
 
 /** Quote block. */
