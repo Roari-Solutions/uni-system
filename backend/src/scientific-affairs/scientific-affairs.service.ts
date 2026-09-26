@@ -22,7 +22,7 @@ export class ScientificAffairsService {
 
   async get() {
     try {
-      const content = (await this.db.query.scientificAffairsPage.findFirst())?.content ?? {};
+      const content = (await this.db.query.scientificAffairsPage.findFirst())?.content ?? null;
       return content;
     } catch (error) {
       this.logger.error('Scientific-affairs fetch failed', error);

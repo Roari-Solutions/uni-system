@@ -21,11 +21,11 @@ export class AboutCmsService {
     @Inject(DATABASE) private readonly db: Db,
     private readonly mediaService: MediaService,
   ) {}
-  /** Returns the about page content, or an empty page before the first patch. */
+  /** Returns the about page content, or null before the first patch. */
   async get() {
     try {
       const row = await this.db.query.aboutPage.findFirst();
-      return row?.content ?? {};
+      return row?.content ?? null;
     } catch (error) {
       this.logger.error('About fetch failed', error);
       throw new InternalServerErrorException('About fetch failed', {
