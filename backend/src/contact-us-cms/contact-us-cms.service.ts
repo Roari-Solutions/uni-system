@@ -40,7 +40,7 @@ export class ContactUsCmsService {
       else await this.db.insert(contactUsPage).values({ content: merged });
 
       this.logger.log('Contact-us page patched');
-      return { status: 'true' };
+      return { status: 'ok' };
     } catch (error) {
       this.logger.error('Contact-us patch failed', error);
       throw new InternalServerErrorException('Contact-us patch failed', {

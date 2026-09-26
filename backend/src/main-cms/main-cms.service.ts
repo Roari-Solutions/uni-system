@@ -124,7 +124,7 @@ export class MainCmsService {
 
       this.logger.log('new page contenct stored');
 
-      return { status: 'true' };
+      return { status: 'ok' };
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error('Main page patch failed', error);

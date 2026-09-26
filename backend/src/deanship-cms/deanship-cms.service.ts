@@ -43,7 +43,7 @@ export class DeanshipCmsService {
       else await this.db.insert(deanshipPage).values({ content: merged });
 
       this.logger.log('Deanship page patched');
-      return { status: 'true' };
+      return { status: 'ok' };
     } catch (error) {
       this.logger.error('Deanship patch failed', error);
       throw new InternalServerErrorException('Deanship patch failed', {
