@@ -434,6 +434,7 @@
       "row": "Row",
       "uniNumber": "University number",
       "nameAr": "Name (Arabic)",
+      "nameEn": "Name (English)",
       "nationalId": "National ID",
       "faculty": "Faculty",
       "problems": "Status"
