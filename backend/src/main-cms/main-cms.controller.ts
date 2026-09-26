@@ -17,8 +17,12 @@ import { DynamicContentGuard } from 'src/dynamic_content/dynamic_content.guard';
 import { MAX_MEDIA_BYTES, type MediaFile } from 'src/media/media.service';
 import { MainCmsService } from './main-cms.service';
 
+type ParsedMainPage = Partial<MainPageContent> & {
+  body?: Partial<MainPageContent>;
+};
+
 interface BodyWrapper {
-  body: Partial<MainPageContent>;
+  body: ParsedMainPage;
 }
 
 @Controller('cms')
@@ -55,6 +59,8 @@ export class MainCmsController {
     // missing/empty body is 400, never a silent no-op (matches about/scientific)
     if (!parsed || !Object.keys(parsed).length) throw new BadRequestException({ code: 'PI' });
 
-    return this.mainCmsService.patch(parsed, files);
+    const dto: Partial<MainPageContent> = parsed.body ?? parsed;
+
+    return this.mainCmsService.patch(dto, files);
   }
 }

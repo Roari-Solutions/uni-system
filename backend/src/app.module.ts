@@ -17,6 +17,7 @@ import { ContactUsCmsModule } from './contact-us-cms/contact-us-cms.module';
 import { ScientificAffairsModule } from './scientific-affairs/scientific-affairs.module';
 import { AboutCmsModule } from './about-cms/about-cms.module';
 import { MediaModule } from './media/media.module';
+import { FacultyCmsModule } from './faculty-cms/faculty-cms.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { MediaModule } from './media/media.module';
     ScientificAffairsModule,
     AboutCmsModule,
     MediaModule,
+    FacultyCmsModule,
   ],
   controllers: [AppController],
   providers: [AppService, GrGurdGuard],
