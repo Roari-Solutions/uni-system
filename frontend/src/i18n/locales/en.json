@@ -10,7 +10,8 @@
     "toggleMenu": "Menu",
     "users": "Users",
     "import": "Bulk entry",
-    "account": "My account"
+    "account": "My account",
+    "single": "Single entry"
   },
   "curriculumEntry": {
     "title": "Add curriculum",
@@ -291,6 +292,49 @@
     },
     "seatingStatusFor": "Seating status for {{name}}",
     "voidedGrade": "An absence is recorded as 0 (F)."
+  },
+  "singleEntry": {
+    "title": "Enter a student's grades",
+    "search": "Search",
+    "searchPlaceholder": "Name, university number or ID",
+    "empty": "No students match the search or filters",
+    "enterGrades": "Enter grades",
+    "enterGradesFor": "Enter grades for {{name}}",
+    "viewGrades": "View grades",
+    "viewGradesFor": "View grades for {{name}}",
+    "standings": {
+      "suspended": "Suspended",
+      "dismissed": "Dismissed"
+    },
+    "columns": {
+      "uniNumber": "University number",
+      "name": "Student",
+      "faculty": "Faculty",
+      "level": "Academic year",
+      "curriculum": "Curriculum",
+      "abbreviation": "Abbreviation",
+      "seatingStatus": "Seating status",
+      "grade": "Grade",
+      "letter": "Letter",
+      "state": "Status"
+    },
+    "back": "Back to students",
+    "studentPage": "Student page",
+    "gradeFor": "Grade for {{name}}",
+    "seatingStatusFor": "Seating status in {{name}}",
+    "unsavedRow": "Unsaved",
+    "discard": "Discard",
+    "discardFor": "Discard changes to {{name}}",
+    "unsaved": "Unsaved changes: {{count}}",
+    "save": "Save grades",
+    "confirmTitle": "Save grades",
+    "confirmMessage": "Save {{name}}'s grades? New marks: {{added}}, changed marks: {{changed}}.",
+    "savedAll": "Grades saved: {{count}}",
+    "savedWithFailures": "{{saved}} saved, {{failed}} could not be saved. Check the marked rows.",
+    "leaveTitle": "Leave without saving?",
+    "leaveMessage": "You have {{count}} unsaved changes that will be lost if you leave this page.",
+    "leave": "Leave",
+    "stay": "Stay"
   },
   "roles": {
     "admin": "Administrator",

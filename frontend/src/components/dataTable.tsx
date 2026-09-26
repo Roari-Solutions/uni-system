@@ -1,4 +1,5 @@
-import type { MouseEvent, ReactNode } from "react";
+import { useId, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
+import { adjacentRowId, focusRow } from "../utils/rowNav";
 
 export type Column<T> = {
 	key: string;
@@ -15,6 +16,10 @@ type DataTableProps<T> = {
 	onRowClick?: (row: T) => void;
 	// marks a row as needing attention; the row must say why in its cells too (§39)
 	rowClassName?: (row: T) => string;
+	// makes rows keyboard stops: the arrows move between them, Enter hands the row here
+	onRowActivate?: (row: T) => void;
+	// rows sharing a group are one run for the arrows, across tables; defaults to this table
+	navGroup?: string;
 };
 
 const DataTable = <T,>({
@@ -24,11 +29,29 @@ const DataTable = <T,>({
 	emptyText,
 	onRowClick,
 	rowClassName,
+	onRowActivate,
+	navGroup,
 }: DataTableProps<T>) => {
+	const ownGroup = useId();
+	const group = navGroup ?? ownGroup;
+
 	const handleRowClick = (e: MouseEvent<HTMLTableRowElement>, row: T) => {
 		// controls inside the row keep their own behaviour
 		if ((e.target as HTMLElement).closest("a, button, input, select, textarea")) return;
 		onRowClick?.(row);
+	};
+
+	const handleRowKeyDown = (e: KeyboardEvent<HTMLTableRowElement>, row: T) => {
+		// keys pressed in a control inside the row are the control's own
+		if (e.target !== e.currentTarget) return;
+		if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+			e.preventDefault();
+			const next = adjacentRowId(group, getRowId(row), e.key === "ArrowDown" ? 1 : -1);
+			if (next) focusRow(group, next);
+		} else if (e.key === "Enter") {
+			e.preventDefault();
+			onRowActivate?.(row);
+		}
 	};
 
 	return (
@@ -52,11 +75,19 @@ const DataTable = <T,>({
 							</td>
 						</tr>
 					) : (
-						rows.map((row) => (
+						rows.map((row, index) => (
 							<tr
 								key={getRowId(row)}
 								onClick={onRowClick ? (e) => handleRowClick(e, row) : undefined}
-								className={`transition-colors duration-150 ease-out hover:bg-background ${onRowClick ? "cursor-pointer" : ""} ${rowClassName?.(row) ?? ""}`}
+								{...(onRowActivate && {
+									// Tab reaches the first row; the arrows reach the rest
+									tabIndex: index === 0 ? 0 : -1,
+									"data-nav-group": group,
+									"data-row-id": getRowId(row),
+									onKeyDown: (e: KeyboardEvent<HTMLTableRowElement>) => handleRowKeyDown(e, row),
+								})}
+								// §37 — a focused row carries the primary focus ring
+								className={`transition-colors duration-150 ease-out hover:bg-background ${onRowClick ? "cursor-pointer" : ""} ${onRowActivate ? "focus-visible:bg-background focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary" : ""} ${rowClassName?.(row) ?? ""}`}
 							>
 								{columns.map((col) => (
 									<td key={col.key} className="px-4 py-4">

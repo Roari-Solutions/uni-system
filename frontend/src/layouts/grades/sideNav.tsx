@@ -38,6 +38,7 @@ const SUB_OPTIONS = ["list", "entry"] as const;
 // sections with an option of their own beyond the shared list/entry pair
 const EXTRA_OPTIONS: Partial<Record<Section["id"], string[]>> = {
 	students: ["import"],
+	grades: ["single"],
 };
 
 // §18.3 — 44px tall, 12px horizontal padding, 8px gap

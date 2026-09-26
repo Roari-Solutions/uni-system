@@ -10,7 +10,8 @@
     "toggleMenu": "القائمة",
     "users": "المستخدمون",
     "import": "إدخال بالجملة",
-    "account": "حسابي"
+    "account": "حسابي",
+    "single": "إدخال فردي"
   },
   "curriculumEntry": {
     "title": "إضافة منهج",
@@ -291,6 +292,49 @@
     },
     "seatingStatusFor": "حالة الجلوس لـ {{name}}",
     "voidedGrade": "يُسجَّل الغياب بالدرجة 0 (راسب)."
+  },
+  "singleEntry": {
+    "title": "إدخال درجات طالب",
+    "search": "بحث",
+    "searchPlaceholder": "الاسم أو الرقم الجامعي أو الرقم الوطني",
+    "empty": "لا يوجد طلاب يطابقون البحث أو عوامل التصفية المحددة",
+    "enterGrades": "إدخال الدرجات",
+    "enterGradesFor": "إدخال درجات {{name}}",
+    "viewGrades": "عرض الدرجات",
+    "viewGradesFor": "عرض درجات {{name}}",
+    "standings": {
+      "suspended": "موقوف",
+      "dismissed": "مفصول"
+    },
+    "columns": {
+      "uniNumber": "الرقم الجامعي",
+      "name": "الطالب",
+      "faculty": "الكلية",
+      "level": "السنة الدراسية",
+      "curriculum": "المنهج",
+      "abbreviation": "الاختصار",
+      "seatingStatus": "حالة الجلوس",
+      "grade": "الدرجة",
+      "letter": "التقدير",
+      "state": "الحالة"
+    },
+    "back": "العودة إلى الطلاب",
+    "studentPage": "صفحة الطالب",
+    "gradeFor": "درجة {{name}}",
+    "seatingStatusFor": "حالة الجلوس في {{name}}",
+    "unsavedRow": "غير محفوظ",
+    "discard": "تراجع",
+    "discardFor": "التراجع عن تغييرات {{name}}",
+    "unsaved": "تغييرات غير محفوظة: {{count}}",
+    "save": "حفظ الدرجات",
+    "confirmTitle": "تأكيد حفظ الدرجات",
+    "confirmMessage": "حفظ درجات {{name}}؟ درجات جديدة: {{added}}، درجات معدّلة: {{changed}}.",
+    "savedAll": "تم حفظ الدرجات: {{count}}",
+    "savedWithFailures": "تم حفظ {{saved}}، وتعذّر حفظ {{failed}}. راجع الصفوف المعلّمة.",
+    "leaveTitle": "مغادرة دون حفظ؟",
+    "leaveMessage": "لديك تغييرات غير محفوظة ({{count}}) ستضيع إذا غادرت هذه الصفحة.",
+    "leave": "مغادرة",
+    "stay": "البقاء"
   },
   "roles": {
     "admin": "مسؤول",
