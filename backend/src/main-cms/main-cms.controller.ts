@@ -16,8 +16,12 @@ import { DynamicContentGuard } from 'src/dynamic_content/dynamic_content.guard';
 import { MAX_MEDIA_BYTES, type MediaFile } from 'src/media/media.service';
 import { MainCmsService } from './main-cms.service';
 
+type ParsedMainPage = Partial<MainPageContent> & {
+  body?: Partial<MainPageContent>;
+};
+
 interface BodyWrapper {
-  body: Partial<MainPageContent>;
+  body: ParsedMainPage;
 }
 
 @Controller('cms')
@@ -52,6 +56,8 @@ export class MainCmsController {
       }),
     ) as BodyWrapper;
 
-    return this.mainCmsService.patch(parsed, files);
+    const dto: Partial<MainPageContent> = parsed.body ?? parsed;
+
+    return this.mainCmsService.patch(dto, files);
   }
 }
