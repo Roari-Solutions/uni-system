@@ -4,8 +4,8 @@ const noFiles: StoredFiles = { newsPictureByIndex: {} };
 
 const hero = {
   backgroundImages: ['/images/old.jpg'],
-  mainHeading: 'Old',
-  subHeading: 'Sub',
+  mainHead: 'Old',
+  subHead: 'Sub',
 };
 
 const analytics = {
@@ -42,16 +42,16 @@ describe('mergeMainPage', () => {
     );
 
     expect(merged.heroSection?.backgroundImages).toEqual(['/images/new.jpg']);
-    expect(merged.heroSection?.mainHeading).toBe('Old');
+    expect(merged.heroSection?.mainHead).toBe('Old');
   });
 
   it('keeps stored images when the patch omits them', () => {
-    const dtoHero = { mainHeading: 'New', subHeading: 'Sub' };
+    const dtoHero = { mainHead: 'New', subHead: 'Sub' };
 
     const merged = mergeMainPage({ heroSection: hero }, { heroSection: dtoHero }, noFiles);
 
     expect(merged.heroSection?.backgroundImages).toEqual(['/images/old.jpg']);
-    expect(merged.heroSection?.mainHeading).toBe('New');
+    expect(merged.heroSection?.mainHead).toBe('New');
   });
 
   it('maps newsPicture.N to card N and falls back to stored card links', () => {

@@ -15,7 +15,7 @@ import {
 export class SciHeroSectionDto {
   @IsString()
   @IsNotEmpty()
-  subHeading!: string;
+  subHead!: string;
 
   @IsString()
   @IsNotEmpty()

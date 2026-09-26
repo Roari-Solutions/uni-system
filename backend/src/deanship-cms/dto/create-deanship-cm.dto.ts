@@ -109,7 +109,7 @@ export class CreateDeanshipCmDto {
 
   @IsString()
   @IsNotEmpty()
-  subHeading!: string;
+  subHead!: string;
 
   @IsString()
   @IsNotEmpty()
