@@ -18,9 +18,9 @@ import { validateSync } from 'class-validator';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { FacultyPageContent } from 'src/content/entities/faculty-page.entity';
 import { DynamicContentGuard } from 'src/dynamic_content/dynamic_content.guard';
-import { MAX_IMAGE_BYTES } from 'src/images/images.service';
+import { MAX_MEDIA_BYTES, type MediaFile } from 'src/media/media.service';
 import { UpdateFacultyPageDto } from './dto/update-faculty-page.dto';
-import { FacultyCmsService, type MemoryFile } from './faculty-cms.service';
+import { FacultyCmsService } from './faculty-cms.service';
 
 type ParsedFacultyPage = Partial<FacultyPageContent> & {
   body?: Partial<FacultyPageContent>;
@@ -56,11 +56,11 @@ export class FacultyCmsController {
   @Patch(':facultyId')
   @HttpCode(HttpStatus.OK)
   @UseGuards(AuthGuard, DynamicContentGuard)
-  @UseInterceptors(AnyFilesInterceptor({ limits: { fileSize: MAX_IMAGE_BYTES } }))
+  @UseInterceptors(AnyFilesInterceptor({ limits: { fileSize: MAX_MEDIA_BYTES } }))
   patchOne(
     @Param('facultyId', new ParseUUIDPipe({ version: '4' })) facultyId: string,
     @Body() body: ParsedFacultyPage,
-    @UploadedFiles() files: MemoryFile[] = [],
+    @UploadedFiles() files: MediaFile[] = [],
   ): Promise<{ status: string }> {
     const outer = Object.fromEntries(
       Object.entries(body ?? {}).map(([k, v]) => {

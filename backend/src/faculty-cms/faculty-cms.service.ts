@@ -9,16 +9,8 @@ import { eq } from 'drizzle-orm';
 import { faculties, facultyPages } from 'schema';
 import { FacultyPageContent } from 'src/content/entities/faculty-page.entity';
 import { DATABASE, type Db } from 'src/database/database.module';
-import { ImagesService } from 'src/images/images.service';
+import { MediaService, type MediaFile } from 'src/media/media.service';
 import { UpdateFacultyPageDto } from './dto/update-faculty-page.dto';
-
-export type MemoryFile = {
-  buffer: Buffer;
-  fieldname: string;
-  mimetype: string;
-  originalname: string;
-  size: number;
-};
 
 export type StoredFiles = {
   backgroundImages?: string[];
@@ -54,7 +46,7 @@ export function mergeFacultyPage(
 export class FacultyCmsService {
   constructor(
     @Inject(DATABASE) private readonly db: Db,
-    private readonly imagesService: ImagesService,
+    private readonly mediaService: MediaService,
   ) {}
   logger = new Logger(FacultyCmsService.name);
 
@@ -85,7 +77,7 @@ export class FacultyCmsService {
   async patch(
     facultyId: string,
     body: UpdateFacultyPageDto,
-    files: MemoryFile[],
+    files: MediaFile[],
   ): Promise<{ status: string }> {
     //  fieldname convention — backgroundImages
 
@@ -98,7 +90,7 @@ export class FacultyCmsService {
 
     for (const f of files) {
       if (f.fieldname === 'backgroundImages') {
-        const url = await this.imagesService.store(f.buffer, f.mimetype);
+        const url = await this.mediaService.storeImage(f.buffer, f.mimetype);
         (stored.backgroundImages ??= []).push(url);
       } else this.logger.warn(`ignored file field: ${f.fieldname}`);
     }
