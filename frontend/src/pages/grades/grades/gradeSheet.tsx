@@ -2,23 +2,14 @@ import { useEffect, useState, type KeyboardEvent } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import axios from "axios";
-import { z } from "zod";
 import { ArrowLeftIcon, CheckIcon, PencilSquareIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import DataTable, { type Column } from "../../../components/dataTable";
 import { createGrade, fetchPendingGrades, type PendingGrades } from "../../../api/grades";
 import SeatingStatusSelect, { SeatingStatusTag } from "../../../components/seatingStatusSelect";
 import type { SeatingStatus } from "../../../types/grade";
 import { smallPrimaryButtonClass, smallSecondaryButtonClass } from "../../../styles/form";
-
-const GRADE_RANGE = "gradeSheet.errors.gradeRange";
-
-// messages are i18n keys, translated when rendered
-const gradeSchema = z
-	.string()
-	.trim()
-	.min(1, "gradeSheet.errors.required")
-	.transform(Number)
-	.pipe(z.number({ error: "gradeSheet.errors.gradeNumber" }).min(0, GRADE_RANGE).max(100, GRADE_RANGE));
+import { gradeSchema, voidsMark } from "../../../utils/gradeInput";
+import { adjacentRowId, afterRender, focusField, focusRow } from "../../../utils/rowNav";
 
 type PendingStudent = PendingGrades["students"][number];
 
@@ -30,12 +21,14 @@ type RowState =
 
 const IDLE: RowState = { mode: "idle" };
 
+// the sheet's rows, for the arrow keys
+const NAV_GROUP = "grade-sheet";
+
+const inputId = (studentId: string) => `grade-input-${studentId}`;
+const selectId = (studentId: string) => `seating-status-${studentId}`;
+
 // the common case, so a row opens ready for the grade alone
 const DEFAULT_STATUS: SeatingStatus = "attended";
-
-// an absence scores 0; the API enforces this too. A cheating case keeps its
-// mark and is decided later from the grades list or the student's page.
-const voidsMark = (status: SeatingStatus) => status === "absent";
 
 // step two of grade entry: one curriculum's students, each graded in its own row
 const GradeSheet = () => {
@@ -75,16 +68,17 @@ const GradeSheet = () => {
 	const rowOf = (id: string) => rows[id] ?? IDLE;
 	const setRow = (id: string, next: RowState) => setRows((prev) => ({ ...prev, [id]: next }));
 
-	const save = async (student: PendingStudent) => {
+	/** True once the mark is stored. */
+	const save = async (student: PendingStudent): Promise<boolean> => {
 		const row = rowOf(student.id);
-		if (row.mode !== "editing") return;
+		if (row.mode !== "editing") return false;
 
 		// a voided mark needs no entry: the grade is 0 whatever was typed
 		const voided = voidsMark(row.seatingStatus);
 		const result = gradeSchema.safeParse(voided ? "0" : row.draft);
 		if (!result.success) {
 			setRow(student.id, { ...row, error: result.error.issues[0]?.message });
-			return;
+			return false;
 		}
 
 		setRow(student.id, { mode: "saving", draft: row.draft, seatingStatus: row.seatingStatus });
@@ -101,6 +95,7 @@ const GradeSheet = () => {
 				letter: created.letter,
 				seatingStatus: created.seatingStatus,
 			});
+			return true;
 		} catch (error) {
 			// 409: someone else graded this student since the sheet loaded
 			const status = axios.isAxiosError(error) ? error.response?.status : undefined;
@@ -110,15 +105,56 @@ const GradeSheet = () => {
 				seatingStatus: row.seatingStatus,
 				error: status === 409 ? "gradeSheet.errors.alreadyGraded" : "common.saveFailed",
 			});
+			return false;
 		}
 	};
 
-	const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>, student: PendingStudent) => {
+	/** Enter on a row: open it for entry, or return to its open field. */
+	const activateRow = (student: PendingStudent) => {
+		const row = rowOf(student.id);
+		// the field mounts focused (autoFocus)
+		if (row.mode === "idle") {
+			setRow(student.id, { mode: "editing", draft: "", seatingStatus: DEFAULT_STATUS });
+		} else if (row.mode === "editing") {
+			focusField(inputId(student.id), selectId(student.id));
+		}
+	};
+
+	// Enter on a stored mark carries on to the next student still without one
+	const openNext = (studentId: string) => {
+		const list = sheet?.students ?? [];
+		const next = list
+			.slice(list.findIndex((s) => s.id === studentId) + 1)
+			.find((s) => rowOf(s.id).mode === "idle" || rowOf(s.id).mode === "editing");
+
+		if (next && rowOf(next.id).mode === "idle") {
+			setRow(next.id, { mode: "editing", draft: "", seatingStatus: DEFAULT_STATUS });
+		} else if (next) {
+			afterRender(() => focusField(inputId(next.id), selectId(next.id)));
+		} else {
+			// nobody left: the field just closed, so focus rests on its row
+			afterRender(() => focusRow(NAV_GROUP, studentId));
+		}
+	};
+
+	const handleKeyDown = (
+		e: KeyboardEvent<HTMLInputElement | HTMLSelectElement>,
+		student: PendingStudent,
+	) => {
 		if (e.key === "Enter") {
 			e.preventDefault();
-			void save(student);
+			void save(student).then((stored) => stored && openNext(student.id));
 		} else if (e.key === "Escape") {
 			setRow(student.id, IDLE);
+			afterRender(() => focusRow(NAV_GROUP, student.id));
+		} else if (
+			e.currentTarget instanceof HTMLInputElement &&
+			(e.key === "ArrowDown" || e.key === "ArrowUp")
+		) {
+			// the arrows move between rows rather than nudge the mark; the open row keeps its draft
+			e.preventDefault();
+			const next = adjacentRowId(NAV_GROUP, student.id, e.key === "ArrowDown" ? 1 : -1);
+			if (next) focusRow(NAV_GROUP, next);
 		}
 	};
 
@@ -148,6 +184,7 @@ const GradeSheet = () => {
 					min={0}
 					max={100}
 					step="any"
+					id={inputId(student.id)}
 					dir="ltr"
 					// the row was just opened for entry; take the user straight to its field
 					autoFocus
@@ -185,10 +222,11 @@ const GradeSheet = () => {
 
 		return (
 			<SeatingStatusSelect
-				id={`seating-status-${student.id}`}
+				id={selectId(student.id)}
 				value={row.seatingStatus}
 				disabled={row.mode === "saving"}
 				label={t("gradeSheet.seatingStatusFor", { name: student.name[lang] })}
+				onKeyDown={(e) => handleKeyDown(e, student)}
 				onChange={(next) =>
 					setRow(student.id, { mode: "editing", draft: row.draft, seatingStatus: next })
 				}
@@ -306,6 +344,8 @@ const GradeSheet = () => {
 				columns={columns}
 				rows={sheet?.students ?? []}
 				getRowId={(s) => s.id}
+				onRowActivate={activateRow}
+				navGroup={NAV_GROUP}
 				emptyText={loading ? t("common.loading") : t("gradeSheet.empty")}
 			/>
 		</div>
