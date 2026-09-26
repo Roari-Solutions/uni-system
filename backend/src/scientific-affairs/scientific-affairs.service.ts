@@ -1,32 +1,28 @@
-import { Inject, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import {
+  HttpException,
+  Inject,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { DATABASE, type Db } from 'src/database/database.module';
 import type { ScientificAffairsPage } from 'src/content/entities/scientific-affairs-page.entity';
 import type { UpdateScientificAffairsDto } from './dto/update-scientific-affairs.dto';
-import type { MemoryFile } from 'src/main-cms/main-cms.service';
-import { hash } from 'crypto';
-import { join } from 'path';
-import { access, mkdir, writeFile } from 'node:fs/promises';
+import { MediaService, type MediaFile } from 'src/media/media.service';
 import { scientificAffairsPage } from 'schema';
 import { eq } from 'drizzle-orm';
 
 @Injectable()
 export class ScientificAffairsService {
-  constructor(@Inject(DATABASE) private readonly db: Db) {}
+  constructor(
+    @Inject(DATABASE) private readonly db: Db,
+    private readonly mediaService: MediaService,
+  ) {}
   private readonly logger = new Logger(ScientificAffairsService.name);
-  PDF_PATH = 'pdfs/';
-
-  /** Stores PDF bytes by content hash; returns the public URL, or null for non-PDFs. */
-  async storePdf(buffer: Buffer, mime: string): Promise<string | null> {
-    if (mime !== 'application/pdf') return null;
-    const hashString = hash('sha256', buffer);
-    const filePath = join(this.PDF_PATH, `${hashString}.pdf`);
-    await access(filePath).catch(() => writeFile(filePath, buffer));
-    return `/pdfs/${hashString}.pdf`;
-  }
 
   async get() {
     try {
-      const content = (await this.db.query.scientificAffairsPage.findFirst())?.content ?? {};
+      const content = (await this.db.query.scientificAffairsPage.findFirst())?.content ?? null;
       return content;
     } catch (error) {
       this.logger.error('Scientific-affairs fetch failed', error);
@@ -37,7 +33,15 @@ export class ScientificAffairsService {
     }
   }
 
-  async update(dto: UpdateScientificAffairsDto, files: MemoryFile[]) {
+  async update(dto: UpdateScientificAffairsDto, files: MediaFile[]) {
+    // ponytail: store uploads before the try so media 400s are not wrapped in 500s
+    const pdfByIndex = new Map<number, string>();
+    for (const f of files) {
+      const m = /^pdf_(\d+)$/.exec(f.fieldname); // .at(-1) gets 1-9 but breaks at 10 this fixes it
+      if (!m) continue;
+      pdfByIndex.set(Number(m[1]), await this.mediaService.storePdf(f.buffer, f.mimetype));
+    }
+
     try {
       const existing = await this.db.query.scientificAffairsPage.findFirst();
 
@@ -45,15 +49,10 @@ export class ScientificAffairsService {
         ...existing?.content,
         ...dto,
       } as ScientificAffairsPage;
-      await mkdir(this.PDF_PATH, { recursive: true });
 
-      for (const f of files) {
-        const m = /^pdf_(\d+)$/.exec(f.fieldname); // .at(-1) gets 1-9 but breaks at 10 this fixes it
-        if (!m) continue;
-        const url = await this.storePdf(f.buffer, f.mimetype);
-
-        const card = newContent.resources?.[Number(m[1])];
-        if (card && url) card.pdfLink = url;
+      for (const [index, url] of pdfByIndex) {
+        const card = newContent.resources?.[index];
+        if (card) card.pdfLink = url;
       }
 
       if (existing)
@@ -65,6 +64,7 @@ export class ScientificAffairsService {
       this.logger.log('Scientific-affairs page patched');
       return { status: 'ok' };
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.logger.error('Scientific-affairs patch failed', error);
       throw new InternalServerErrorException('Scientific-affairs patch failed', {
         cause: error,

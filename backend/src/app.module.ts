@@ -16,6 +16,7 @@ import { MainCmsModule } from './main-cms/main-cms.module';
 import { ContactUsCmsModule } from './contact-us-cms/contact-us-cms.module';
 import { ScientificAffairsModule } from './scientific-affairs/scientific-affairs.module';
 import { AboutCmsModule } from './about-cms/about-cms.module';
+import { MediaModule } from './media/media.module';
 import { FacultyCmsModule } from './faculty-cms/faculty-cms.module';
 
 @Module({
@@ -37,6 +38,7 @@ import { FacultyCmsModule } from './faculty-cms/faculty-cms.module';
     ContactUsCmsModule,
     ScientificAffairsModule,
     AboutCmsModule,
+    MediaModule,
     FacultyCmsModule,
   ],
   controllers: [AppController],

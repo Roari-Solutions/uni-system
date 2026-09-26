@@ -1,19 +1,16 @@
-import { Inject, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import {
+  HttpException,
+  Inject,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import { mainPage } from 'schema';
 import { MainPageContent } from 'src/content/entities/main-page.entity';
 import { DATABASE, type Db } from 'src/database/database.module';
-import { ImagesService } from 'src/images/images.service';
+import { MediaService, type MediaFile } from 'src/media/media.service';
 import { UpdateMainPageDto } from './dto/main-page.dto';
-
-/** Multer in-memory file (structural type, avoids @types/multer). */
-export type MemoryFile = {
-  buffer: Buffer;
-  fieldname: string;
-  mimetype: string;
-  originalname: string;
-  size: number;
-};
 
 /** Uploaded-file URLs grouped by form field. */
 export type StoredFiles = {
@@ -76,7 +73,7 @@ export function mergeMainPage(
 export class MainCmsService {
   constructor(
     @Inject(DATABASE) private readonly db: Db,
-    private readonly imagesService: ImagesService,
+    private readonly mediaService: MediaService,
   ) {}
   logger = new Logger(MainCmsService.name);
 
@@ -94,11 +91,11 @@ export class MainCmsService {
   }
 
   /** Applies a partial body plus uploaded images over stored content. */
-  async patch(body: Partial<MainPageContent>, files: MemoryFile[]): Promise<{ status: string }> {
+  async patch(body: Partial<MainPageContent>, files: MediaFile[]): Promise<{ status: string }> {
     // ponytail: fieldname convention — backgroundImages, managerPicture, newsPicture_<index>
     const stored: StoredFiles = { newsPictureByIndex: {} };
     for (const f of files) {
-      const url = await this.imagesService.store(f.buffer, f.mimetype);
+      const url = await this.mediaService.storeImage(f.buffer, f.mimetype);
       if (f.fieldname === 'backgroundImages')
         (stored.backgroundImages ??= []).push(url); // append or create the array
       else if (f.fieldname === 'managerPicture') stored.managerPicture = url;
@@ -110,21 +107,30 @@ export class MainCmsService {
 
     this.logger.log(`media files stored and organized in an object`);
 
-    const existing = await this.db.query.mainPage.findFirst();
-    const merged = mergeMainPage(
-      existing?.content as Partial<MainPageContent> | undefined,
-      body as UpdateMainPageDto,
-      stored,
-    );
+    // ponytail: uploads stay outside the try so media 400s are never wrapped in 500s
+    try {
+      const existing = await this.db.query.mainPage.findFirst();
+      const merged = mergeMainPage(
+        existing?.content as Partial<MainPageContent> | undefined,
+        body as UpdateMainPageDto,
+        stored,
+      );
 
-    this.logger.log('new page content constructed');
+      this.logger.log('new page content constructed');
 
-    if (existing)
-      await this.db.update(mainPage).set({ content: merged }).where(eq(mainPage.id, existing.id));
-    else await this.db.insert(mainPage).values({ content: merged });
+      if (existing)
+        await this.db.update(mainPage).set({ content: merged }).where(eq(mainPage.id, existing.id));
+      else await this.db.insert(mainPage).values({ content: merged });
 
-    this.logger.log('new page contenct stored');
+      this.logger.log('new page contenct stored');
 
-    return { status: 'true' };
+      return { status: 'ok' };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error('Main page patch failed', error);
+      throw new InternalServerErrorException('Main page patch failed', {
+        cause: error,
+      });
+    }
   }
 }

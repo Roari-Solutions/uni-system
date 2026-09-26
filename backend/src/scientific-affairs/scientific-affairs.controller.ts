@@ -1,10 +1,19 @@
-import { BadRequestException, Controller, Get, Body, Patch, UseInterceptors, UploadedFiles, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  Body,
+  Patch,
+  UseInterceptors,
+  UploadedFiles,
+  UseGuards,
+} from '@nestjs/common';
 import { ScientificAffairsService } from './scientific-affairs.service';
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 import { UpdateScientificAffairsDto } from './dto/update-scientific-affairs.dto';
-import { type MemoryFile } from 'src/main-cms/main-cms.service';
+import { MAX_MEDIA_BYTES, type MediaFile } from 'src/media/media.service';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { DynamicContentGuard } from 'src/dynamic_content/dynamic_content.guard';
 
@@ -17,9 +26,9 @@ export class ScientificAffairsController {
   }
 
   @Patch()
-  @UseGuards(AuthGuard,DynamicContentGuard)
-  @UseInterceptors(AnyFilesInterceptor())
-  async update(@Body() body: Record<string, unknown>, @UploadedFiles() files: MemoryFile[] = []) {
+  @UseGuards(AuthGuard, DynamicContentGuard)
+  @UseInterceptors(AnyFilesInterceptor({ limits: { fileSize: MAX_MEDIA_BYTES } }))
+  async update(@Body() body: Record<string, unknown>, @UploadedFiles() files: MediaFile[] = []) {
     const parsed = Object.fromEntries(
       Object.entries(body ?? {}).map(([k, v]) => {
         if (typeof v !== 'string') return [k, v];
