@@ -97,7 +97,7 @@ export interface GradeView {
   cheatingResolved: boolean;
 }
 
-/** A curriculum's entry sheet: the curriculum and the students still without a grade for it. */
+/** A curriculum's entry sheet: the curriculum and its year's students, each with their mark if any. */
 export interface PendingGradesView {
   curriculum: {
     id: string;
@@ -107,7 +107,18 @@ export interface PendingGradesView {
     academicYear: number;
     semester: number;
   };
-  students: { id: string; name: { en: string; ar: string }; uniNumber: string }[];
+  students: {
+    id: string;
+    name: { en: string; ar: string };
+    uniNumber: string;
+    /** The student's grade row for this curriculum; null until one exists. */
+    gradeId: string | null;
+    /** Null until a mark is entered, even when a row exists. */
+    grade: number | null;
+    letter: LetterGrade | null;
+    seatingStatus: SeatingStatus | null;
+    cheatingResolved: boolean;
+  }[];
 }
 
 /** One curriculum of a student's current year, with the mark if one is entered. */
@@ -438,8 +449,8 @@ export class GradesService {
   }
 
   /**
-   * The students of the curriculum's academic year who hold no grade row for it
-   * yet, for the entry sheet. A university requirement is offered by every
+   * The active students of the curriculum's academic year, each with their mark
+   * for it (null until entered), for the entry sheet. A university requirement is offered by every
    * faculty, so the sheet lists the faculty it was opened for: a scoped caller's
    * own, the one asked for, or, for an admin who names none, every offering one.
    */
@@ -479,12 +490,27 @@ export class GradesService {
         columns: { id: true, nameEn: true, nameAr: true, uniNumber: true },
       });
 
-      // any existing row blocks a new one (student_curriculum_unique), marked or not
-      const graded = await this.db.query.grades.findMany({
-        where: eq(grades.curriculumId, curriculum.id),
-        columns: { studentId: true },
-      });
-      const gradedIds = new Set(graded.map((g) => g.studentId));
+      // a student with a row, marked or not, is edited through it (student_curriculum_unique)
+      const graded = cohort.length
+        ? await this.db.query.grades.findMany({
+            where: and(
+              eq(grades.curriculumId, curriculum.id),
+              inArray(
+                grades.studentId,
+                cohort.map((s) => s.id),
+              ),
+            ),
+            columns: {
+              id: true,
+              studentId: true,
+              grade: true,
+              letter: true,
+              seatingStatus: true,
+              cheatingResolved: true,
+            },
+          })
+        : [];
+      const markOf = new Map(graded.map((g) => [g.studentId, g]));
 
       return {
         curriculum: {
@@ -496,13 +522,22 @@ export class GradesService {
           semester: semesterToNumber(curriculum.semester),
         },
         students: cohort
-          .filter((s) => !gradedIds.has(s.id))
           .sort((a, b) => a.uniNumber.localeCompare(b.uniNumber))
-          .map((s) => ({
-            id: s.id,
-            name: { en: s.nameEn, ar: s.nameAr },
-            uniNumber: s.uniNumber,
-          })),
+          .map((s) => {
+            const mark = markOf.get(s.id);
+            const grade = mark?.grade == null ? null : Number(mark.grade);
+            return {
+              id: s.id,
+              name: { en: s.nameEn, ar: s.nameAr },
+              uniNumber: s.uniNumber,
+              gradeId: mark?.id ?? null,
+              grade,
+              // the stored letter: a mark keeps the scale it was entered under
+              letter: grade === null ? null : (mark?.letter ?? null),
+              seatingStatus: mark?.seatingStatus ?? null,
+              cheatingResolved: mark?.cheatingResolved ?? false,
+            };
+          }),
       };
     } catch (error) {
       if (error instanceof NotFoundException || error instanceof UnauthorizedException) {

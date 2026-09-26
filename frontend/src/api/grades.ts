@@ -24,10 +24,20 @@ export const fetchGrades = async (filters: GradeFilters = {}): Promise<Grade[]> 
 	return data;
 };
 
+// one student of the sheet, with their mark in the curriculum if one is entered
+export type SheetStudent = Pick<Student, "id" | "name" | "uniNumber"> & {
+	// the grade row behind the mark; null until one exists
+	gradeId: string | null;
+	grade: number | null;
+	letter: Grade["letter"] | null;
+	seatingStatus: SeatingStatus | null;
+	cheatingResolved: boolean;
+};
+
 export type PendingGrades = {
 	curriculum: Pick<Curriculum, "id" | "name" | "abbreviation" | "facultyId" | "academicYear" | "semester">;
-	// the curriculum's faculty and year cohort, minus anyone already graded in it
-	students: Pick<Student, "id" | "name" | "uniNumber">[];
+	// the curriculum's faculty and year cohort (active students), marked or not
+	students: SheetStudent[];
 };
 
 // facultyId picks which faculty's students a shared university requirement lists
@@ -83,6 +93,10 @@ export type CheatingDecision = {
 export const resolveCheating = async (id: string, decision: CheatingDecision): Promise<Grade> => {
 	const { data } = await api.post<Grade>(`/gr/grades/${id}/resolve`, decision);
 	return data;
+};
+
+export const deleteGrade = async (id: string): Promise<void> => {
+	await api.delete(`/gr/grades/${id}`);
 };
 
 // PATCH is partial: send only the fields being changed
