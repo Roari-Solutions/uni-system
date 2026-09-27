@@ -7,6 +7,7 @@ import { SciResourceDto } from 'src/scientific-affairs/dto/create-scientific-aff
 import { CheckListDto } from 'src/deanship-cms/dto/create-deanship-cm.dto';
 import { OpenTimeDto } from 'src/contact-us-cms/dto/create-contact-us-cm.dto';
 import { FacultyProgramDto } from 'src/faculty-cms/dto/create-faculty-page.dto';
+import { PartnershipEntryDto } from 'src/partnerships-cms/dto/create-partnership.dto';
 
 describe('arabic (_ar) fields', () => {
   it('accepts _ar siblings on the main hero section', () => {
@@ -75,5 +76,24 @@ describe('arabic (_ar) fields', () => {
     expect(validateSync(resource)).toHaveLength(0);
     expect(validateSync(check)).toHaveLength(0);
     expect(validateSync(time)).toHaveLength(0);
+  });
+
+  it('accepts _ar siblings on a partnership entry', () => {
+    const entry = plainToInstance(PartnershipEntryDto, {
+      icon: 'handshake',
+      tag: 'Academic',
+      tag_ar: 'أكاديمي',
+      title: 'Exchange',
+      title_ar: 'تبادل',
+      subTitle: 'Mobility',
+      subTitle_ar: 'تنقل',
+      content: 'C',
+      content_ar: 'م',
+      field: 'Education',
+      field_ar: 'تعليم',
+      date: '2026-01-15',
+    });
+
+    expect(validateSync(entry)).toHaveLength(0);
   });
 });
