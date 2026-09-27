@@ -1,4 +1,13 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Patch, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Patch,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { DynamicContentGuard } from 'src/dynamic_content/dynamic_content.guard';
 import { PartnershipsCmsService } from './partnerships-cms.service';
@@ -21,6 +30,7 @@ export class PartnershipsCmsController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(AuthGuard, DynamicContentGuard)
   async update(@Body() dto: UpdatePartnershipDto) {
+    if (!dto || Object.keys(dto).length === 0) throw new BadRequestException({ code: 'PI' });
     return await this.partnershipsCmsService.update(dto);
   }
 }
