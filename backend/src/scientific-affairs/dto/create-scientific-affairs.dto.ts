@@ -17,9 +17,17 @@ export class SciHeroSectionDto {
   @IsNotEmpty()
   subHead!: string;
 
+  @IsOptional()
+  @IsString()
+  subHead_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   content!: string;
+
+  @IsOptional()
+  @IsString()
+  content_ar?: string;
 
   @IsInt()
   @Min(0)
@@ -44,13 +52,25 @@ export class SciQuoteDto {
   @IsNotEmpty()
   content!: string;
 
+  @IsOptional()
+  @IsString()
+  content_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   author!: string;
 
+  @IsOptional()
+  @IsString()
+  author_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   position!: string;
+
+  @IsOptional()
+  @IsString()
+  position_ar?: string;
 }
 
 /** One vision card. */
@@ -63,9 +83,17 @@ export class SciVisionDto {
   @IsNotEmpty()
   title!: string;
 
+  @IsOptional()
+  @IsString()
+  title_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   content!: string;
+
+  @IsOptional()
+  @IsString()
+  content_ar?: string;
 }
 
 /** One speciality entry. */
@@ -74,9 +102,17 @@ export class SciSpecialityDto {
   @IsNotEmpty()
   title!: string;
 
+  @IsOptional()
+  @IsString()
+  title_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   content!: string;
+
+  @IsOptional()
+  @IsString()
+  content_ar?: string;
 }
 
 /** Link entry inside councils/committees. */
@@ -84,6 +120,10 @@ export class SciLinkDto {
   @IsString()
   @IsNotEmpty()
   name!: string;
+
+  @IsOptional()
+  @IsString()
+  name_ar?: string;
 
   @IsUrl()
   link!: string;
@@ -99,6 +139,10 @@ export class SciCouncilDto {
   @IsNotEmpty()
   name!: string;
 
+  @IsOptional()
+  @IsString()
+  name_ar?: string;
+
   @ValidateNested()
   @Type(() => SciLinkDto)
   link!: SciLinkDto;
@@ -110,9 +154,17 @@ export class SciServiceDto {
   @IsNotEmpty()
   name!: string;
 
+  @IsOptional()
+  @IsString()
+  name_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   content!: string;
+
+  @IsOptional()
+  @IsString()
+  content_ar?: string;
 }
 
 /** One downloadable resource; pdfLink is file-set, optional in body. */
@@ -121,9 +173,17 @@ export class SciResourceDto {
   @IsNotEmpty()
   title!: string;
 
+  @IsOptional()
+  @IsString()
+  title_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   metadata!: string;
+
+  @IsOptional()
+  @IsString()
+  metadata_ar?: string;
 
   @IsOptional()
   @IsString()
@@ -142,6 +202,10 @@ export class SciContactsDto {
   @IsString()
   @IsNotEmpty()
   workTime!: string;
+
+  @IsOptional()
+  @IsString()
+  workTime_ar?: string;
 }
 
 /** Full scientific-affairs page body; PATCH uses the partial child. */
@@ -153,6 +217,10 @@ export class CreateScientificAffairsDto {
   @IsString()
   @IsNotEmpty()
   overview!: string;
+
+  @IsOptional()
+  @IsString()
+  overview_ar?: string;
 
   @ValidateNested()
   @Type(() => SciQuoteDto)

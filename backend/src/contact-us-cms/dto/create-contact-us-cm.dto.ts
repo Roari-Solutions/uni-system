@@ -2,6 +2,7 @@ import { Type } from 'class-transformer';
 import {
   IsEmail,
   IsNotEmpty,
+  IsOptional,
   IsString,
   ValidateNested,
 } from 'class-validator';
@@ -21,6 +22,10 @@ export class OpenTimeDto {
   @IsNotEmpty()
   day!: string;
 
+  @IsOptional()
+  @IsString()
+  day_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   start!: string;
@@ -36,6 +41,10 @@ export class PhoneDto {
   @IsNotEmpty()
   entity!: string;
 
+  @IsOptional()
+  @IsString()
+  entity_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   phone!: string;
@@ -47,9 +56,17 @@ export class CreateContactUsCmDto {
   @IsNotEmpty()
   contactData!: string;
 
+  @IsOptional()
+  @IsString()
+  contactData_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   location!: string;
+
+  @IsOptional()
+  @IsString()
+  location_ar?: string;
 
   @ValidateNested()
   @Type(() => ContactEmailDto)
