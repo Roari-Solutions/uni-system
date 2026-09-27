@@ -8,6 +8,7 @@ import { CheckListDto } from 'src/deanship-cms/dto/create-deanship-cm.dto';
 import { OpenTimeDto } from 'src/contact-us-cms/dto/create-contact-us-cm.dto';
 import { FacultyProgramDto } from 'src/faculty-cms/dto/create-faculty-page.dto';
 import { PartnershipEntryDto } from 'src/partnerships-cms/dto/create-partnership.dto';
+import { CrewWordFromDeptDto } from 'src/crew-cms/dto/create-crew-cm.dto';
 
 describe('arabic (_ar) fields', () => {
   it('accepts _ar siblings on the main hero section', () => {
@@ -95,5 +96,18 @@ describe('arabic (_ar) fields', () => {
     });
 
     expect(validateSync(entry)).toHaveLength(0);
+  });
+
+  it('accepts _ar siblings on a crew dept word', () => {
+    const word = plainToInstance(CrewWordFromDeptDto, {
+      title: 'Word',
+      title_ar: 'كلمة',
+      details: 'D',
+      details_ar: 'ت',
+      profName: 'Prof X',
+      profName_ar: 'أستاذ س',
+    });
+
+    expect(validateSync(word)).toHaveLength(0);
   });
 });

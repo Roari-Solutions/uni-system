@@ -19,6 +19,7 @@ import { AboutCmsModule } from './about-cms/about-cms.module';
 import { MediaModule } from './media/media.module';
 import { FacultyCmsModule } from './faculty-cms/faculty-cms.module';
 import { PartnershipsCmsModule } from './partnerships-cms/partnerships-cms.module';
+import { CrewCmsModule } from './crew-cms/crew-cms.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { PartnershipsCmsModule } from './partnerships-cms/partnerships-cms.modul
     MediaModule,
     FacultyCmsModule,
     PartnershipsCmsModule,
+    CrewCmsModule,
   ],
   controllers: [AppController],
   providers: [AppService, GrGurdGuard],
