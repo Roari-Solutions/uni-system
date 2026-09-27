@@ -1,6 +1,6 @@
 export type CrewPage = {
   name: string;
-  subHeading: string;
+  subHead: string;
   about: string;
   statsDetails: { stats: number; content: string }[];
   departmentGuide: string;
