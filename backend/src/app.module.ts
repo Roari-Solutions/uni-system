@@ -18,6 +18,7 @@ import { ScientificAffairsModule } from './scientific-affairs/scientific-affairs
 import { AboutCmsModule } from './about-cms/about-cms.module';
 import { MediaModule } from './media/media.module';
 import { FacultyCmsModule } from './faculty-cms/faculty-cms.module';
+import { PartnershipsCmsModule } from './partnerships-cms/partnerships-cms.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { FacultyCmsModule } from './faculty-cms/faculty-cms.module';
     AboutCmsModule,
     MediaModule,
     FacultyCmsModule,
+    PartnershipsCmsModule,
   ],
   controllers: [AppController],
   providers: [AppService, GrGurdGuard],
