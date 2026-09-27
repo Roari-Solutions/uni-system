@@ -1,6 +1,6 @@
 export type ScientificAffairsPage = {
   heroSection: {
-    subHeading: string;
+    subHead: string;
     content: string;
     regulationsCount: number;
     academicDecisions: number;

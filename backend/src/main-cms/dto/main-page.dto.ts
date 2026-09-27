@@ -34,11 +34,11 @@ export class HeroSectionDto {
 
   @IsString()
   @IsNotEmpty()
-  mainHeading!: string;
+  mainHead!: string;
 
   @IsString()
   @IsNotEmpty()
-  subHeading!: string;
+  subHead!: string;
 }
 
 /** Dean's word section. */

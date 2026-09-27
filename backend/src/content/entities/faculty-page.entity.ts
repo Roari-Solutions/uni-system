@@ -3,7 +3,7 @@ export type FacultyPageContent = {
   heroSection: {
     backgroundImages: string[];
     mainHead: string;
-    subHeading: string;
+    subHead: string;
   };
   pageCatalog: string;
   specializations: number;

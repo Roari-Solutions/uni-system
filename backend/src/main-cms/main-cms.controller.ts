@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -55,6 +56,8 @@ export class MainCmsController {
         }
       }),
     ) as BodyWrapper;
+    // missing/empty body is 400, never a silent no-op (matches about/scientific)
+    if (!parsed || !Object.keys(parsed).length) throw new BadRequestException({ code: 'PI' });
 
     const dto: Partial<MainPageContent> = parsed.body ?? parsed;
 

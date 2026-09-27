@@ -1,6 +1,6 @@
 export type DeanshipAndCenters = {
   name: string;
-  subHeading: string;
+  subHead: string;
   about: string;
   quote: {
     content: string;
