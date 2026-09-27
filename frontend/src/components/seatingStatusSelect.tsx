@@ -1,3 +1,4 @@
+import type { KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import {
 	XCircleIcon,
@@ -20,6 +21,8 @@ type SeatingStatusSelectProps = {
 	/** Names the student this row belongs to, for screen readers. */
 	label: string;
 	disabled?: boolean;
+	/** Lets a sheet treat Enter here like Enter in the row's mark field. */
+	onKeyDown?: (e: KeyboardEvent<HTMLSelectElement>) => void;
 };
 
 /**
@@ -32,6 +35,7 @@ const SeatingStatusSelect = ({
 	onChange,
 	label,
 	disabled,
+	onKeyDown,
 }: SeatingStatusSelectProps) => {
 	const { t } = useTranslation();
 
@@ -41,6 +45,7 @@ const SeatingStatusSelect = ({
 			value={value}
 			disabled={disabled}
 			onChange={(e) => onChange(e.target.value as SeatingStatus)}
+			onKeyDown={onKeyDown}
 			aria-label={label}
 			// §31 sizing, cut to the 36px row height the sheet's controls use
 			className={`h-9 rounded-sm border border-border bg-surface px-3 text-body-sm font-medium outline-none focus:border-primary focus:ring-3 focus:ring-primary/25 disabled:bg-background disabled:text-primary-hover ${STATUS_STYLE[value].text}`}

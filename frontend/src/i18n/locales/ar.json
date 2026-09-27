@@ -10,7 +10,8 @@
     "toggleMenu": "القائمة",
     "users": "المستخدمون",
     "import": "إدخال بالجملة",
-    "account": "حسابي"
+    "account": "حسابي",
+    "single": "إدخال فردي"
   },
   "curriculumEntry": {
     "title": "إضافة منهج",
@@ -268,14 +269,13 @@
   "gradeSheet": {
     "title": "إدخال الدرجات",
     "back": "العودة إلى المناهج",
-    "empty": "جميع طلاب سنة هذا المنهج لديهم درجات مسجلة",
+    "empty": "لا يوجد طلاب نشطون في سنة هذا المنهج",
     "notEntered": "لم تُدخل",
     "enterGrade": "إدخال الدرجة",
     "enterGradeFor": "إدخال درجة {{name}}",
     "gradeFor": "درجة {{name}}",
     "save": "حفظ",
     "saveFor": "حفظ درجة {{name}}",
-    "cancelFor": "إلغاء درجة {{name}}",
     "columns": {
       "uniNumber": "الرقم الجامعي",
       "name": "الطالب",
@@ -290,7 +290,66 @@
       "alreadyGraded": "هذا الطالب لديه درجة مسجلة في هذا المنهج"
     },
     "seatingStatusFor": "حالة الجلوس لـ {{name}}",
-    "voidedGrade": "يُسجَّل الغياب بالدرجة 0 (راسب)."
+    "voidedGrade": "يُسجَّل الغياب بالدرجة 0 (راسب).",
+    "noMatches": "لا يوجد طلاب يطابقون البحث أو عامل التصفية",
+    "progress": "أُدخلت {{entered}} من {{total}}",
+    "search": "بحث",
+    "searchPlaceholder": "الاسم أو الرقم الجامعي",
+    "markFilter": "الدرجة",
+    "markFilters": {
+      "all": "جميع الطلاب",
+      "notEntered": "لم تُدخل",
+      "entered": "مُدخلة"
+    },
+    "discard": "تراجع",
+    "discardFor": "التراجع عن درجة {{name}}",
+    "deleteFor": "حذف درجة {{name}}",
+    "deleteTitle": "حذف الدرجة",
+    "deleteMessage": "حذف درجة {{name}} ({{grade}}) في هذا المنهج؟ يُعاد حساب المعدل الفصلي، ويمكن إدخال الدرجة من جديد لاحقًا.",
+    "deleteFailed": "تعذّر حذف الدرجة. حاول مرة أخرى."
+  },
+  "singleEntry": {
+    "title": "إدخال درجات طالب",
+    "search": "بحث",
+    "searchPlaceholder": "الاسم أو الرقم الجامعي أو الرقم الوطني",
+    "empty": "لا يوجد طلاب يطابقون البحث أو عوامل التصفية المحددة",
+    "enterGrades": "إدخال الدرجات",
+    "enterGradesFor": "إدخال درجات {{name}}",
+    "viewGrades": "عرض الدرجات",
+    "viewGradesFor": "عرض درجات {{name}}",
+    "standings": {
+      "suspended": "موقوف",
+      "dismissed": "مفصول"
+    },
+    "columns": {
+      "uniNumber": "الرقم الجامعي",
+      "name": "الطالب",
+      "faculty": "الكلية",
+      "level": "السنة الدراسية",
+      "curriculum": "المنهج",
+      "abbreviation": "الاختصار",
+      "seatingStatus": "حالة الجلوس",
+      "grade": "الدرجة",
+      "letter": "التقدير",
+      "state": "الحالة"
+    },
+    "back": "العودة إلى الطلاب",
+    "studentPage": "صفحة الطالب",
+    "gradeFor": "درجة {{name}}",
+    "seatingStatusFor": "حالة الجلوس في {{name}}",
+    "unsavedRow": "غير محفوظ",
+    "discard": "تراجع",
+    "discardFor": "التراجع عن تغييرات {{name}}",
+    "unsaved": "تغييرات غير محفوظة: {{count}}",
+    "save": "حفظ الدرجات",
+    "confirmTitle": "تأكيد حفظ الدرجات",
+    "confirmMessage": "حفظ درجات {{name}}؟ درجات جديدة: {{added}}، درجات معدّلة: {{changed}}.",
+    "savedAll": "تم حفظ الدرجات: {{count}}",
+    "savedWithFailures": "تم حفظ {{saved}}، وتعذّر حفظ {{failed}}. راجع الصفوف المعلّمة.",
+    "leaveTitle": "مغادرة دون حفظ؟",
+    "leaveMessage": "لديك تغييرات غير محفوظة ({{count}}) ستضيع إذا غادرت هذه الصفحة.",
+    "leave": "مغادرة",
+    "stay": "البقاء"
   },
   "roles": {
     "admin": "مسؤول",
@@ -434,6 +493,7 @@
       "row": "الصف",
       "uniNumber": "الرقم الجامعي",
       "nameAr": "الاسم / عربي",
+      "nameEn": "الاسم / انجليزي",
       "nationalId": "الرقم الوطني",
       "faculty": "الكلية",
       "problems": "الحالة"

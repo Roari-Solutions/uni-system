@@ -10,5 +10,5 @@ import { FacultyCmsService } from './faculty-cms.service';
   controllers: [FacultyCmsController],
   providers: [FacultyCmsService],
 })
-/** Wires per-faculty CMS controller/service with auth/database/images. */
+/** Wires per-faculty CMS controller/service with auth/database/media. */
 export class FacultyCmsModule {}

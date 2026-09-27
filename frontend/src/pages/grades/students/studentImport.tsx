@@ -152,6 +152,25 @@ const StudentImport = () => {
 				/>
 			),
 		},
+		// the ministry sheet carries no English name, so only the other shows one
+		...(ministry
+			? []
+			: [
+					{
+						key: "nameEn",
+						header: t("bulkImport.columns.nameEn"),
+						render: (r: PreviewRow) => (
+							<input
+								type="text"
+								dir="ltr"
+								value={r.nameEn}
+								onChange={(e) => editRow(r.rowNumber, { nameEn: e.target.value })}
+								aria-label={t("bulkImport.columns.nameEn")}
+								className="h-9 w-56 rounded-sm border border-border bg-surface px-3 text-body-sm outline-none focus:border-primary focus:ring-3 focus:ring-primary/25"
+							/>
+						),
+					},
+				]),
 		{
 			key: "nationalId",
 			header: t("bulkImport.columns.nationalId"),

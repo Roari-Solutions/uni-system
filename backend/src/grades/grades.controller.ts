@@ -35,7 +35,7 @@ export class GradesController {
     return await this.gradesService.listGrades(req.grCaller, query);
   }
 
-  /** GET /gr/grades/pending/:curriculumId — the entry sheet for one curriculum. */
+  /** GET /gr/grades/pending/:curriculumId — the entry sheet for one curriculum, marked students included. */
   @Get('pending/:curriculumId')
   async GetPendingGrades(
     @Req() req: GrRequest,

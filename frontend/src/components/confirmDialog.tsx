@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { destructiveButtonClass, secondaryButtonClass } from "../styles/form";
+import { destructiveButtonClass, secondaryButtonClass, submitButtonClass } from "../styles/form";
 
 type ConfirmDialogProps = {
 	open: boolean;
@@ -9,6 +9,8 @@ type ConfirmDialogProps = {
 	cancelLabel: string;
 	onConfirm: () => void;
 	onCancel: () => void;
+	/** A delete confirms in the error colour; anything else in the primary one. */
+	tone?: "destructive" | "primary";
 };
 
 // native <dialog> gives focus trapping, Escape to close and a backdrop for free
@@ -20,6 +22,7 @@ const ConfirmDialog = ({
 	cancelLabel,
 	onConfirm,
 	onCancel,
+	tone = "destructive",
 }: ConfirmDialogProps) => {
 	const ref = useRef<HTMLDialogElement>(null);
 
@@ -48,7 +51,11 @@ const ConfirmDialog = ({
 					<button type="button" onClick={onCancel} className={secondaryButtonClass}>
 						{cancelLabel}
 					</button>
-					<button type="button" onClick={onConfirm} className={destructiveButtonClass}>
+					<button
+						type="button"
+						onClick={onConfirm}
+						className={tone === "primary" ? submitButtonClass : destructiveButtonClass}
+					>
 						{confirmLabel}
 					</button>
 				</div>

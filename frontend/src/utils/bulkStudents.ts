@@ -57,6 +57,10 @@ const HEADERS = {
  */
 function normalise(value: string): string {
 	return value
+		// Excel leaves invisible direction marks around Arabic text
+		.replace(/[\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/g, "")
+		// "الاسم/انجليزي" and "الاسم / انجليزي" are the same heading
+		.replace(/\s*([/-])\s*/g, " $1 ")
 		.replace(/[ً-ْـ]/g, "")
 		.replace(/[أإآ]/g, "ا")
 		.replace(/ى/g, "ي")

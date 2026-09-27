@@ -17,6 +17,8 @@ import StudentDetails from './pages/grades/students/studentDetails';
 import GradeList from './pages/grades/grades/gradeList';
 import GradeEntry from './pages/grades/grades/gradeEntry';
 import GradeSheet from './pages/grades/grades/gradeSheet';
+import SingleEntry from './pages/grades/grades/singleEntry';
+import StudentGradeSheet from './pages/grades/grades/studentGradeSheet';
 import UserList from './pages/admin/userList';
 import UserEntry from './pages/admin/userEntry';
 import AccountSettings from './pages/account/accountSettings';
@@ -59,6 +61,8 @@ const router = createBrowserRouter([
 									{ path: "list", element: <GradeList /> },
 									{ path: "entry", element: <GradeEntry /> },
 									{ path: "entry/:curriculumId", element: <GradeSheet /> },
+									{ path: "single", element: <SingleEntry /> },
+									{ path: "single/:studentId", element: <StudentGradeSheet /> },
 								],
 							},
 							// every signed-in user manages their own account here
