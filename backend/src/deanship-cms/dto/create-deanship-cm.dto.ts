@@ -3,6 +3,7 @@ import {
   IsArray,
   IsEmail,
   IsNotEmpty,
+  IsOptional,
   IsString,
   ValidateNested,
 } from 'class-validator';
@@ -13,13 +14,25 @@ export class QuoteDto {
   @IsNotEmpty()
   content!: string;
 
+  @IsOptional()
+  @IsString()
+  content_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   author!: string;
 
+  @IsOptional()
+  @IsString()
+  author_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   position!: string;
+
+  @IsOptional()
+  @IsString()
+  position_ar?: string;
 }
 
 /** One strategic card. */
@@ -28,9 +41,17 @@ export class StrategicCardDto {
   @IsNotEmpty()
   name!: string;
 
+  @IsOptional()
+  @IsString()
+  name_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   content!: string;
+
+  @IsOptional()
+  @IsString()
+  content_ar?: string;
 }
 
 /** Contact block. */
@@ -45,6 +66,10 @@ export class DeanshipContactDto {
   @IsString()
   @IsNotEmpty()
   availability!: string;
+
+  @IsOptional()
+  @IsString()
+  availability_ar?: string;
 }
 
 /** Single button label. */
@@ -52,6 +77,10 @@ export class ButtonDto {
   @IsString()
   @IsNotEmpty()
   content!: string;
+
+  @IsOptional()
+  @IsString()
+  content_ar?: string;
 }
 
 /** Quality and standards block. */
@@ -59,6 +88,10 @@ export class QualityAndStandardsDto {
   @IsString()
   @IsNotEmpty()
   content!: string;
+
+  @IsOptional()
+  @IsString()
+  content_ar?: string;
 
   @IsArray()
   @ValidateNested({ each: true })
@@ -71,6 +104,10 @@ export class CheckListDto {
   @IsString()
   @IsNotEmpty()
   name!: string;
+
+  @IsOptional()
+  @IsString()
+  name_ar?: string;
 }
 
 /** Bottom bilingual card. */
@@ -87,13 +124,25 @@ export class BottomCardDto {
   @IsNotEmpty()
   content!: string;
 
+  @IsOptional()
+  @IsString()
+  content_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   catchingPhrase!: string;
 
+  @IsOptional()
+  @IsString()
+  catchingPhrase_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   subCatchingPhrase!: string;
+
+  @IsOptional()
+  @IsString()
+  subCatchingPhrase_ar?: string;
 
   @IsArray()
   @ValidateNested({ each: true })
@@ -107,13 +156,25 @@ export class CreateDeanshipCmDto {
   @IsNotEmpty()
   name!: string;
 
+  @IsOptional()
+  @IsString()
+  name_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   subHead!: string;
 
+  @IsOptional()
+  @IsString()
+  subHead_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   about!: string;
+
+  @IsOptional()
+  @IsString()
+  about_ar?: string;
 
   @ValidateNested()
   @Type(() => QuoteDto)

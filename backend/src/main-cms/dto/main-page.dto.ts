@@ -23,6 +23,10 @@ export class LinkDto {
   @IsString()
   @IsNotEmpty()
   name!: string;
+
+  @IsOptional()
+  @IsString()
+  name_ar?: string;
 }
 
 /** Hero banner section. */
@@ -36,9 +40,17 @@ export class HeroSectionDto {
   @IsNotEmpty()
   mainHead!: string;
 
+  @IsOptional()
+  @IsString()
+  mainHead_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   subHead!: string;
+
+  @IsOptional()
+  @IsString()
+  subHead_ar?: string;
 }
 
 /** Dean's word section. */
@@ -47,9 +59,17 @@ export class ManagerWordSectionDto {
   @IsNotEmpty()
   managerName!: string;
 
+  @IsOptional()
+  @IsString()
+  managerName_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   managerWord!: string;
+
+  @IsOptional()
+  @IsString()
+  managerWord_ar?: string;
 
   @IsOptional()
   @IsString()
@@ -62,9 +82,17 @@ export class VisionCardDto {
   @IsNotEmpty()
   title!: string;
 
+  @IsOptional()
+  @IsString()
+  title_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   content!: string;
+
+  @IsOptional()
+  @IsString()
+  content_ar?: string;
 }
 
 /** Vision/mission/values section. */
@@ -81,13 +109,25 @@ export class NewsCardDto {
   @IsNotEmpty()
   tag!: string;
 
+  @IsOptional()
+  @IsString()
+  tag_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   title!: string;
 
+  @IsOptional()
+  @IsString()
+  title_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   content!: string;
+
+  @IsOptional()
+  @IsString()
+  content_ar?: string;
 
   @IsDateString()
   date!: string;
@@ -145,9 +185,17 @@ export class ContactLocationDto {
   @IsNotEmpty()
   box!: string;
 
+  @IsOptional()
+  @IsString()
+  box_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   location!: string;
+
+  @IsOptional()
+  @IsString()
+  location_ar?: string;
 }
 
 /** Footer section. */

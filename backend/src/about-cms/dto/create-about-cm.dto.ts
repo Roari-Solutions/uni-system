@@ -18,9 +18,17 @@ export class AboutHeroSectionDto {
   @IsNotEmpty()
   mainHead!: string;
 
+  @IsOptional()
+  @IsString()
+  mainHead_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   subHead!: string;
+
+  @IsOptional()
+  @IsString()
+  subHead_ar?: string;
 }
 
 /** One stats entry. */
@@ -29,13 +37,25 @@ export class AboutStatDto {
   @IsNotEmpty()
   title!: string;
 
+  @IsOptional()
+  @IsString()
+  title_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   content!: string;
 
+  @IsOptional()
+  @IsString()
+  content_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   moreInfo!: string;
+
+  @IsOptional()
+  @IsString()
+  moreInfo_ar?: string;
 }
 
 /** Principles inner card. */
@@ -44,9 +64,17 @@ export class AboutPrincipleCardDto {
   @IsNotEmpty()
   title!: string;
 
+  @IsOptional()
+  @IsString()
+  title_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   content!: string;
+
+  @IsOptional()
+  @IsString()
+  content_ar?: string;
 }
 
 /** Principles block. */
@@ -55,9 +83,17 @@ export class AboutPrinciplesDto {
   @IsNotEmpty()
   title!: string;
 
+  @IsOptional()
+  @IsString()
+  title_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   subTitle!: string;
+
+  @IsOptional()
+  @IsString()
+  subTitle_ar?: string;
 
   @ValidateNested()
   @Type(() => AboutPrincipleCardDto)
@@ -70,17 +106,33 @@ export class AboutJourneyCardDto {
   @IsNotEmpty()
   title!: string;
 
+  @IsOptional()
+  @IsString()
+  title_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   content!: string;
+
+  @IsOptional()
+  @IsString()
+  content_ar?: string;
 
   @IsString()
   @IsNotEmpty()
   year!: string;
 
+  @IsOptional()
+  @IsString()
+  year_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   tag!: string;
+
+  @IsOptional()
+  @IsString()
+  tag_ar?: string;
 }
 
 /** Journey block. */
@@ -100,9 +152,17 @@ export class AboutVisionCardDto {
   @IsNotEmpty()
   title!: string;
 
+  @IsOptional()
+  @IsString()
+  title_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   content!: string;
+
+  @IsOptional()
+  @IsString()
+  content_ar?: string;
 }
 
 /** Vision and message block. */
@@ -118,9 +178,17 @@ export class AboutGoalDto {
   @IsNotEmpty()
   title!: string;
 
+  @IsOptional()
+  @IsString()
+  title_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   content!: string;
+
+  @IsOptional()
+  @IsString()
+  content_ar?: string;
 }
 
 /** Academic principles block. */
@@ -145,13 +213,25 @@ export class AboutCertificateDto {
   @IsNotEmpty()
   content!: string;
 
+  @IsOptional()
+  @IsString()
+  content_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   tag!: string;
 
+  @IsOptional()
+  @IsString()
+  tag_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   miniTag!: string;
+
+  @IsOptional()
+  @IsString()
+  miniTag_ar?: string;
 }
 
 /** Full about page body; PATCH uses the partial child. */
@@ -200,11 +280,23 @@ export class CreateAboutCmDto {
   @IsNotEmpty()
   admissionTitle!: string;
 
+  @IsOptional()
+  @IsString()
+  admissionTitle_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   admissionSubTitle!: string;
 
+  @IsOptional()
+  @IsString()
+  admissionSubTitle_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   admissionGuidelines!: string;
+
+  @IsOptional()
+  @IsString()
+  admissionGuidelines_ar?: string;
 }

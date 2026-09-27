@@ -21,9 +21,17 @@ export class FacultyHeroSectionDto {
   @IsNotEmpty()
   mainHead!: string;
 
+  @IsOptional()
+  @IsString()
+  mainHead_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   subHead!: string;
+
+  @IsOptional()
+  @IsString()
+  subHead_ar?: string;
 }
 
 /** Quote block. */
@@ -32,13 +40,25 @@ export class FacultyQuoteDto {
   @IsNotEmpty()
   content!: string;
 
+  @IsOptional()
+  @IsString()
+  content_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   author!: string;
 
+  @IsOptional()
+  @IsString()
+  author_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   position!: string;
+
+  @IsOptional()
+  @IsString()
+  position_ar?: string;
 }
 
 export class FacultyVisionDto {
@@ -46,9 +66,17 @@ export class FacultyVisionDto {
   @IsNotEmpty()
   title!: string;
 
+  @IsOptional()
+  @IsString()
+  title_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   content!: string;
+
+  @IsOptional()
+  @IsString()
+  content_ar?: string;
 
   @IsString()
   @IsNotEmpty()
@@ -60,9 +88,17 @@ export class FacultyGoalDto {
   @IsNotEmpty()
   title!: string;
 
+  @IsOptional()
+  @IsString()
+  title_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   content!: string;
+
+  @IsOptional()
+  @IsString()
+  content_ar?: string;
 }
 
 export class FacultyProgramDto {
@@ -70,21 +106,41 @@ export class FacultyProgramDto {
   @IsNotEmpty()
   tag!: string;
 
+  @IsOptional()
+  @IsString()
+  tag_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   title!: string;
+
+  @IsOptional()
+  @IsString()
+  title_ar?: string;
 
   @IsString()
   @IsNotEmpty()
   subTitle!: string;
 
+  @IsOptional()
+  @IsString()
+  subTitle_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   level!: string;
 
+  @IsOptional()
+  @IsString()
+  level_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   content!: string;
+
+  @IsOptional()
+  @IsString()
+  content_ar?: string;
 
   @IsNumber()
   @Min(0)
@@ -93,6 +149,10 @@ export class FacultyProgramDto {
   @IsString()
   @IsNotEmpty()
   track!: string;
+
+  @IsOptional()
+  @IsString()
+  track_ar?: string;
 }
 
 export class FacultyAcceptanceConditionDto {
@@ -100,19 +160,35 @@ export class FacultyAcceptanceConditionDto {
   @IsNotEmpty()
   conditionTitle!: string;
 
+  @IsOptional()
+  @IsString()
+  conditionTitle_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   content!: string;
 
+  @IsOptional()
+  @IsString()
+  content_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   detail!: string;
+
+  @IsOptional()
+  @IsString()
+  detail_ar?: string;
 }
 
 export class FacultyRequiredPaperDto {
   @IsString()
   @IsNotEmpty()
   point!: string;
+
+  @IsOptional()
+  @IsString()
+  point_ar?: string;
 }
 
 export class FacultyCreditHoursDetailDto {
@@ -120,9 +196,17 @@ export class FacultyCreditHoursDetailDto {
   @IsNotEmpty()
   title!: string;
 
+  @IsOptional()
+  @IsString()
+  title_ar?: string;
+
   @IsString()
   @IsNotEmpty()
   content!: string;
+
+  @IsOptional()
+  @IsString()
+  content_ar?: string;
 }
 
 /** POST/PATCH payload for faculty page — full create shape; patch uses PartialType. */
@@ -131,6 +215,10 @@ export class CreateFacultyPageDto {
   @IsNotEmpty()
   title!: string;
 
+  @IsOptional()
+  @IsString()
+  title_ar?: string;
+
   @ValidateNested()
   @Type(() => FacultyHeroSectionDto)
   heroSection!: FacultyHeroSectionDto;
@@ -138,6 +226,10 @@ export class CreateFacultyPageDto {
   @IsString()
   @IsNotEmpty()
   pageCatalog!: string;
+
+  @IsOptional()
+  @IsString()
+  pageCatalog_ar?: string;
 
   @IsInt()
   @Min(0)
@@ -154,6 +246,10 @@ export class CreateFacultyPageDto {
   @IsString()
   @IsNotEmpty()
   about!: string;
+
+  @IsOptional()
+  @IsString()
+  about_ar?: string;
 
   @ValidateNested()
   @Type(() => FacultyQuoteDto)
@@ -187,6 +283,10 @@ export class CreateFacultyPageDto {
   @IsString()
   @IsNotEmpty()
   applicationDuration!: string;
+
+  @IsOptional()
+  @IsString()
+  applicationDuration_ar?: string;
 
   @IsArray()
   @ValidateNested({ each: true })
