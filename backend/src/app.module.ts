@@ -20,6 +20,7 @@ import { MediaModule } from './media/media.module';
 import { FacultyCmsModule } from './faculty-cms/faculty-cms.module';
 import { PartnershipsCmsModule } from './partnerships-cms/partnerships-cms.module';
 import { CrewCmsModule } from './crew-cms/crew-cms.module';
+import { ExhibitionCmsModule } from './exhibition-cms/exhibition-cms.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { CrewCmsModule } from './crew-cms/crew-cms.module';
     FacultyCmsModule,
     PartnershipsCmsModule,
     CrewCmsModule,
+    ExhibitionCmsModule,
   ],
   controllers: [AppController],
   providers: [AppService, GrGurdGuard],
