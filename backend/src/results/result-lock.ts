@@ -1,5 +1,5 @@
 import { ConflictException } from '@nestjs/common';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { results, resultStudents } from 'schema';
 import type { Db } from 'src/database/database.module';
 import type { AcademicYear, Semester } from 'src/common/academic-year';
@@ -71,4 +71,51 @@ export async function hasApprovedResults(
     )
     .limit(1);
   return row.length > 0;
+}
+
+/**
+ * Whether the Sup & Sub results are approved for the batch whose semester
+ * results list this student. A Sup & Sub sheet lists only the students who
+ * sat a re-exam, so this is judged by the batch, not by who is on that sheet:
+ * once it is approved, no one in the batch takes a new re-exam mark.
+ */
+export async function resitsClosed(
+  db: Db,
+  studentId: string,
+  academicYear: AcademicYear,
+  semester: Semester,
+): Promise<boolean> {
+  const batches = await db
+    .select({
+      facultyId: results.facultyId,
+      acceptanceYear: results.acceptanceYear,
+    })
+    .from(resultStudents)
+    .innerJoin(results, eq(results.id, resultStudents.resultId))
+    .where(
+      and(
+        eq(resultStudents.studentId, studentId),
+        eq(results.academicYear, academicYear),
+        eq(results.semester, semester),
+        eq(results.kind, 'regular'),
+        eq(results.status, 'approved'),
+      ),
+    );
+  for (const batch of batches) {
+    const resit = await db.query.results.findFirst({
+      where: and(
+        eq(results.facultyId, batch.facultyId),
+        eq(results.academicYear, academicYear),
+        batch.acceptanceYear
+          ? eq(results.acceptanceYear, batch.acceptanceYear)
+          : isNull(results.acceptanceYear),
+        eq(results.semester, semester),
+        eq(results.kind, 'resit'),
+        eq(results.status, 'approved'),
+      ),
+      columns: { id: true },
+    });
+    if (resit) return true;
+  }
+  return false;
 }

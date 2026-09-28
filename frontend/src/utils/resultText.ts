@@ -58,6 +58,17 @@ export const cellText = (
 	}
 };
 
+/**
+ * A header date as the sheet prints it: a picked day (2026-02-02) reads
+ * "2 February 2026"; anything typed by hand prints as typed.
+ */
+export const dateText = (value: string) => {
+	const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+	if (!match) return value;
+	const [, y, m, d] = match.map(Number);
+	return new Date(y, m - 1, d).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+};
+
 /** CH as a whole number, GP to one decimal and GPA to two, as the university's sheet has them. */
 export const totalsText = (totals: ResultTotals) => ({
 	ch: String(totals.ch),

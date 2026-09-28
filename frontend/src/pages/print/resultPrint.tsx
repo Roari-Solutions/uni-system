@@ -8,18 +8,31 @@ import type { Result, ResultVersion } from "../../types/result";
 import { submitButtonClass } from "../../styles/form";
 import { levelText } from "../../utils/resultText";
 
-// A4 landscape with 8mm margins; the page background prints white whatever the
-// dashboard's canvas is
+// A4 landscape with 8mm margins, and room below for the page number; the page
+// background prints white whatever the dashboard's canvas is
 const MARGIN_MM = 8;
+const FOOTER_MM = 12;
+// "Page 2 of 5" is written by the browser in the page's margin (Chrome and Edge
+// 131+). Margin boxes can't read the theme's variables, so the colour is the
+// foreground token's value (#1b2a38).
 const PRINT_CSS = `
-@page { size: A4 landscape; margin: ${MARGIN_MM}mm; }
+@page {
+  size: A4 landscape;
+  margin: ${MARGIN_MM}mm ${MARGIN_MM}mm ${FOOTER_MM}mm;
+  @bottom-center {
+    content: "Page " counter(page) " of " counter(pages);
+    font-family: Inter, sans-serif;
+    font-size: 9px;
+    color: #1b2a38;
+  }
+}
 @media print { body { background: var(--color-surface); } }
 `;
 
 // the printable area in CSS pixels (96 per inch)
 const PX_PER_MM = 96 / 25.4;
 const PAGE_WIDTH = (297 - 2 * MARGIN_MM) * PX_PER_MM;
-const PAGE_HEIGHT = (210 - 2 * MARGIN_MM) * PX_PER_MM;
+const PAGE_HEIGHT = (210 - MARGIN_MM - FOOTER_MM) * PX_PER_MM;
 
 /**
  * Scales down any page that doesn't fit: the cover to one whole page, the

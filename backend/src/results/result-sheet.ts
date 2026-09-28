@@ -76,7 +76,8 @@ export interface ResultStudent {
 export interface ResultSheet {
   college: string;
   academicYear: number;
-  acceptanceYear: string;
+  /** Null when the sheet covers every acceptance year at the level. */
+  acceptanceYear: string | null;
   semester: number;
   kind: 'regular' | 'resit';
   courses: ResultCourse[];

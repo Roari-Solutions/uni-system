@@ -4,6 +4,7 @@ import type {
 	Result,
 	ResultHeader,
 	ResultKind,
+	ResultPreview,
 	ResultStatus,
 	ResultSummary,
 } from "../types/result";
@@ -16,12 +17,21 @@ export type ResultFilters = {
 	status?: ResultStatus;
 };
 
-// one batch (faculty, level, acceptance year) in one semester
+// one batch (faculty, level, and one acceptance year or all of them) in one semester
 export type ResultBatch = {
 	facultyId: string;
 	academicYear: number;
-	acceptanceYear: string;
+	// omitted for every acceptance year at the level
+	acceptanceYear?: string;
 	semester: number;
+	// students left off the sheet by hand
+	excludedStudentIds?: string[];
+};
+
+/** The sheet the batch would get now; nothing is saved. */
+export const previewResult = async (batch: ResultBatch, kind: ResultKind): Promise<ResultPreview> => {
+	const { data } = await api.post<ResultPreview>("/gr/results/preview", { ...batch, kind });
+	return data;
 };
 
 export const fetchResults = async (filters: ResultFilters = {}): Promise<ResultSummary[]> => {

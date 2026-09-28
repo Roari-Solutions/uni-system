@@ -9,6 +9,7 @@ export const generateError = (error: unknown): string => {
 	if (axios.isAxiosError(error) && error.response?.status === 400) {
 		const data = error.response.data as { code?: string } | undefined;
 		if (data?.code === "EMPTY_BATCH") return "results.errors.emptyBatch";
+		if (data?.code === "NO_RESITS") return "results.errors.noResits";
 	}
 	return "common.saveFailed";
 };

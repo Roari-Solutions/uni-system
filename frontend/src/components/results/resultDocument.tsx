@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { ResultHeader, ResultSheet, ResultVersion } from "../../types/result";
-import { levelText, sheetTitle, versionText } from "../../utils/resultText";
+import { dateText, levelText, sheetTitle, versionText } from "../../utils/resultText";
 import ResultTable from "./resultTable";
 
 // the printed keys, as on the university's sheet
@@ -143,17 +143,20 @@ const TitleBlock = ({ header, sheet, version }: ResultDocumentProps) => (
 	</header>
 );
 
-const Dates = ({ header }: { header: ResultHeader }) => (
+/** The exam and board dates; only the second semester's (year) result goes to the central board. */
+const Dates = ({ header, semester }: { header: ResultHeader; semester: number }) => (
 	<div className="mb-3 flex justify-between border-b border-dotted border-foreground pb-1 text-[11px]">
 		<span>
-			Date of Exam <Fill value={header.examDate} />
+			Date of Exam <Fill value={dateText(header.examDate)} />
 		</span>
 		<span>
-			Date of College Board <Fill value={header.collegeBoardDate} />
+			Date of College Board <Fill value={dateText(header.collegeBoardDate)} />
 		</span>
-		<span>
-			Date of Central Board <Fill value={header.centralBoardDate} />
-		</span>
+		{semester === 2 && (
+			<span>
+				Date of Central Board <Fill value={dateText(header.centralBoardDate)} />
+			</span>
+		)}
 	</div>
 );
 
@@ -182,8 +185,9 @@ const Page = ({ children, first, fit }: { children: ReactNode; first?: boolean; 
 );
 
 /**
- * The exported results: a cover page with the header, the courses key and
- * every key the sheet uses, then the results table. English and LTR throughout.
+ * The exported results. The board's copy opens with a cover page (the header,
+ * the courses key and every key the sheet uses); the final results handed out
+ * to students are the table alone. English and LTR throughout.
  */
 const ResultDocument = ({ header, sheet, version }: ResultDocumentProps) => {
 	const totalHours = sheet.courses.reduce((acc, c) => acc + c.hours, 0);
@@ -195,90 +199,94 @@ const ResultDocument = ({ header, sheet, version }: ResultDocumentProps) => {
 			lang="en"
 			className="bg-surface font-en text-[10px] leading-tight text-foreground [print-color-adjust:exact]"
 		>
-			<Page first fit="page">
-				<TitleBlock header={header} sheet={sheet} version={version} />
-				<Dates header={header} />
+			{version === "board" && (
+				<Page first fit="page">
+					<TitleBlock header={header} sheet={sheet} version={version} />
+					<Dates header={header} semester={sheet.semester} />
 
-				<div className="grid grid-cols-2 gap-4">
-					<div className="flex flex-col gap-3">
-						<table className="w-full border-collapse">
-							<thead>
-								<tr>
-									<th colSpan={4} className={`${cell} ${band}`}>
-										Courses Key
-									</th>
-								</tr>
-								<tr>
-									<th className={cell}>S.No.</th>
-									<th className={cell}>Code</th>
-									<th className={cell}>Name</th>
-									<th className={cell}>Credit Hours</th>
-								</tr>
-							</thead>
-							<tbody>
-								{sheet.courses.map((c) => (
-									<tr key={c.curriculumId}>
-										<td className={`${cell} text-center`}>{c.sNo}</td>
-										<td className={cell}>{c.code ?? ""}</td>
-										<td className={cell}>{c.name}</td>
-										<td className={`${cell} text-center`}>{c.hours}</td>
+					<div className="grid grid-cols-2 gap-4">
+						<div className="flex flex-col gap-3">
+							<table className="w-full border-collapse">
+								<thead>
+									<tr>
+										<th colSpan={4} className={`${cell} ${band}`}>
+											Courses Key
+										</th>
 									</tr>
-								))}
-								<tr>
-									<td colSpan={3} className={`${cell} ${band} text-center`}>
-										Total
-									</td>
-									<td className={`${cell} ${band} text-center`}>{totalHours}</td>
-								</tr>
-							</tbody>
-						</table>
-
-						<table className="w-full border-collapse">
-							<thead>
-								<tr>
-									<th colSpan={4} className={`${cell} ${band}`}>
-										Grading System
-									</th>
-								</tr>
-								<tr>
-									<th className={cell}>Grade</th>
-									<th className={cell}>Points</th>
-									<th className={cell}>Marks</th>
-									<th className={cell}>Remarks</th>
-								</tr>
-							</thead>
-							<tbody>
-								{GRADING.map(([grade, points, marks, remark]) => (
-									<tr key={grade}>
-										<td className={`${cell} text-center`}>{grade}</td>
-										<td className={`${cell} text-center`}>{points}</td>
-										<td className={cell}>{marks}</td>
-										<td className={cell}>{remark}</td>
+									<tr>
+										<th className={cell}>S.No.</th>
+										<th className={cell}>Code</th>
+										<th className={cell}>Name</th>
+										<th className={cell}>Credit Hours</th>
 									</tr>
-								))}
-							</tbody>
-						</table>
-					</div>
+								</thead>
+								<tbody>
+									{sheet.courses.map((c) => (
+										<tr key={c.curriculumId}>
+											<td className={`${cell} text-center`}>{c.sNo}</td>
+											<td className={cell}>{c.code ?? ""}</td>
+											<td className={cell}>{c.name}</td>
+											<td className={`${cell} text-center`}>{c.hours}</td>
+										</tr>
+									))}
+									<tr>
+										<td colSpan={3} className={`${cell} ${band} text-center`}>
+											Total
+										</td>
+										<td className={`${cell} ${band} text-center`}>{totalHours}</td>
+									</tr>
+								</tbody>
+							</table>
 
-					<div className="flex flex-col gap-3">
-						<PairedKey title="Academic Status Key" head={["Symbol", "Academic status"]} rows={ACADEMIC_STATUS} />
-						<div>
-							<PairedKey
-								title="Academic History Key"
-								head={["Symbol", "Academic history"]}
-								rows={ACADEMIC_HISTORY}
-							/>
-							<p className="mt-1">The subscript (i) is a variable indicating the academic year.</p>
+							<table className="w-full border-collapse">
+								<thead>
+									<tr>
+										<th colSpan={4} className={`${cell} ${band}`}>
+											Grading System
+										</th>
+									</tr>
+									<tr>
+										<th className={cell}>Grade</th>
+										<th className={cell}>Points</th>
+										<th className={cell}>Marks</th>
+										<th className={cell}>Remarks</th>
+									</tr>
+								</thead>
+								<tbody>
+									{GRADING.map(([grade, points, marks, remark]) => (
+										<tr key={grade}>
+											<td className={`${cell} text-center`}>{grade}</td>
+											<td className={`${cell} text-center`}>{points}</td>
+											<td className={cell}>{marks}</td>
+											<td className={cell}>{remark}</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
 						</div>
-						<PairedKey title="Symbols" head={["Symbol", "Meaning"]} rows={SYMBOLS} />
+
+						<div className="flex flex-col gap-3">
+							<PairedKey title="Academic Status Key" head={["Symbol", "Academic status"]} rows={ACADEMIC_STATUS} />
+							<div>
+								<PairedKey
+									title="Academic History Key"
+									head={["Symbol", "Academic history"]}
+									rows={ACADEMIC_HISTORY}
+								/>
+								<p className="mt-1">The subscript (i) is a variable indicating the academic year.</p>
+							</div>
+							<PairedKey title="Symbols" head={["Symbol", "Meaning"]} rows={SYMBOLS} />
+						</div>
 					</div>
-				</div>
 
-				<Signatures />
-			</Page>
+					<Signatures />
+				</Page>
+			)}
 
-			<Page fit="width">
+			<Page first={version === "final"} fit="width">
 				<TitleBlock header={header} sheet={sheet} version={version} />
+				{/* without the cover, the final results carry the dates themselves */}
+				{version === "final" && <Dates header={header} semester={sheet.semester} />}
 				<ResultTable sheet={sheet} version={version} />
 				<Signatures />
 			</Page>

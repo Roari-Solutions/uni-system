@@ -8,7 +8,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { and, desc, eq, inArray, type SQL } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, type SQL } from 'drizzle-orm';
 import {
   faculties,
   facultyCurriculums,
@@ -33,9 +33,11 @@ import {
 import { letterOf, type LetterGrade } from 'src/grades/letter-grade';
 import { resitKindOf, type ResitView } from 'src/grades/grades.service';
 import { backfillSerialNos } from 'src/curriculums/serial-no';
+import { approvedStudents } from './result-lock';
 import {
   GenerateResultDto,
   ListResultsQueryDto,
+  PreviewResultDto,
   type ResultKind,
 } from './dto/results.dto';
 import {
@@ -49,11 +51,11 @@ import {
   type ResultSheet,
 } from './result-sheet';
 
-/** The students one result covers. */
+/** The students one result covers: a level's, of one acceptance year or (null) all of them. */
 interface Batch {
   facultyId: string;
   academicYear: AcademicYear;
-  acceptanceYear: string;
+  acceptanceYear: string | null;
   semester: Semester;
 }
 
@@ -65,12 +67,15 @@ export interface ResultSummaryView {
   id: string;
   facultyId: string;
   academicYear: number;
-  acceptanceYear: string;
+  /** Null when the result covers every acceptance year at the level. */
+  acceptanceYear: string | null;
   semester: number;
   kind: ResultKind;
   status: 'pending' | 'approved';
   header: ResultHeader;
   studentCount: number;
+  /** Students of the batch left off by hand. */
+  excludedStudentIds: string[];
   createdAt: string;
   updatedAt: string;
   approvedAt: string | null;
@@ -81,6 +86,25 @@ export interface ResultView extends ResultSummaryView {
   sheet: ResultSheet;
   /** Pending only: the grades have changed since the sheet was generated. */
   stale: boolean;
+}
+
+/** The grade row behind one cell, so the preview can edit it in place. */
+export interface CellGradeView {
+  gradeId: string;
+  grade: number | null;
+  seatingStatus: GradeRow['seatingStatus'];
+  cheatingResolved: boolean;
+}
+
+/** The sheet as it would be generated now, with what the views need to edit it. */
+export interface ResultPreviewView {
+  sheet: ResultSheet;
+  /** Keyed `${studentId}:${curriculumId}`; a cell without a grade row has none. */
+  grades: Record<string, CellGradeView>;
+  /** Students whose grades for the semester are locked by approved results. */
+  lockedStudentIds: string[];
+  /** The students left off, so they can be put back. */
+  excluded: { id: string; uniNumber: string; name: string }[];
 }
 
 /** A cell that may take a Sup & Sub re-exam, with what it holds now. */
@@ -199,16 +223,23 @@ export class ResultsService {
       );
   }
 
-  /**
-   * Builds the sheet from the grades as they stand. A regular sheet shows the
-   * semester's own marks; a resit sheet shows the Sup & Sub marks over them.
-   * A second-semester sheet adds the year's totals, with the first semester
-   * counted as it finally stands (its resits included).
-   */
+  /** The sheet as it would be generated now. */
   private async buildSheet(
     batch: Batch,
     kind: ResultKind,
+    excluded: string[],
   ): Promise<ResultSheet> {
+    return (await this.assemble(batch, kind, excluded)).sheet;
+  }
+
+  /**
+   * Builds the sheet from the grades as they stand, leaving off the excluded
+   * students. A regular sheet shows the semester's own marks; a resit sheet
+   * shows the Sup & Sub marks over them. A second-semester sheet adds the
+   * year's totals, with the first semester counted as it finally stands (its
+   * resits included). Also hands back the grade rows and who was left off.
+   */
+  private async assemble(batch: Batch, kind: ResultKind, excluded: string[]) {
     const faculty = await this.db.query.faculties.findFirst({
       where: eq(faculties.id, batch.facultyId),
       columns: { nameEn: true },
@@ -227,14 +258,18 @@ export class ResultsService {
       ? await this.coursesOf(batch.facultyId, batch.academicYear, '1')
       : [];
 
-    const cohort = await this.db.query.students.findMany({
+    const everyone = await this.db.query.students.findMany({
       where: and(
         eq(students.facultyId, batch.facultyId),
         eq(students.academicYear, batch.academicYear),
-        eq(students.acceptanceYear, batch.acceptanceYear),
+        batch.acceptanceYear
+          ? eq(students.acceptanceYear, batch.acceptanceYear)
+          : undefined,
       ),
       columns: { id: true, uniNumber: true, nameEn: true, standing: true },
     });
+    const left = new Set(excluded);
+    const cohort = everyone.filter((s) => !left.has(s.id));
     if (!courses.length || !cohort.length) {
       throw new BadRequestException({ code: 'EMPTY_BATCH' });
     }
@@ -255,15 +290,25 @@ export class ResultsService {
       rows.map((r) => [`${r.studentId}:${r.curriculumId}`, r]),
     );
     const withResit = kind === 'resit';
+    // a Sup & Sub sheet lists only the students who sat a re-exam with a mark
+    // entered; their rows still show the whole semester, recalculated
+    const semesterIds = new Set(courses.map((c) => c.curriculumId));
+    const resat = new Set(
+      rows
+        .filter((r) => r.resitKind && semesterIds.has(r.curriculumId))
+        .map((r) => r.studentId),
+    );
+    const listed = withResit ? cohort.filter((s) => resat.has(s.id)) : cohort;
+    if (!listed.length) throw new BadRequestException({ code: 'NO_RESITS' });
 
-    return {
+    const sheet: ResultSheet = {
       college: faculty.nameEn,
       academicYear: academicYearToNumber(batch.academicYear),
       acceptanceYear: batch.acceptanceYear,
       semester: semesterToNumber(batch.semester),
       kind,
       courses,
-      students: cohort
+      students: listed
         .sort((a, b) => a.uniNumber.localeCompare(b.uniNumber))
         .map((s) => {
           const cells = courses.map((c) =>
@@ -297,6 +342,16 @@ export class ResultsService {
           };
         }),
     };
+    return {
+      sheet,
+      // only the semester's own curriculums are edited from the sheet
+      rows: rows.filter((r) =>
+        courses.some((c) => c.curriculumId === r.curriculumId),
+      ),
+      excluded: everyone
+        .filter((s) => left.has(s.id))
+        .map((s) => ({ id: s.id, uniNumber: s.uniNumber, name: s.nameEn })),
+    };
   }
 
   private batchOf(row: ResultRow): Batch {
@@ -319,6 +374,7 @@ export class ResultsService {
       status: row.status,
       header: row.header,
       studentCount: row.sheet.students.length,
+      excludedStudentIds: row.excludedStudentIds,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
       approvedAt: isoOrNull(row.approvedAt),
@@ -329,7 +385,11 @@ export class ResultsService {
   private async isStale(row: ResultRow): Promise<boolean> {
     if (row.status !== 'pending') return false;
     try {
-      const fresh = await this.buildSheet(this.batchOf(row), row.kind);
+      const fresh = await this.buildSheet(
+        this.batchOf(row),
+        row.kind,
+        row.excludedStudentIds,
+      );
       return canonicalJson(fresh) !== canonicalJson(row.sheet);
     } catch (error) {
       // the batch or its curriculums are gone: the sheet no longer holds
@@ -382,8 +442,9 @@ export class ResultsService {
       if (facultyId) filters.push(eq(results.facultyId, facultyId));
       if (query.academicYear)
         filters.push(eq(results.academicYear, query.academicYear));
-      if (query.acceptanceYear)
+      if (query.acceptanceYear) {
         filters.push(eq(results.acceptanceYear, query.acceptanceYear));
+      }
       if (query.semester) filters.push(eq(results.semester, query.semester));
       if (query.status) filters.push(eq(results.status, query.status));
 
@@ -411,6 +472,63 @@ export class ResultsService {
     }
   }
 
+  /** Checks the caller may act for the batch's faculty, and names the batch. */
+  private async batchFor(
+    dto: PreviewResultDto,
+    caller: GrCaller,
+  ): Promise<Batch> {
+    const facultyId = await assertFacultyExists(this.db, dto.facultyId);
+    assertFaculty(caller, facultyId);
+    return {
+      facultyId,
+      academicYear: dto.academicYear,
+      acceptanceYear: dto.acceptanceYear ?? null,
+      semester: dto.semester,
+    };
+  }
+
+  /**
+   * The sheet a batch would get if generated now, without saving anything,
+   * plus each cell's grade row so its marks can be corrected in place.
+   */
+  async previewResult(
+    dto: PreviewResultDto,
+    caller: GrCaller,
+  ): Promise<ResultPreviewView> {
+    try {
+      const batch = await this.batchFor(dto, caller);
+      const { sheet, rows, excluded } = await this.assemble(
+        batch,
+        dto.kind,
+        dto.excludedStudentIds ?? [],
+      );
+      const locked = await approvedStudents(
+        this.db,
+        sheet.students.map((s) => s.id),
+        batch.academicYear,
+        batch.semester,
+      );
+      return {
+        sheet,
+        grades: Object.fromEntries(
+          rows.map((r) => [
+            `${r.studentId}:${r.curriculumId}`,
+            {
+              gradeId: r.id,
+              grade: r.grade === null ? null : Number(r.grade),
+              seatingStatus: r.seatingStatus,
+              cheatingResolved: r.cheatingResolved,
+            },
+          ]),
+        ),
+        lockedStudentIds: [...locked],
+        excluded,
+      };
+    } catch (error) {
+      this.fail('Failed to preview result', error);
+    }
+  }
+
   /**
    * Generates a batch's board results, or regenerates a pending one from the
    * grades as they now stand. An approved result is final. Sup & Sub results
@@ -421,31 +539,29 @@ export class ResultsService {
     caller: GrCaller,
   ): Promise<ResultView> {
     try {
-      const facultyId = await assertFacultyExists(this.db, dto.facultyId);
-      assertFaculty(caller, facultyId);
-      const batch: Batch = {
-        facultyId,
-        academicYear: dto.academicYear,
-        acceptanceYear: dto.acceptanceYear,
-        semester: dto.semester,
-      };
+      const batch = await this.batchFor(dto, caller);
       const sameBatch = (kind: ResultKind) =>
         and(
           eq(results.facultyId, batch.facultyId),
           eq(results.academicYear, batch.academicYear),
-          eq(results.acceptanceYear, batch.acceptanceYear),
+          batch.acceptanceYear
+            ? eq(results.acceptanceYear, batch.acceptanceYear)
+            : isNull(results.acceptanceYear),
           eq(results.semester, batch.semester),
           eq(results.kind, kind),
         );
 
+      let excluded = dto.excludedStudentIds ?? [];
       if (dto.kind === 'resit') {
         const regular = await this.db.query.results.findFirst({
           where: sameBatch('regular'),
-          columns: { status: true },
+          columns: { status: true, excludedStudentIds: true },
         });
         if (regular?.status !== 'approved') {
           throw new ConflictException({ code: 'REGULAR_NOT_APPROVED' });
         }
+        // the Sup & Sub sheet lists whoever the semester's sheet did, unless told otherwise
+        excluded = dto.excludedStudentIds ?? regular.excludedStudentIds;
       }
 
       const existing = await this.db.query.results.findFirst({
@@ -455,14 +571,16 @@ export class ResultsService {
         throw new ConflictException({ code: 'ALREADY_APPROVED' });
       }
 
-      const sheet = await this.buildSheet(batch, dto.kind);
+      const sheet = await this.buildSheet(batch, dto.kind, excluded);
       const header: ResultHeader = {
         program: dto.header.program.trim(),
         batch: dto.header.batch.trim(),
         academicYearLabel: dto.header.academicYearLabel.trim(),
         examDate: dto.header.examDate.trim(),
         collegeBoardDate: dto.header.collegeBoardDate.trim(),
-        centralBoardDate: dto.header.centralBoardDate.trim(),
+        // only the second semester's (year) result goes to the central board
+        centralBoardDate:
+          batch.semester === '2' ? dto.header.centralBoardDate.trim() : '',
       };
 
       const saved = await this.db.transaction(async (tx) => {
@@ -470,7 +588,7 @@ export class ResultsService {
         if (existing) {
           [row] = await tx
             .update(results)
-            .set({ header, sheet })
+            .set({ header, sheet, excludedStudentIds: excluded })
             .where(eq(results.id, existing.id))
             .returning();
           await tx
@@ -479,7 +597,13 @@ export class ResultsService {
         } else {
           [row] = await tx
             .insert(results)
-            .values({ ...batch, kind: dto.kind, header, sheet })
+            .values({
+              ...batch,
+              kind: dto.kind,
+              header,
+              sheet,
+              excludedStudentIds: excluded,
+            })
             .returning();
         }
         await tx

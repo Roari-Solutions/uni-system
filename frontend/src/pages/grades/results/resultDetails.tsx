@@ -12,13 +12,13 @@ import {
 	TrashIcon,
 } from "@heroicons/react/24/outline";
 import ConfirmDialog from "../../../components/confirmDialog";
+import ApproveResultDialog from "../../../components/results/approveResultDialog";
 import GenerateResultDialog from "../../../components/results/generateResultDialog";
 import ResitEntry from "../../../components/results/resitEntry";
 import ResultStatusTag from "../../../components/results/resultStatusTag";
 import ResultTable from "../../../components/results/resultTable";
 import useFaculties from "../../../hooks/useFaculties";
 import {
-	approveResult,
 	discardResult,
 	fetchResitCandidates,
 	fetchResult,
@@ -38,11 +38,11 @@ import {
 	smallSecondaryButtonClass,
 	submitButtonClass,
 } from "../../../styles/form";
-import { conflictCode } from "../../../utils/apiError";
+import { headerDefaults, type HeaderSuggestions } from "../../../utils/resultHeader";
 import { generateError } from "../../../utils/resultErrors";
 
 // the regeneration dialog or the Sup & Sub one; both ask for the header
-type Generating = { kind: ResultKind; header: ResultHeader } | null;
+type Generating = { kind: ResultKind; header: ResultHeader; suggestions: HeaderSuggestions } | null;
 
 /**
  * One batch's results for a semester. Pending board results can be exported,
@@ -62,7 +62,7 @@ const ResultDetails = () => {
 	const [candidates, setCandidates] = useState<ResitCandidate[]>([]);
 	const [failed, setFailed] = useState(false);
 	const [version, setVersion] = useState<ResultVersion>("board");
-	const [confirmApprove, setConfirmApprove] = useState(false);
+	const [approving, setApproving] = useState(false);
 	const [confirmDiscard, setConfirmDiscard] = useState(false);
 	const [generating, setGenerating] = useState<Generating>(null);
 	const [submitting, setSubmitting] = useState(false);
@@ -75,12 +75,14 @@ const ResultDetails = () => {
 		const batch = await fetchResults({
 			facultyId: row.facultyId,
 			academicYear: row.academicYear,
-			acceptanceYear: row.acceptanceYear,
+			acceptanceYear: row.acceptanceYear ?? undefined,
 			semester: row.semester,
 		});
 		const resits =
 			row.kind === "regular" && row.status === "approved" ? await fetchResitCandidates(row.id) : [];
-		return { row, sibling: batch.find((r) => r.kind !== row.kind) ?? null, resits };
+		// an all-acceptance-years result's sibling covers all of them too
+		const other = batch.find((r) => r.kind !== row.kind && r.acceptanceYear === row.acceptanceYear);
+		return { row, sibling: other ?? null, resits };
 	}, [resultId]);
 
 	useEffect(() => {
@@ -110,25 +112,31 @@ const ResultDetails = () => {
 		setCandidates(resits);
 	};
 
-	const approve = async () => {
-		if (!result) return;
-		setConfirmApprove(false);
-		setSubmitting(true);
+	const approved = async () => {
+		setApproving(false);
+		setActionError(null);
 		try {
-			await approveResult(result.id);
 			await reload();
 			setVersion("final");
-			setActionError(null);
-		} catch (error) {
-			if (conflictCode(error) === "RESULT_STALE") {
-				setActionError("results.errors.stale");
-				await reload();
-			} else {
-				setActionError("common.saveFailed");
-			}
-		} finally {
-			setSubmitting(false);
+		} catch {
+			setFailed(true);
 		}
+	};
+
+	/** Opens the header form: the result's own header, with the faculty's earlier values to pick from. */
+	const openGenerating = async (kind: ResultKind) => {
+		if (!result) return;
+		setGenerateFailed(null);
+		const previous = await fetchResults({ facultyId: result.facultyId }).catch(
+			() => [] as ResultSummary[],
+		);
+		const { suggestions } = headerDefaults({
+			previous,
+			facultyNameEn: faculties.find((f) => f.id === result.facultyId)?.name.en ?? "",
+			level: result.academicYear,
+			semester: result.semester,
+		});
+		setGenerating({ kind, header: result.header, suggestions });
 	};
 
 	const discard = async () => {
@@ -151,8 +159,10 @@ const ResultDetails = () => {
 				{
 					facultyId: result.facultyId,
 					academicYear: result.academicYear,
-					acceptanceYear: result.acceptanceYear,
+					acceptanceYear: result.acceptanceYear ?? undefined,
 					semester: result.semester,
+					// a regeneration leaves off who it did; Sup & Sub follows the semester's result
+					excludedStudentIds: generating.kind === result.kind ? result.excludedStudentIds : undefined,
 				},
 				generating.kind,
 				header,
@@ -208,7 +218,13 @@ const ResultDetails = () => {
 				<span>{t(`student.levels.${result.academicYear}`)}</span>
 				<span aria-hidden>·</span>
 				<span>
-					{t("results.acceptanceYearValue")} <span dir="ltr">{result.acceptanceYear}</span>
+					{result.acceptanceYear ? (
+						<>
+							{t("results.acceptanceYearValue")} <span dir="ltr">{result.acceptanceYear}</span>
+						</>
+					) : (
+						t("results.allAcceptanceYears")
+					)}
 				</span>
 				<span aria-hidden>·</span>
 				<span>{t(`semesters.${result.semester}`)}</span>
@@ -233,10 +249,7 @@ const ResultDetails = () => {
 					</div>
 					<button
 						type="button"
-						onClick={() => {
-							setGenerateFailed(null);
-							setGenerating({ kind: result.kind, header: result.header });
-						}}
+						onClick={() => void openGenerating(result.kind)}
 						className={smallSecondaryButtonClass}
 					>
 						<ArrowPathIcon className="size-4" aria-hidden />
@@ -266,10 +279,7 @@ const ResultDetails = () => {
 					<>
 						<button
 							type="button"
-							onClick={() => {
-								setGenerateFailed(null);
-								setGenerating({ kind: result.kind, header: result.header });
-							}}
+							onClick={() => void openGenerating(result.kind)}
 							className={secondaryButtonClass}
 						>
 							<ArrowPathIcon className="me-2 size-5" aria-hidden />
@@ -277,8 +287,8 @@ const ResultDetails = () => {
 						</button>
 						<button
 							type="button"
-							onClick={() => setConfirmApprove(true)}
-							disabled={submitting || result.stale}
+							onClick={() => setApproving(true)}
+							disabled={submitting}
 							className={submitButtonClass}
 						>
 							<CheckBadgeIcon className="me-2 size-5" aria-hidden />
@@ -293,10 +303,7 @@ const ResultDetails = () => {
 				{result.kind === "regular" && !pending && !sibling && (
 					<button
 						type="button"
-						onClick={() => {
-							setGenerateFailed(null);
-							setGenerating({ kind: "resit", header: result.header });
-						}}
+						onClick={() => void openGenerating("resit")}
 						className={secondaryButtonClass}
 					>
 						<DocumentPlusIcon className="me-2 size-5" aria-hidden />
@@ -354,16 +361,14 @@ const ResultDetails = () => {
 				</section>
 			)}
 
-			<ConfirmDialog
-				open={confirmApprove}
-				tone="primary"
-				title={t("results.approveTitle")}
-				message={t("results.approveMessage")}
-				confirmLabel={t("results.approve")}
-				cancelLabel={t("common.cancel")}
-				onConfirm={() => void approve()}
-				onCancel={() => setConfirmApprove(false)}
-			/>
+			{approving && (
+				<ApproveResultDialog
+					open
+					result={result}
+					onApproved={() => void approved()}
+					onCancel={() => setApproving(false)}
+				/>
+			)}
 
 			<ConfirmDialog
 				open={confirmDiscard}
@@ -375,19 +380,23 @@ const ResultDetails = () => {
 				onCancel={() => setConfirmDiscard(false)}
 			/>
 
-			<GenerateResultDialog
-				open={generating !== null}
-				title={
-					generating?.kind === "resit" && result.kind === "regular"
-						? t("results.generateResit")
-						: t("results.regenerate")
-				}
-				initial={generating?.header ?? result.header}
-				submitting={submitting}
-				error={generateFailed}
-				onSubmit={(header) => void generate(header)}
-				onCancel={() => setGenerating(null)}
-			/>
+			{generating && (
+				<GenerateResultDialog
+					open
+					title={
+						generating.kind === "resit" && result.kind === "regular"
+							? t("results.generateResit")
+							: t("results.regenerate")
+					}
+					initial={generating.header}
+					suggestions={generating.suggestions}
+					semester={result.semester}
+					submitting={submitting}
+					error={generateFailed}
+					onSubmit={(header) => void generate(header)}
+					onCancel={() => setGenerating(null)}
+				/>
+			)}
 		</div>
 	);
 };

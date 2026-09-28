@@ -332,7 +332,8 @@ export const gpas = pgTable(
 
 /**
  * A batch's results for one semester: a frozen snapshot of the sheet, as the
- * college board saw it. One per faculty -> year -> acceptance year -> semester -> kind.
+ * college board saw it. One per faculty -> year -> acceptance year (or all of
+ * them) -> semester -> kind.
  */
 export const results = pgTable(
   'results',
@@ -342,7 +343,8 @@ export const results = pgTable(
       .notNull()
       .references(() => faculties.id),
     academicYear: studyLevelEnum('academic_year').notNull(),
-    acceptanceYear: text('acceptance_year').notNull(),
+    /** Null when the result covers every student at the level, whatever their acceptance year. */
+    acceptanceYear: text('acceptance_year'),
     semester: semesterEnum('semester').notNull(),
     kind: resultKindEnum('kind').notNull(),
     status: resultStatusEnum('status').notNull().default('pending'),
@@ -350,6 +352,8 @@ export const results = pgTable(
     header: jsonb('header').$type<ResultHeader>().notNull(),
     /** The courses, students and cells, frozen at generation. */
     sheet: jsonb('sheet').$type<ResultSheet>().notNull(),
+    /** Students of the batch left off this result by hand; their grades don't lock with it. */
+    excludedStudentIds: jsonb('excluded_student_ids').$type<string[]>().notNull().default([]),
     approvedAt: timestamp('approved_at', { withTimezone: true }),
     ...timestamps(),
   },
@@ -360,7 +364,9 @@ export const results = pgTable(
       t.acceptanceYear,
       t.semester,
       t.kind,
-    ),
+    )
+      // an all-acceptance-years result (null) is still one per level and semester
+      .nullsNotDistinct(),
   ],
 );
 

@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import {
+  IsArray,
   IsIn,
   IsOptional,
   IsString,
@@ -53,8 +54,8 @@ export class ResultHeaderDto {
   centralBoardDate!: string;
 }
 
-/** Body for POST /gr/results: the batch, the semester, and which exams. */
-export class GenerateResultDto {
+/** Body for POST /gr/results/preview: the batch, the semester, which exams, and who is left off. */
+export class PreviewResultDto {
   @IsUUID()
   facultyId!: string;
 
@@ -63,9 +64,11 @@ export class GenerateResultDto {
   @IsIn(ACADEMIC_YEARS)
   academicYear!: AcademicYear;
 
+  /** Omitted for every student at the level, whatever their acceptance year. */
+  @IsOptional()
   @IsString()
   @Matches(ACCEPTANCE_YEAR)
-  acceptanceYear!: string;
+  acceptanceYear?: string;
 
   @NormaliseSemester()
   @IsIn(SEMESTERS)
@@ -74,6 +77,15 @@ export class GenerateResultDto {
   @IsIn(RESULT_KINDS)
   kind!: ResultKind;
 
+  /** Students of the batch removed from the sheet by hand. */
+  @IsOptional()
+  @IsArray()
+  @IsUUID('all', { each: true })
+  excludedStudentIds?: string[];
+}
+
+/** Body for POST /gr/results: the preview's batch plus the header lines it prints. */
+export class GenerateResultDto extends PreviewResultDto {
   @ValidateNested()
   @Type(() => ResultHeaderDto)
   header!: ResultHeaderDto;

@@ -1,9 +1,32 @@
-import type { ResultSheet, ResultVersion } from "../../types/result";
+import { XMarkIcon } from "@heroicons/react/24/outline";
+import type {
+	ResultCell,
+	ResultCourse,
+	ResultSheet,
+	ResultStudent,
+	ResultVersion,
+} from "../../types/result";
 import { cellText, totalsText } from "../../utils/resultText";
+
+/**
+ * Makes the preview editable. The sheet itself stays English; these labels are
+ * the dashboard's own, in its language.
+ */
+export type ResultTableEditing = {
+	/** Whether the student's marks may change (not locked, not frozen). */
+	canEdit: (student: ResultStudent) => boolean;
+	onCellClick: (student: ResultStudent, cell: ResultCell, course: ResultCourse) => void;
+	cellLabel: (student: ResultStudent, course: ResultCourse) => string;
+	onRemove: (student: ResultStudent) => void;
+	removeLabel: (student: ResultStudent) => string;
+	/** The heading of the remove column, for screen readers. */
+	removeHeader: string;
+};
 
 type ResultTableProps = {
 	sheet: ResultSheet;
 	version: ResultVersion;
+	editing?: ResultTableEditing;
 };
 
 // a thin rule on every cell, as on the university's printed sheet
@@ -20,7 +43,7 @@ const failedCell = "bg-accent-soft font-bold";
  * semester sheet, and an empty Remarks column. Always English and LTR: it is
  * the exported document, whatever language the dashboard is in.
  */
-const ResultTable = ({ sheet, version }: ResultTableProps) => {
+const ResultTable = ({ sheet, version, editing }: ResultTableProps) => {
 	const yearSheet = sheet.semester === 2;
 	const totalColumns = yearSheet ? ["CH", "GP", "GPA", "CH", "GP", "GPA"] : ["CH", "GP", "GPA"];
 
@@ -65,6 +88,11 @@ const ResultTable = ({ sheet, version }: ResultTableProps) => {
 					<th scope="col" rowSpan={2} className={`${cell} min-w-16 text-error`}>
 						Remarks
 					</th>
+					{editing && (
+						<th scope="col" rowSpan={2} className={cell}>
+							<span className="sr-only">{editing.removeHeader}</span>
+						</th>
+					)}
 				</tr>
 				<tr>
 					<th scope="row" className={`${cell} text-end`}>
@@ -92,14 +120,28 @@ const ResultTable = ({ sheet, version }: ResultTableProps) => {
 							<td className={cell}>{index + 1}</td>
 							<td className={`${cell} text-start font-semibold`}>{student.uniNumber}</td>
 							<td className={`${cell} text-start font-semibold`}>{student.name}</td>
-							{student.cells.map((c) => {
+							{student.cells.map((c, i) => {
 								const { text, failed } = cellText(c, version, sheet.kind);
+								const course = sheet.courses[i];
+								const editable = editing && course && editing.canEdit(student);
 								return (
 									<td
 										key={c.curriculumId}
-										className={`${cell} whitespace-nowrap ${failed ? failedCell : ""}`}
+										className={`${cell} whitespace-nowrap ${failed ? failedCell : ""} ${editable ? "p-0" : ""}`}
 									>
-										{text}
+										{editable ? (
+											<button
+												type="button"
+												onClick={() => editing.onCellClick(student, c, course)}
+												aria-label={editing.cellLabel(student, course)}
+												title={editing.cellLabel(student, course)}
+												className="h-full min-h-6 w-full px-1.5 py-1 transition-colors duration-150 ease-out hover:bg-background"
+											>
+												{text}
+											</button>
+										) : (
+											text
+										)}
 									</td>
 								);
 							})}
@@ -115,6 +157,19 @@ const ResultTable = ({ sheet, version }: ResultTableProps) => {
 							)}
 							{/* left blank for the board to write in */}
 							<td className={cell} />
+							{editing && (
+								<td className={`${cell} p-0`}>
+									<button
+										type="button"
+										onClick={() => editing.onRemove(student)}
+										aria-label={editing.removeLabel(student)}
+										title={editing.removeLabel(student)}
+										className="flex w-full items-center justify-center p-1 transition-colors duration-150 ease-out hover:bg-background hover:text-error"
+									>
+										<XMarkIcon className="size-4" aria-hidden />
+									</button>
+								</td>
+							)}
 						</tr>
 					);
 				})}

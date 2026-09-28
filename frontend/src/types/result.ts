@@ -1,4 +1,4 @@
-import type { LetterGrade, Resit } from "./grade";
+import type { LetterGrade, Resit, SeatingStatus } from "./grade";
 import type { StudentStanding } from "./student";
 
 // the semester's own exams, or the Sup & Sub re-exams that follow them
@@ -76,7 +76,8 @@ export type ResultStudent = {
 export type ResultSheet = {
 	college: string;
 	academicYear: number;
-	acceptanceYear: string;
+	// null when the sheet covers every acceptance year at the level
+	acceptanceYear: string | null;
 	semester: number;
 	kind: ResultKind;
 	courses: ResultCourse[];
@@ -87,12 +88,15 @@ export type ResultSummary = {
 	id: string;
 	facultyId: string;
 	academicYear: number;
-	acceptanceYear: string;
+	// null when the result covers every acceptance year at the level
+	acceptanceYear: string | null;
 	semester: number;
 	kind: ResultKind;
 	status: ResultStatus;
 	header: ResultHeader;
 	studentCount: number;
+	// students of the batch left off by hand
+	excludedStudentIds: string[];
 	createdAt: string;
 	updatedAt: string;
 	approvedAt: string | null;
@@ -102,6 +106,25 @@ export type Result = ResultSummary & {
 	sheet: ResultSheet;
 	// pending only: the grades changed since the sheet was generated
 	stale: boolean;
+};
+
+// the grade row behind one cell of a preview, so it can be edited in place
+export type CellGrade = {
+	gradeId: string;
+	grade: number | null;
+	seatingStatus: SeatingStatus | null;
+	cheatingResolved: boolean;
+};
+
+// the sheet a batch would get if generated now
+export type ResultPreview = {
+	sheet: ResultSheet;
+	// keyed `${studentId}:${curriculumId}`; a cell with no grade row has none
+	grades: Record<string, CellGrade>;
+	// students whose semester is locked by approved results
+	lockedStudentIds: string[];
+	// the students left off, so they can be put back
+	excluded: { id: string; uniNumber: string; name: string }[];
 };
 
 // a cell that may take a Sup & Sub re-exam

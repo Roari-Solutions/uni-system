@@ -41,6 +41,7 @@ import {
   approvedStudents,
   assertGradesOpen,
   hasApprovedResults,
+  resitsClosed,
 } from 'src/results/result-lock';
 
 /** Absence and a bar void the mark: the grade is stored as 0, so its letter is F. */
@@ -996,7 +997,7 @@ export class GradesService {
 
   /**
    * Loads a row for a Sup & Sub re-exam and checks it may take one: the regular
-   * results for its semester are approved, the Sup & Sub results are not yet,
+   * results for its semester are approved, the batch's Sup & Sub results are not yet,
    * and the row is an F or a substitute.
    */
   private async resitRowOrThrow(id: string, caller: GrCaller) {
@@ -1014,14 +1015,9 @@ export class GradesService {
     const { academicYear, semester } = row.curriculum;
     const approved = await approvedStudents(this.db, [row.studentId], academicYear, semester);
     if (!approved.size) throw new ConflictException({ code: 'RESULTS_NOT_APPROVED' });
-    const resitApproved = await approvedStudents(
-      this.db,
-      [row.studentId],
-      academicYear,
-      semester,
-      'resit',
-    );
-    if (resitApproved.size) throw new ConflictException({ code: 'RESULTS_APPROVED' });
+    if (await resitsClosed(this.db, row.studentId, academicYear, semester)) {
+      throw new ConflictException({ code: 'RESULTS_APPROVED' });
+    }
 
     const kind = resitKindOf(row);
     if (!kind) throw new ConflictException({ code: 'NO_RESIT' });

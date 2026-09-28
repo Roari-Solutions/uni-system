@@ -14,7 +14,11 @@ import {
 import { AuthGuard } from 'src/auth/auth.guard';
 import { GrGurdGuard, type GrRequest } from 'src/gr-gurd/gr-gurd.guard';
 import { ResultsService } from './results.service';
-import { GenerateResultDto, ListResultsQueryDto } from './dto/results.dto';
+import {
+  GenerateResultDto,
+  ListResultsQueryDto,
+  PreviewResultDto,
+} from './dto/results.dto';
 
 /** Board and final results per batch (auth + faculty-scope guarded). */
 @Controller('gr/results')
@@ -35,6 +39,12 @@ export class ResultsController {
   @Post()
   async GenerateResult(@Req() req: GrRequest, @Body() dto: GenerateResultDto) {
     return await this.resultsService.generateResult(dto, req.grCaller);
+  }
+
+  /** POST /gr/results/preview — the sheet a batch would get now; nothing is saved. */
+  @Post('preview')
+  async PreviewResult(@Req() req: GrRequest, @Body() dto: PreviewResultDto) {
+    return await this.resultsService.previewResult(dto, req.grCaller);
   }
 
   /** GET /gr/results/:id — one result with its frozen sheet. */
