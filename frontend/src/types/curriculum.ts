@@ -18,4 +18,6 @@ export type Curriculum = {
 	requirementType: RequirementType | null;
 	// credit hours; they weight this curriculum's grade points in the GPA
 	courseHours: number;
+	// S.No. on the results sheets, within this faculty -> year -> semester
+	serialNo: number | null;
 };

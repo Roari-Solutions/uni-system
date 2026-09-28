@@ -19,6 +19,7 @@ import { CrewPage } from 'src/content/entities/crew-page.entity';
 import { ImagesExhibition } from 'src/content/entities/images-exhibition.entity';
 import { Partnerships } from 'src/content/entities/partnerships.entity';
 import { ScientificAffairsPage } from 'src/content/entities/scientific-affairs-page.entity';
+import type { ResultHeader, ResultSheet } from 'src/results/result-sheet';
 
 /** Blood group values stored on users. */
 export const bloodTypeEnum = pgEnum('blood_type', [
@@ -35,8 +36,26 @@ export const bloodTypeEnum = pgEnum('blood_type', [
 /** Academic year = study year (1-6), the level a student or curriculum sits in. */
 export const studyLevelEnum = pgEnum('study_level', ['1', '2', '3', '4', '5', '6']);
 
-/** Exams seating status */
-export const seatingStatusEnum = pgEnum('seating_status', ['attended', 'absent', 'cheating']);
+/**
+ * Exams seating status. Absent and barred score 0 (F); substitute is an accepted
+ * excuse: no mark until the substitute exam, and left out of the GPA until then.
+ */
+export const seatingStatusEnum = pgEnum('seating_status', [
+  'attended',
+  'absent',
+  'cheating',
+  'barred',
+  'substitute',
+]);
+
+/** Which re-exam a resit mark came from: supplementary (after an F) or substitute (after an excuse). */
+export const resitKindEnum = pgEnum('resit_kind', ['supplementary', 'substitute']);
+
+/** A batch's results: the semester's own exams, or the Sup & Sub re-exams that follow. */
+export const resultKindEnum = pgEnum('result_kind', ['regular', 'resit']);
+
+/** Board results wait for approval; approving locks the batch's grades for that semester. */
+export const resultStatusEnum = pgEnum('result_status', ['pending', 'approved']);
 
 /** The grading scale, best first; a mark's letter decides its grade points. */
 export const letterGradeEnum = pgEnum('letter_grade', ['A', 'B+', 'B', 'C+', 'C', 'D', 'F']);
@@ -219,6 +238,11 @@ export const facultyCurriculums = pgTable(
     curriculumId: uuid('curriculum_id')
       .notNull()
       .references(() => curriculums.id),
+    /**
+     * S.No. on the results sheets: 1, 2, 3... within the faculty -> year ->
+     * semester, the first free number when the curriculum is placed there.
+     */
+    serialNo: integer('serial_no'),
     ...timestamps(),
   },
   (t) => [unique('faculty_curriculum_unique').on(t.facultyId, t.curriculumId)],
@@ -275,6 +299,11 @@ export const grades = pgTable(
     penaltyWarning: boolean('penalty_warning').notNull().default(false),
     penaltySuspensionYears: integer('penalty_suspension_years'),
     penaltyDismissal: boolean('penalty_dismissal').notNull().default(false),
+    /** A Sup & Sub re-exam mark. The original mark and letter stay as they were. */
+    resitKind: resitKindEnum('resit_kind'),
+    resitGrade: numeric('resit_grade', { precision: 5, scale: 2 }),
+    /** The letter the resit counts as: a supplementary one is capped at C. `gp` follows it. */
+    resitLetter: letterGradeEnum('resit_letter'),
     ...timestamps(),
   },
   (t) => [unique('student_curriculum_unique').on(t.studentId, t.curriculumId)],
@@ -299,6 +328,61 @@ export const gpas = pgTable(
     ...timestamps(),
   },
   (t) => [unique('unique_gpa_student_year_semester').on(t.studentId, t.academicYear, t.semester)],
+);
+
+/**
+ * A batch's results for one semester: a frozen snapshot of the sheet, as the
+ * college board saw it. One per faculty -> year -> acceptance year (or all of
+ * them) -> semester -> kind.
+ */
+export const results = pgTable(
+  'results',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    facultyId: uuid('faculty_id')
+      .notNull()
+      .references(() => faculties.id),
+    academicYear: studyLevelEnum('academic_year').notNull(),
+    /** Null when the result covers every student at the level, whatever their acceptance year. */
+    acceptanceYear: text('acceptance_year'),
+    semester: semesterEnum('semester').notNull(),
+    kind: resultKindEnum('kind').notNull(),
+    status: resultStatusEnum('status').notNull().default('pending'),
+    /** What staff typed when generating: program, batch, academic year and the dates. */
+    header: jsonb('header').$type<ResultHeader>().notNull(),
+    /** The courses, students and cells, frozen at generation. */
+    sheet: jsonb('sheet').$type<ResultSheet>().notNull(),
+    /** Students of the batch left off this result by hand; their grades don't lock with it. */
+    excludedStudentIds: jsonb('excluded_student_ids').$type<string[]>().notNull().default([]),
+    approvedAt: timestamp('approved_at', { withTimezone: true }),
+    ...timestamps(),
+  },
+  (t) => [
+    unique('result_batch_unique').on(
+      t.facultyId,
+      t.academicYear,
+      t.acceptanceYear,
+      t.semester,
+      t.kind,
+    )
+      // an all-acceptance-years result (null) is still one per level and semester
+      .nullsNotDistinct(),
+  ],
+);
+
+/** The students a result lists; an approved result locks their grades for its semester. */
+export const resultStudents = pgTable(
+  'result_students',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    resultId: uuid('result_id')
+      .notNull()
+      .references(() => results.id, { onDelete: 'cascade' }),
+    studentId: uuid('student_id')
+      .notNull()
+      .references(() => students.id),
+  },
+  (t) => [unique('result_student_unique').on(t.resultId, t.studentId)],
 );
 
 // ============================================== CMS ==============================================
@@ -501,6 +585,27 @@ export const gradesRelations = relations(grades, ({ one }) => ({
 export const gpasRelations = relations(gpas, ({ one }) => ({
   student: one(students, {
     fields: [gpas.studentId],
+    references: [students.id],
+  }),
+}));
+
+/** Relations for results: faculty, listed students. */
+export const resultsRelations = relations(results, ({ one, many }) => ({
+  faculty: one(faculties, {
+    fields: [results.facultyId],
+    references: [faculties.id],
+  }),
+  students: many(resultStudents),
+}));
+
+/** Relations for a result's students: result, student. */
+export const resultStudentsRelations = relations(resultStudents, ({ one }) => ({
+  result: one(results, {
+    fields: [resultStudents.resultId],
+    references: [results.id],
+  }),
+  student: one(students, {
+    fields: [resultStudents.studentId],
     references: [students.id],
   }),
 }));

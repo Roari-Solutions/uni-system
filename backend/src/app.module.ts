@@ -18,6 +18,7 @@ import { ScientificAffairsModule } from './scientific-affairs/scientific-affairs
 import { AboutCmsModule } from './about-cms/about-cms.module';
 import { MediaModule } from './media/media.module';
 import { FacultyCmsModule } from './faculty-cms/faculty-cms.module';
+import { ResultsModule } from './results/results.module';
 import { PartnershipsCmsModule } from './partnerships-cms/partnerships-cms.module';
 import { CrewCmsModule } from './crew-cms/crew-cms.module';
 import { ExhibitionCmsModule } from './exhibition-cms/exhibition-cms.module';
@@ -32,6 +33,7 @@ import { ExhibitionCmsModule } from './exhibition-cms/exhibition-cms.module';
     GradesModule,
     StudentsModule,
     CurriculumsModule,
+    ResultsModule,
     FacultiesModule,
     AdminModule,
     AuthModule,

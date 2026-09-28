@@ -1,0 +1,159 @@
+import type { LetterGrade } from 'src/grades/letter-grade';
+import { pointsOf } from 'src/grades/letter-grade';
+import type { StudentStanding } from 'src/common/student-standing';
+
+/** What staff type when generating a result; printed in the sheet's header. */
+export interface ResultHeader {
+  /** e.g. "Information Technology"; printed after "B.A. Program". */
+  program: string;
+  /** The batch's label, e.g. "Batch 12". */
+  batch: string;
+  /** The calendar academic year, e.g. "2025/2026". */
+  academicYearLabel: string;
+  examDate: string;
+  collegeBoardDate: string;
+  centralBoardDate: string;
+}
+
+/** One curriculum column: its S.No., code, English name and credit hours. */
+export interface ResultCourse {
+  sNo: number;
+  curriculumId: string;
+  code: string | null;
+  name: string;
+  hours: number;
+}
+
+/**
+ * How a cell prints. `marked` is an ordinary mark; `cheating` a case decided
+ * with a zero; `cheatingPending` one still undecided; `incomplete` no mark yet.
+ */
+export const CELL_STATES = [
+  'marked',
+  'absent',
+  'barred',
+  'substitute',
+  'incomplete',
+  'cheating',
+  'cheatingPending',
+] as const;
+export type CellState = (typeof CELL_STATES)[number];
+
+export type ResitKind = 'supplementary' | 'substitute';
+
+/** One student's cell under one curriculum. */
+export interface ResultCell {
+  curriculumId: string;
+  state: CellState;
+  /** The original mark and letter; null when there is none (incomplete, substitute, undecided cheating). */
+  mark: number | null;
+  letter: LetterGrade | null;
+  /** The Sup & Sub re-exam, on resit sheets only. */
+  resit: { kind: ResitKind; mark: number; letter: LetterGrade } | null;
+}
+
+/** Credit hours, grade points and GPA over the cells that count. */
+export interface ResultTotals {
+  ch: number;
+  gp: number;
+  /** Null when no hours count. */
+  gpa: number | null;
+}
+
+export interface ResultStudent {
+  id: string;
+  uniNumber: string;
+  /** English; all exported sheets are in English. */
+  name: string;
+  standing: StudentStanding;
+  cells: ResultCell[];
+  semester: ResultTotals;
+  /** Second-semester sheets only: the whole academic year. */
+  year: ResultTotals | null;
+}
+
+/** The frozen sheet: everything the board and final versions print. */
+export interface ResultSheet {
+  college: string;
+  academicYear: number;
+  /** Null when the sheet covers every acceptance year at the level. */
+  acceptanceYear: string | null;
+  semester: number;
+  kind: 'regular' | 'resit';
+  courses: ResultCourse[];
+  students: ResultStudent[];
+}
+
+/** What a cell counts as: the resit when there is one and the sheet uses it. */
+export function effectiveLetter(
+  cell: ResultCell,
+  withResit: boolean,
+): LetterGrade | null {
+  return withResit && cell.resit ? cell.resit.letter : cell.letter;
+}
+
+/**
+ * Whether a cell's hours count. A missing mark, an undecided cheating case and
+ * an excused (substitute) absence without its re-exam are all left out.
+ */
+export function counts(cell: ResultCell, withResit: boolean): boolean {
+  if (withResit && cell.resit) return true;
+  return (
+    cell.state !== 'incomplete' &&
+    cell.state !== 'cheatingPending' &&
+    cell.state !== 'substitute'
+  );
+}
+
+const round = (value: number, digits: number) => Number(value.toFixed(digits));
+
+/** A semester's totals over its cells; the GPA is GP / CH, as the stored GPA is. */
+export function totalsOf(
+  cells: ResultCell[],
+  courses: ResultCourse[],
+  withResit: boolean,
+): ResultTotals {
+  const hoursOf = new Map(courses.map((c) => [c.curriculumId, c.hours]));
+  let ch = 0;
+  let gp = 0;
+  for (const cell of cells) {
+    const letter = effectiveLetter(cell, withResit);
+    if (!letter || !counts(cell, withResit)) continue;
+    const hours = hoursOf.get(cell.curriculumId) ?? 0;
+    ch += hours;
+    gp += pointsOf(letter) * hours;
+  }
+  return { ch, gp: round(gp, 2), gpa: ch ? round(gp / ch, 2) : null };
+}
+
+/**
+ * The year's totals: hours and points summed, and the GPA as the plain average
+ * of the semesters that have one, matching the annual GPA the system shows.
+ */
+export function yearTotalsOf(semesters: ResultTotals[]): ResultTotals {
+  const gpas = semesters
+    .map((s) => s.gpa)
+    .filter((g): g is number => g !== null);
+  return {
+    ch: semesters.reduce((acc, s) => acc + s.ch, 0),
+    gp: round(
+      semesters.reduce((acc, s) => acc + s.gp, 0),
+      2,
+    ),
+    gpa: gpas.length
+      ? round(gpas.reduce((acc, g) => acc + g, 0) / gpas.length, 2)
+      : null,
+  };
+}
+
+/** JSON with object keys sorted, so two sheets compare equal whatever order jsonb kept them in. */
+export function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+  if (value && typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .filter(([, v]) => v !== undefined)
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+    return `{${entries.map(([k, v]) => `${JSON.stringify(k)}:${canonicalJson(v)}`).join(',')}}`;
+  }
+  return JSON.stringify(value);
+}

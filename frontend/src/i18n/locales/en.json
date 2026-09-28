@@ -11,7 +11,8 @@
     "users": "Users",
     "import": "Bulk entry",
     "account": "My account",
-    "single": "Single entry"
+    "single": "Single entry",
+    "results": "Results"
   },
   "curriculumEntry": {
     "title": "Add curriculum",
@@ -58,7 +59,8 @@
       "academicYear": "Academic year",
       "semester": "Semester",
       "requirementType": "Requirement type",
-      "courseHours": "Course hours"
+      "courseHours": "Course hours",
+      "serialNo": "S.No."
     },
     "deleteTitle": "Delete curriculum",
     "deleteMessage": "Are you sure you want to delete \"{{name}}\"? This can't be undone.",
@@ -308,7 +310,8 @@
     "deleteFor": "Delete {{name}}'s grade",
     "deleteTitle": "Delete grade",
     "deleteMessage": "Delete {{name}}'s grade ({{grade}}) in this curriculum? The semester GPA is recalculated, and the grade can be entered again later.",
-    "deleteFailed": "Couldn't delete the grade. Try again."
+    "deleteFailed": "Couldn't delete the grade. Try again.",
+    "substituteGrade": "No mark until the substitute exam; left out of the GPA until then."
   },
   "singleEntry": {
     "title": "Enter a student's grades",
@@ -431,7 +434,9 @@
   "seatingStatuses": {
     "attended": "Attended",
     "cheating": "Cheating case",
-    "absent": "Absent"
+    "absent": "Absent",
+    "barred": "Barred",
+    "substitute": "Substitute (excused)"
   },
   "resolveCheating": {
     "title": "Resolve cheating case",
@@ -543,5 +548,145 @@
       "wrongPassword": "That isn't your current password",
       "nothingChanged": "Nothing to save: change a field first."
     }
+  },
+  "resit": {
+    "kinds": {
+      "supplementary": "Supplementary",
+      "substitute": "Substitute exam"
+    }
+  },
+  "results": {
+    "title": "Results",
+    "intro": "Build a batch's board results from the live grades, then approve them once the college board has.",
+    "chooseBatch": "Choose the faculty, academic year and semester (and the acceptance year, if you narrowed to one) to see the sheet.",
+    "generateBoard": "Generate board results",
+    "openBatch": "Open this batch's results",
+    "empty": "No results match the selected filters",
+    "open": "Open",
+    "openFor": "Open the results of {{name}}",
+    "columns": {
+      "faculty": "Faculty",
+      "level": "Academic year",
+      "acceptanceYear": "Acceptance year",
+      "semester": "Semester",
+      "kind": "Exams",
+      "status": "Status",
+      "students": "Students",
+      "updatedAt": "Last updated"
+    },
+    "kinds": {
+      "regular": "Semester exams",
+      "resit": "Sup & Sub"
+    },
+    "statuses": {
+      "pending": "Awaiting approval",
+      "approved": "Approved"
+    },
+    "headerHint": "These lines are printed on the sheet in English, so type them in English. A blank line prints as dots to fill in by hand.",
+    "header": {
+      "program": "B.A. program",
+      "batch": "Batch",
+      "academicYearLabel": "Academic year",
+      "examDate": "Date of exam",
+      "collegeBoardDate": "Date of college board",
+      "centralBoardDate": "Date of central board"
+    },
+    "headerPlaceholders": {
+      "program": "e.g. Information Technology",
+      "batch": "e.g. 12",
+      "academicYearLabel": "e.g. 2025/2026",
+      "examDate": "e.g. January 2026",
+      "collegeBoardDate": "e.g. 2 February 2026",
+      "centralBoardDate": "e.g. 10 February 2026"
+    },
+    "generate": "Generate",
+    "generating": "Generating…",
+    "errors": {
+      "alreadyApproved": "These results are already approved and can't be regenerated.",
+      "regularNotApproved": "The semester's results must be approved before Sup & Sub results.",
+      "emptyBatch": "This batch has no students or no curriculums in this semester.",
+      "stale": "The grades changed since these results were generated. Regenerate them, then approve.",
+      "noResits": "No re-exam marks have been entered yet. Enter them in the Sup & Sub marks below, then generate."
+    },
+    "back": "Back to results",
+    "detailTitles": {
+      "regular": "Semester results",
+      "resit": "Sup & Sub results"
+    },
+    "acceptanceYearValue": "Acceptance year",
+    "staleTitle": "Grades changed since generation",
+    "staleText": "These board results no longer match the grades. Regenerate them before they can be approved.",
+    "regenerate": "Regenerate",
+    "exportBoard": "Export board results (PDF)",
+    "exportFinal": "Export final results (PDF)",
+    "approve": "Approve",
+    "approveTitle": "Approve these results",
+    "approveMessage": "Approve only once the college board has approved these results. The batch's grades for this semester will be locked and the final results can be exported.",
+    "discard": "Discard",
+    "discardTitle": "Discard board results",
+    "discardMessage": "Discard these board results? The grades are not touched, and the results can be generated again.",
+    "pendingHint": "Export the board results for the college board. Once they approve, come back and approve them here.",
+    "generateResit": "Generate Sup & Sub results",
+    "openSibling": {
+      "regular": "Open the semester results",
+      "resit": "Open the Sup & Sub results"
+    },
+    "versionLabel": "Version",
+    "versions": {
+      "final": "Final results",
+      "board": "Board results"
+    },
+    "preview": "Results preview",
+    "printAgain": "Print or save as PDF",
+    "locked": "Results approved",
+    "lockedError": "This semester's results are approved, so its grades can no longer change.",
+    "resitTitle": "Sup & Sub marks",
+    "resitText": "Enter the re-exam marks: supplementary for an F (counted as at most C) and substitute for an excused absence. Then generate the Sup & Sub results: they list only the students with a re-exam mark entered.",
+    "resitLockedText": "The Sup & Sub results are approved, so these marks can no longer change.",
+    "resitColumns": {
+      "uniNumber": "University number",
+      "name": "Student",
+      "course": "S.No. · Code",
+      "original": "Original",
+      "kind": "Re-exam",
+      "resit": "Re-exam mark"
+    },
+    "resitFor": "Re-exam mark for {{name}} in {{course}}",
+    "saveResitFor": "Save the re-exam mark for {{name}} in {{course}}",
+    "clearResitFor": "Remove the re-exam mark for {{name}} in {{course}}",
+    "clearResit": "Remove",
+    "noResitCandidates": "No student needs a re-exam in this semester",
+    "resitLocked": "The Sup & Sub results are approved, so this mark can no longer change.",
+    "newTitle": "New board results",
+    "loadForEditing": "Load for editing",
+    "loadForEditingFor": "Load the results of {{name}} for editing",
+    "editingLoaded": "You're editing results already generated. Correct marks or remove students below, then update them; they replace the pending board results.",
+    "updateBoard": "Update board results",
+    "alreadyApproved": "These results are already approved, so the batch's grades are locked.",
+    "startOver": "Start over",
+    "startOverTitle": "Start over",
+    "startOverMessage": "Clear the chosen batch, the students removed from it and the header typed so far? Grade corrections are already saved and stay as they are.",
+    "draftKept": "Your choices here are kept on this device, even after a refresh, until the results are generated or you start over.",
+    "newHint": "Choose the faculty, academic year and semester. The sheet below is built from the grades as they stand: click a cell to correct a mark, or remove a student from this result, then generate.",
+    "generatedTitle": "Previously generated results",
+    "generatedHint": "Board results already generated, narrowed by the choices above. Open one to export, approve or continue it.",
+    "byAcceptanceYear": "Only one acceptance year",
+    "chooseAcceptanceYear": "Choose an acceptance year",
+    "allAcceptanceYears": "All acceptance years",
+    "alreadyGenerated": "Board results were already generated for this selection.",
+    "previewSummary": "{{students}} students · {{courses}} curriculums",
+    "previewHint": "Click a mark to correct the student's grade. The remove button (×) at the end of a row takes the student off this result only.",
+    "removed": "Removed from this result:",
+    "restoreFor": "Put {{name}} back on the sheet",
+    "removeFor": "Remove {{name}} from this result",
+    "removeColumn": "Remove",
+    "editCellFor": "Correct {{name}}'s grade in {{course}}",
+    "openItemsTitle": "Still open: {{count}}",
+    "openItemsHint": "These grades haven't been settled yet. You can settle them here, or approve with them as they are.",
+    "openItemKinds": {
+      "cheating": "Cheating case awaiting a decision (@)",
+      "missing": "No mark entered (inc)"
+    },
+    "regenerateBeforeApprove": "The sheet will be regenerated from the current grades before it is approved."
   }
 }

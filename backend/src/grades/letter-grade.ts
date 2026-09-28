@@ -37,3 +37,13 @@ const POINTS: Record<LetterGrade, number> = {
 export function pointsOf(letter: LetterGrade): number {
   return POINTS[letter];
 }
+
+/** A supplementary re-exam counts for at most this letter, whatever the mark. */
+export const SUPPLEMENTARY_CAP: LetterGrade = 'C';
+
+/** A letter better than `cap` drops to it; `cap` or worse stands. */
+export function capLetter(letter: LetterGrade, cap: LetterGrade): LetterGrade {
+  return LETTER_GRADES.indexOf(letter) < LETTER_GRADES.indexOf(cap)
+    ? cap
+    : letter;
+}

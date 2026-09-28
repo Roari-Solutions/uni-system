@@ -5,6 +5,8 @@ import FilterSelect from "../../../components/filterSelect";
 import useFaculties from "../../../hooks/useFaculties";
 import { fetchGrades, resolveCheating, updateGrade } from "../../../api/grades";
 import { SeatingStatusTag } from "../../../components/seatingStatusSelect";
+import ResitNote from "../../../components/resitNote";
+import { conflictCode } from "../../../utils/apiError";
 import ResolveCheatingDialog, {
 	type CheatingResolution,
 } from "../../../components/resolveCheatingDialog";
@@ -38,6 +40,8 @@ const GradeList = () => {
 	// the cheating row being decided, if any
 	const [resolving, setResolving] = useState<Grade | null>(null);
 	const [saving, setSaving] = useState(false);
+	// approved results lock a case that was still open; the API says so with RESULTS_APPROVED
+	const [resultsLocked, setResultsLocked] = useState(false);
 
 	// a locked caller only ever sees their own faculty
 	const effectiveFacultyId = locked ? (lockedFacultyId ?? "") : facultyId;
@@ -113,8 +117,14 @@ const GradeList = () => {
 			const updated = await resolveCheating(resolving.id, resolution);
 			replaceRow(updated);
 			setResolving(null);
-		} catch {
-			setFailed(true);
+			setResultsLocked(false);
+		} catch (error) {
+			if (conflictCode(error) === "RESULTS_APPROVED") {
+				setResultsLocked(true);
+				setResolving(null);
+			} else {
+				setFailed(true);
+			}
 		} finally {
 			setSaving(false);
 		}
@@ -139,13 +149,17 @@ const GradeList = () => {
 						max={100}
 						step="any"
 						dir="ltr"
-						defaultValue={g.grade}
+						defaultValue={g.grade ?? ""}
 						onBlur={(e) => void handleGradeChange(g, Number(e.target.value))}
 						aria-label={t("gradeList.gradeFor", { name: student(g)?.name[lang] ?? "" })}
 						className="h-9 w-20 rounded-sm border border-border bg-surface px-3 text-body-md text-foreground outline-none focus:border-primary focus:ring-3 focus:ring-primary/25"
 					/>
 				) : (
-					<span className="font-semibold">{g.grade}</span>
+					<div className="flex flex-col items-start gap-1">
+						{/* a substitute has no mark until its re-exam */}
+						<span className="font-semibold">{g.grade ?? "—"}</span>
+						<ResitNote resit={g.resit} />
+					</div>
 				),
 		},
 		{
@@ -167,7 +181,7 @@ const GradeList = () => {
 				</div>
 			),
 		},
-		{ key: "letter", header: t("gradeList.columns.letter"), render: (g) => <span dir="ltr" className="font-semibold">{g.letter}</span> },
+		{ key: "letter", header: t("gradeList.columns.letter"), render: (g) => <span dir="ltr" className="font-semibold">{g.letter ?? "—"}</span> },
 	];
 
 	return (
@@ -219,6 +233,11 @@ const GradeList = () => {
 			{failed && (
 				<p role="alert" className="mb-6 text-body-sm text-error">
 					{t("common.loadFailed")}
+				</p>
+			)}
+			{resultsLocked && (
+				<p role="alert" className="mb-6 text-body-sm text-error">
+					{t("results.lockedError")}
 				</p>
 			)}
 

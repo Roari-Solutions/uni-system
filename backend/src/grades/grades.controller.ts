@@ -8,6 +8,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
   Query,
   Req,
   UseGuards,
@@ -19,6 +20,7 @@ import {
   CreateGradeDto,
   ListGradesQueryDto,
   PendingGradesQueryDto,
+  ResitGradeDto,
   ResolveCheatingDto,
   UpdateGradeDto,
 } from './dto/grades.dto';
@@ -85,6 +87,22 @@ export class GradesController {
     @Body() dto: ResolveCheatingDto,
   ) {
     return await this.gradesService.resolveCheating(id, dto, req.grCaller);
+  }
+
+  /** PUT /gr/grades/:id/resit — records the Sup & Sub re-exam mark once the semester's results are approved. */
+  @Put(':id/resit')
+  async EnterResit(
+    @Req() req: GrRequest,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ResitGradeDto,
+  ) {
+    return await this.gradesService.enterResit(id, dto, req.grCaller);
+  }
+
+  /** DELETE /gr/grades/:id/resit — removes the re-exam mark. */
+  @Delete(':id/resit')
+  async ClearResit(@Req() req: GrRequest, @Param('id', ParseUUIDPipe) id: string) {
+    return await this.gradesService.clearResit(id, req.grCaller);
   }
 
   /** DELETE /gr/grades/all/:studentId — clears one student's grades and results. */

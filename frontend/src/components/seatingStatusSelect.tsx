@@ -1,9 +1,11 @@
 import type { KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import {
+	ArrowPathIcon,
 	XCircleIcon,
 	ExclamationTriangleIcon,
 	CheckCircleIcon,
+	NoSymbolIcon,
 } from "@heroicons/react/24/outline";
 import { SEATING_STATUSES, type SeatingStatus } from "../types/grade";
 
@@ -12,6 +14,8 @@ const STATUS_STYLE: Record<SeatingStatus, { icon: typeof CheckCircleIcon; text: 
 	attended: { icon: CheckCircleIcon, text: "text-success" },
 	cheating: { icon: ExclamationTriangleIcon, text: "text-error" },
 	absent: { icon: XCircleIcon, text: "text-foreground" },
+	barred: { icon: NoSymbolIcon, text: "text-foreground" },
+	substitute: { icon: ArrowPathIcon, text: "text-foreground" },
 };
 
 type SeatingStatusSelectProps = {
@@ -27,7 +31,7 @@ type SeatingStatusSelectProps = {
 
 /**
  * Picks how a student sat an exam. Collapsed it shows only the chosen status;
- * the three options appear on open.
+ * the options appear on open.
  */
 const SeatingStatusSelect = ({
 	id,

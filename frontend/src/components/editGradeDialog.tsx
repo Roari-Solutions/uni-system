@@ -4,10 +4,12 @@ import SeatingStatusSelect from "./seatingStatusSelect";
 import FormField from "./formField";
 import { inputClass, secondaryButtonClass, submitButtonClass } from "../styles/form";
 import type { SeatingStatus } from "../types/grade";
+import { markToSend, takesNoMark, voidsMark } from "../utils/gradeInput";
 
 /** The edited values, as the caller sends them on. */
 export type GradeEdit = {
-	grade: number;
+	// none for a substitute
+	grade: number | undefined;
 	seatingStatus: SeatingStatus;
 };
 
@@ -19,9 +21,6 @@ type EditGradeDialogProps = {
 	onSave: (edit: GradeEdit) => void;
 	onCancel: () => void;
 };
-
-/** An absence scores 0 whatever is typed; the API enforces the same rule. */
-const voidsMark = (status: SeatingStatus) => status === "absent";
 
 /**
  * Edits one curriculum's mark and seating status. Saving hands the values to
@@ -60,9 +59,16 @@ const EditGradeDialog = ({
 		if (!open && dialog.open) dialog.close();
 	}, [open]);
 
+	// an absence or a bar scores 0 whatever is typed; a substitute takes no mark
 	const voided = voidsMark(status);
+	const noMark = takesNoMark(status);
 
 	const save = () => {
+		if (noMark) {
+			setError("");
+			onSave({ grade: undefined, seatingStatus: status });
+			return;
+		}
 		const value = voided ? 0 : Number(draft.trim());
 		if (draft.trim() === "" && !voided) {
 			setError("gradeSheet.errors.required");
@@ -77,7 +83,7 @@ const EditGradeDialog = ({
 			return;
 		}
 		setError("");
-		onSave({ grade: value, seatingStatus: status });
+		onSave({ grade: markToSend(status, value), seatingStatus: status });
 	};
 
 	return (
@@ -104,8 +110,8 @@ const EditGradeDialog = ({
 						max={100}
 						step="any"
 						dir="ltr"
-						value={voided ? "0" : draft}
-						disabled={voided}
+						value={voided ? "0" : noMark ? "" : draft}
+						disabled={voided || noMark}
 						onChange={(e) => setDraft(e.target.value)}
 						aria-invalid={!!error}
 						className={`${inputClass(!!error)} disabled:bg-background disabled:text-primary-hover`}
@@ -121,6 +127,9 @@ const EditGradeDialog = ({
 					/>
 					{voided && (
 						<p className="text-body-sm text-primary-hover">{t("gradeSheet.voidedGrade")}</p>
+					)}
+					{noMark && (
+						<p className="text-body-sm text-primary-hover">{t("gradeSheet.substituteGrade")}</p>
 					)}
 				</FormField>
 
