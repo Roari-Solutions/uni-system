@@ -111,6 +111,7 @@ export interface PendingGradesView {
     id: string;
     name: { en: string; ar: string };
     uniNumber: string;
+    acceptanceYear: string;
     /** The student's grade row for this curriculum; null until one exists. */
     gradeId: string | null;
     /** Null until a mark is entered, even when a row exists. */
@@ -487,7 +488,7 @@ export class GradesService {
           // suspended and dismissed students take no new marks
           eq(students.standing, 'active'),
         ),
-        columns: { id: true, nameEn: true, nameAr: true, uniNumber: true },
+        columns: { id: true, nameEn: true, nameAr: true, uniNumber: true, acceptanceYear: true },
       });
 
       // a student with a row, marked or not, is edited through it (student_curriculum_unique)
@@ -530,6 +531,7 @@ export class GradesService {
               id: s.id,
               name: { en: s.nameEn, ar: s.nameAr },
               uniNumber: s.uniNumber,
+              acceptanceYear: s.acceptanceYear,
               gradeId: mark?.id ?? null,
               grade,
               // the stored letter: a mark keeps the scale it was entered under

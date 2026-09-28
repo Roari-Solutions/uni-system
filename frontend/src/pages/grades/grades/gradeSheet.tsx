@@ -26,6 +26,7 @@ import type { Grade, SeatingStatus } from "../../../types/grade";
 import { smallPrimaryButtonClass, smallSecondaryButtonClass } from "../../../styles/form";
 import { gradeSchema, voidsMark } from "../../../utils/gradeInput";
 import { adjacentRowId, afterRender, focusField, focusRow } from "../../../utils/rowNav";
+import { ACCEPTANCE_YEARS } from "../../../utils/academicYears";
 
 // a row is idle, showing what is stored, until it is opened to enter or edit its mark
 type RowState =
@@ -83,6 +84,7 @@ const GradeSheet = () => {
 	const [saved, setSaved] = useState<Set<string>>(new Set());
 	const [search, setSearch] = useState("");
 	const [markFilter, setMarkFilter] = useState<MarkFilter>("");
+	const [acceptanceYear, setAcceptanceYear] = useState("");
 	const [pendingEdit, setPendingEdit] = useState<PendingEdit | null>(null);
 	const [pendingDelete, setPendingDelete] = useState<SheetStudent | null>(null);
 	const [deleteFailed, setDeleteFailed] = useState(false);
@@ -116,6 +118,7 @@ const GradeSheet = () => {
 		if (needle && ![s.name.ar, s.name.en, s.uniNumber].some((v) => fold(v).includes(needle))) {
 			return false;
 		}
+		if (acceptanceYear && s.acceptanceYear !== acceptanceYear) return false;
 		// a row saved this visit stays in view, so "not entered" doesn't whisk it away mid-entry
 		if (markFilter === "notEntered") return !hasMark(s) || saved.has(s.id);
 		if (markFilter === "entered") return hasMark(s);
@@ -520,6 +523,14 @@ const GradeSheet = () => {
 					onChange={(value) => setMarkFilter(value as MarkFilter)}
 					allLabel={t("gradeSheet.markFilters.all")}
 					options={MARK_FILTERS.map((f) => ({ value: f, label: t(`gradeSheet.markFilters.${f}`) }))}
+				/>
+				<FilterSelect
+					id="acceptanceYearFilter"
+					label={t("gradeEntry.acceptanceYear")}
+					value={acceptanceYear}
+					onChange={setAcceptanceYear}
+					allLabel={t("gradeEntry.allAcceptanceYears")}
+					options={ACCEPTANCE_YEARS.map((year) => ({ value: year, label: year }))}
 				/>
 			</div>
 

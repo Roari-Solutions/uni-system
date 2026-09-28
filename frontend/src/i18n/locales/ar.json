@@ -255,6 +255,8 @@
     "allYears": "كل السنوات الدراسية",
     "semester": "الفصل الدراسي",
     "allSemesters": "جميع الفصول الدراسية",
+    "acceptanceYear": "سنة القبول",
+    "allAcceptanceYears": "جميع سنوات القبول",
     "empty": "لا توجد مناهج تطابق عوامل التصفية المحددة",
     "enterGrades": "إدخال الدرجات",
     "enterGradesFor": "إدخال درجات {{name}}",

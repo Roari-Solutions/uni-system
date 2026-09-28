@@ -255,6 +255,8 @@
     "allYears": "All academic years",
     "semester": "Semester",
     "allSemesters": "All semesters",
+    "acceptanceYear": "Acceptance year",
+    "allAcceptanceYears": "All acceptance years",
     "empty": "No curriculums match the selected filters",
     "enterGrades": "Enter grades",
     "enterGradesFor": "Enter grades for {{name}}",

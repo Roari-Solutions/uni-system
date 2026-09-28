@@ -9,7 +9,7 @@ import useFaculties from "../../../hooks/useFaculties";
 import { fetchStudents } from "../../../api/students";
 import type { Student } from "../../../types/student";
 import { smallSecondaryButtonClass } from "../../../styles/form";
-import { SEMESTERS, STUDY_LEVELS } from "../../../utils/academicYears";
+import { ACCEPTANCE_YEARS, SEMESTERS, STUDY_LEVELS } from "../../../utils/academicYears";
 
 // step one of single entry: pick the student whose grades are being entered
 const SingleEntry = () => {
@@ -24,6 +24,7 @@ const SingleEntry = () => {
 	const [search, setSearch] = useState("");
 	const [facultyId, setFacultyId] = useState("");
 	const [level, setLevel] = useState("");
+	const [acceptanceYear, setAcceptanceYear] = useState("");
 	// students carry no semester, so this one narrows the sheet the student opens into
 	const [semester, setSemester] = useState("");
 
@@ -36,6 +37,7 @@ const SingleEntry = () => {
 		fetchStudents({
 			facultyId: effectiveFacultyId || undefined,
 			level: level ? Number(level) : undefined,
+			acceptanceYear: acceptanceYear || undefined,
 			q: search.trim() || undefined,
 		})
 			.then((rows) => {
@@ -53,7 +55,7 @@ const SingleEntry = () => {
 		return () => {
 			cancelled = true;
 		};
-	}, [effectiveFacultyId, level, search]);
+	}, [effectiveFacultyId, level, acceptanceYear, search]);
 
 	const facultyName = (id: string) => faculties.find((f) => f.id === id)?.name[lang] ?? "";
 	const sheetPath = (s: Student) => (semester ? `${s.id}?semester=${semester}` : s.id);
@@ -135,6 +137,14 @@ const SingleEntry = () => {
 					onChange={setLevel}
 					allLabel={t("gradeEntry.allYears")}
 					options={STUDY_LEVELS.map((l) => ({ value: String(l), label: t(`student.levels.${l}`) }))}
+				/>
+				<FilterSelect
+					id="acceptanceYearFilter"
+					label={t("gradeEntry.acceptanceYear")}
+					value={acceptanceYear}
+					onChange={setAcceptanceYear}
+					allLabel={t("gradeEntry.allAcceptanceYears")}
+					options={ACCEPTANCE_YEARS.map((year) => ({ value: year, label: year }))}
 				/>
 				<FilterSelect
 					id="semesterFilter"
