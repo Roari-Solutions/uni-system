@@ -20,4 +20,6 @@ export type Curriculum = {
 	courseHours: number;
 	// S.No. on the results sheets, within this faculty -> year -> semester
 	serialNo: number | null;
+	// majors only: the specialization whose students take it; null on other types and older majors
+	specializationId: string | null;
 };

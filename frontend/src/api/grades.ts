@@ -26,7 +26,10 @@ export const fetchGrades = async (filters: GradeFilters = {}): Promise<Grade[]> 
 };
 
 // one student of the sheet, with their mark in the curriculum if one is entered
-export type SheetStudent = Pick<Student, "id" | "name" | "uniNumber" | "acceptanceYear"> & {
+export type SheetStudent = Pick<
+	Student,
+	"id" | "name" | "uniNumber" | "acceptanceYear" | "specializationId"
+> & {
 	// the grade row behind the mark; null until one exists
 	gradeId: string | null;
 	grade: number | null;

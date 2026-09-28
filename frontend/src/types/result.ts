@@ -78,6 +78,8 @@ export type ResultSheet = {
 	academicYear: number;
 	// null when the sheet covers every acceptance year at the level
 	acceptanceYear: string | null;
+	// the specialization's English name; null for the students without one
+	specialization: string | null;
 	semester: number;
 	kind: ResultKind;
 	courses: ResultCourse[];
@@ -90,6 +92,8 @@ export type ResultSummary = {
 	academicYear: number;
 	// null when the result covers every acceptance year at the level
 	acceptanceYear: string | null;
+	// null for the students without a specialization
+	specializationId: string | null;
 	semester: number;
 	kind: ResultKind;
 	status: ResultStatus;

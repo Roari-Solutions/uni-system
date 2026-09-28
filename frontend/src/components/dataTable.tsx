@@ -3,7 +3,10 @@ import { adjacentRowId, focusRow } from "../utils/rowNav";
 
 export type Column<T> = {
 	key: string;
+	// the column's name; also what the column toggle lists
 	header: string;
+	// shown in place of the name, e.g. a select-all checkbox (the name stays for screen readers)
+	headerContent?: ReactNode;
 	render: (row: T) => ReactNode;
 };
 
@@ -62,7 +65,7 @@ const DataTable = <T,>({
 						{columns.map((col) => (
 							// headers may wrap, so the table fits its container instead of scrolling
 							<th key={col.key} scope="col" className="px-4 py-4 text-start align-bottom text-body-sm font-semibold">
-								{col.header}
+								{col.headerContent ?? col.header}
 							</th>
 						))}
 					</tr>

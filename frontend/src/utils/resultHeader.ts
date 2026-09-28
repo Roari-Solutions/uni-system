@@ -27,6 +27,8 @@ type HeaderContext = {
 	facultyNameEn: string;
 	level: number;
 	semester: number;
+	/** The specialization's English name, when the result is for one; it names the program. */
+	specializationNameEn?: string;
 };
 
 /**
@@ -41,6 +43,7 @@ export const headerDefaults = ({
 	facultyNameEn,
 	level,
 	semester,
+	specializationNameEn,
 }: HeaderContext): { initial: ResultHeader; suggestions: HeaderSuggestions } => {
 	const now = new Date();
 	const sameLevel = previous.filter((r) => r.academicYear === level);
@@ -52,7 +55,8 @@ export const headerDefaults = ({
 	const academicYear = academicYearOf(now);
 	return {
 		initial: {
-			program: pick(sameLevel, "program") || pick(previous, "program") || facultyNameEn,
+			program:
+				specializationNameEn || pick(sameLevel, "program") || pick(previous, "program") || facultyNameEn,
 			batch: levelText(level),
 			academicYearLabel: academicYear,
 			examDate: pick(sameTerm, "examDate") || monthYear(now),
@@ -60,7 +64,11 @@ export const headerDefaults = ({
 			centralBoardDate: "",
 		},
 		suggestions: {
-			program: distinct([...previous.map((r) => r.header.program), facultyNameEn]),
+			program: distinct([
+				...(specializationNameEn ? [specializationNameEn] : []),
+				...previous.map((r) => r.header.program),
+				facultyNameEn,
+			]),
 			// every level, so another can be picked
 			batch: STUDY_LEVELS.map(levelText),
 			academicYearLabel: distinct([

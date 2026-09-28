@@ -12,7 +12,9 @@
     "import": "إدخال بالجملة",
     "account": "حسابي",
     "single": "إدخال فردي",
-    "results": "النتائج"
+    "results": "النتائج",
+    "faculty": "الكلية",
+    "view": "بيانات الكلية"
   },
   "curriculumEntry": {
     "title": "إضافة منهج",
@@ -38,7 +40,8 @@
     "courseHours": "الساعات المعتمدة",
     "allFaculties": "جميع الكليات",
     "universityFaculties": "متطلب الجامعة تقدمه جميع الكليات.",
-    "editTitle": "تعديل منهج"
+    "editTitle": "تعديل منهج",
+    "facultyFromTab": "يُضاف إلى الكلية المفتوحة."
   },
   "curriculumList": {
     "title": "المناهج",
@@ -518,7 +521,9 @@
       "facultyMismatch": "هذا الصف يذكر كلية غير الكلية المختارة",
       "facultyAbbreviation": "لا يوجد رمز من حرفين لهذه الكلية، لذا لا يمكن بناء الرقم الجامعي",
       "faculty": "هذا الصف خارج كليتك",
-      "acceptanceTypeUnknown": "نوع القبول لا يطابق أي نوع مسجّل"
+      "acceptanceTypeUnknown": "نوع القبول لا يطابق أي نوع مسجّل",
+      "specializationUnknown": "هذا التخصص لا يطابق أي تخصص في الكلية",
+      "specializationMismatch": "هذا التخصص يتبع كلية أخرى"
     }
   },
   "orphanedGrades": {
@@ -688,5 +693,93 @@
       "missing": "لم تُدخل درجة (inc)"
     },
     "regenerateBeforeApprove": "سيُعاد إصدار الكشف من الدرجات الحالية قبل اعتماده."
+  },
+  "specialization": {
+    "label": "التخصص",
+    "all": "جميع التخصصات",
+    "without": "بدون تخصص",
+    "none": "بدون تخصص",
+    "choose": "اختر التخصص",
+    "chooseFacultyFirst": "اختر الكلية أولاً",
+    "facultyHasNone": "لا توجد تخصصات في هذه الكلية.",
+    "studentHint": "اختياري. يحدد متطلبات التخصص التي يدرسها الطالب في كليته.",
+    "majorHint": "مطلوب: لا يدرس هذا المتطلب إلا طلاب هذا التخصص.",
+    "legacyMajorHint": "هذا المتطلب سابق للتخصصات ويُحسب لكل طلاب الكلية حتى يُحدد تخصصه.",
+    "set": "تحديد التخصص",
+    "setFor": "تحديد تخصص {{name}}",
+    "setSelected": "تحديد تخصص المحددين",
+    "selectAll": "تحديد الكل",
+    "selectFor": "تحديد {{name}}",
+    "selected": "المحدد: {{count}}",
+    "clearSelection": "إلغاء التحديد",
+    "saved": "حُفظ التخصص لـ {{count}}.",
+    "savedWithSkips": "حُفظ لـ {{updated}}، وتُخطي {{skipped}} (مفصولون أو نتيجتهم معتمدة).",
+    "missingStudents": "طلاب بدون تخصص: {{count}}.",
+    "missingMajors": "متطلبات تخصص بدون تخصص محدد: {{count}}.",
+    "showMissing": "عرضهم",
+    "shared": "مشترك",
+    "reviewTitle": "التغييرات المراد حفظها: {{count}}",
+    "becomes": "يصبح",
+    "unchanged": "محدد مسبقاً ولن يتغير: {{count}}",
+    "orphansMessage": "الدرجات في المناهج التي لا يدرسها التخصص الجديد (عدد الدرجات المتأثرة: {{count}}) تبقى محفوظة كسجل، لكنها لن تُحسب في المعدل. هل تريد الحفظ على أي حال؟",
+    "back": "رجوع",
+    "reviewAction": "مراجعة",
+    "save": "حفظ التخصص",
+    "reviewSaveTitle": "مراجعة التخصص",
+    "reviewSaveMessage": "يتغير التخصص من \"{{from}}\" إلى \"{{to}}\". وهو يحدد متطلبات التخصص التي تُحسب. هل تريد الحفظ؟",
+    "withoutResult": "الطلاب بدون تخصص",
+    "errors": {
+      "locked": "نتيجة هذا الفصل معتمدة، فلا يمكن تغيير التخصص.",
+      "required": "اختر تخصص هذا المتطلب.",
+      "namesRequired": "الاسمان مطلوبان.",
+      "nameTaken": "يوجد في هذه الكلية تخصص بهذا الاسم.",
+      "inUse": "لا يزال طلاب أو مناهج يستخدمون هذا التخصص."
+    },
+    "nameAr": "الاسم (بالعربية)",
+    "nameEn": "الاسم (بالإنجليزية)",
+    "nameEnHint": "يُطبع على كشوف النتائج، وهي بالإنجليزية.",
+    "add": "إضافة تخصص",
+    "edit": "تعديل التخصص",
+    "editFor": "تعديل {{name}}",
+    "deleteHint": "لا يُحذف التخصص إلا إذا لم يستخدمه أي طالب أو منهج.",
+    "deleteTitle": "حذف التخصص",
+    "deleteMessage": "حذف \"{{name}}\"؟ لا يمكن التراجع عن ذلك."
+  },
+  "faculty": {
+    "title": "الكليات",
+    "columns": {
+      "name": "الكلية",
+      "abbreviation": "الرمز",
+      "specializations": "التخصصات",
+      "students": "الطلاب",
+      "curriculums": "المناهج"
+    },
+    "noSpecializations": "لا توجد تخصصات",
+    "openFor": "فتح {{name}}",
+    "open": "فتح",
+    "empty": "لا توجد كليات",
+    "back": "العودة إلى الكليات",
+    "specializationCount": "التخصصات: {{count}}",
+    "tabs": {
+      "details": "البيانات",
+      "specializations": "التخصصات",
+      "curriculums": "المناهج"
+    },
+    "fields": {
+      "nameAr": "اسم الكلية (بالعربية)",
+      "nameEn": "اسم الكلية (بالإنجليزية)",
+      "abbreviation": "الرمز من حرفين"
+    },
+    "abbreviationHint": "تُبنى منه الأرقام الجامعية ورموز المناهج الجديدة؛ وتبقى الحالية كما هي.",
+    "save": "حفظ",
+    "errors": {
+      "namesRequired": "الاسمان مطلوبان.",
+      "abbreviationFormat": "استخدم حرفين إنجليزيين كبيرين، مثل EN.",
+      "nameTaken": "توجد كلية أخرى بهذا الاسم.",
+      "abbreviationTaken": "توجد كلية أخرى تستخدم هذا الرمز."
+    },
+    "missingTitle": "لم يُحدد لها تخصص بعد",
+    "goToStudents": "الذهاب إلى الطلاب",
+    "goToCurriculums": "الذهاب إلى المناهج"
   }
 }

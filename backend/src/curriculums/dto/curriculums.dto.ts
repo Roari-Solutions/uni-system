@@ -17,6 +17,7 @@ import { PartialType } from '@nestjs/mapped-types';
 import { OptionalEnglishNameDto } from 'src/common/dto/localized-name.dto';
 import { REQUIREMENT_TYPES, type RequirementType } from 'src/common/requirement-type';
 import { ABBREVIATION_PATTERN } from '../abbreviation';
+import { SPECIALIZATION_FILTER } from 'src/common/specialization';
 import {
   ACADEMIC_YEARS,
   NormaliseAcademicYear,
@@ -61,6 +62,15 @@ export class CreateCurriculumDto {
   @Min(1)
   @Max(12)
   courseHours!: number;
+
+  /**
+   * Major requirements only: the faculty's specialization whose students take
+   * it. Required for a new major; ignored for university and faculty requirements.
+   */
+  @IsOptional()
+  @ValidateIf((_dto: unknown, value: unknown) => value !== null)
+  @IsUUID()
+  specializationId?: string | null;
 }
 
 /** Body for patching a curriculum (all fields optional). */
@@ -94,6 +104,11 @@ export class ListCurriculumsQueryDto {
   @IsOptional()
   @IsIn(REQUIREMENT_TYPES)
   requirementType?: RequirementType;
+
+  /** A specialization's majors, or "none" for the majors not tied to one yet. */
+  @IsOptional()
+  @Matches(SPECIALIZATION_FILTER)
+  specializationId?: string;
 
   /** Free-text match against either language's name or the abbreviation. */
   @IsOptional()

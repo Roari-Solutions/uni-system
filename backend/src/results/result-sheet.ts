@@ -78,6 +78,8 @@ export interface ResultSheet {
   academicYear: number;
   /** Null when the sheet covers every acceptance year at the level. */
   acceptanceYear: string | null;
+  /** The specialization's English name; null for students without one. */
+  specialization: string | null;
   semester: number;
   kind: 'regular' | 'resit';
   courses: ResultCourse[];

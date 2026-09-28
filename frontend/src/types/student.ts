@@ -41,6 +41,8 @@ export type Student = {
 	acceptanceType: AcceptanceType;
 	level: (typeof STUDY_LEVELS)[number];
 	facultyId: string;
+	// null until set; it decides which of the faculty's majors the student takes
+	specializationId: string | null;
 	status: StudentStatus;
 	standing: StudentStanding;
 	// suspended students only

@@ -12,7 +12,9 @@
     "import": "Bulk entry",
     "account": "My account",
     "single": "Single entry",
-    "results": "Results"
+    "results": "Results",
+    "faculty": "Faculty",
+    "view": "Faculty information"
   },
   "curriculumEntry": {
     "title": "Add curriculum",
@@ -38,7 +40,8 @@
     "courseHours": "Course hours",
     "allFaculties": "All faculties",
     "universityFaculties": "A university requirement is offered by every faculty.",
-    "editTitle": "Edit curriculum"
+    "editTitle": "Edit curriculum",
+    "facultyFromTab": "Added to the faculty whose tab this is."
   },
   "curriculumList": {
     "title": "Curriculums",
@@ -518,7 +521,9 @@
       "facultyMismatch": "This row names a different faculty than the one chosen",
       "facultyAbbreviation": "This faculty has no two-letter code, so no university number can be built",
       "faculty": "This row is outside your faculty",
-      "acceptanceTypeUnknown": "This acceptance type matches none on record"
+      "acceptanceTypeUnknown": "This acceptance type matches none on record",
+      "specializationUnknown": "This specialization matches none of the faculty's",
+      "specializationMismatch": "This specialization belongs to another faculty"
     }
   },
   "orphanedGrades": {
@@ -688,5 +693,93 @@
       "missing": "No mark entered (inc)"
     },
     "regenerateBeforeApprove": "The sheet will be regenerated from the current grades before it is approved."
+  },
+  "specialization": {
+    "label": "Specialization",
+    "all": "All specializations",
+    "without": "Without a specialization",
+    "none": "No specialization",
+    "choose": "Choose a specialization",
+    "chooseFacultyFirst": "Choose the faculty first",
+    "facultyHasNone": "This faculty has no specializations.",
+    "studentHint": "Optional. It decides which of the faculty's major requirements the student takes.",
+    "majorHint": "Required: only this specialization's students take this major.",
+    "legacyMajorHint": "This major predates specializations and counts for the whole faculty until one is set.",
+    "set": "Set specialization",
+    "setFor": "Set the specialization of {{name}}",
+    "setSelected": "Set specialization for the selected",
+    "selectAll": "Select all",
+    "selectFor": "Select {{name}}",
+    "selected": "Selected: {{count}}",
+    "clearSelection": "Clear selection",
+    "saved": "Specialization saved for {{count}}.",
+    "savedWithSkips": "Saved for {{updated}}; {{skipped}} skipped (dismissed, or their results are approved).",
+    "missingStudents": "Students without a specialization: {{count}}.",
+    "missingMajors": "Major requirements without a specialization: {{count}}.",
+    "showMissing": "Show them",
+    "shared": "Shared",
+    "reviewTitle": "Changes to save: {{count}}",
+    "becomes": "becomes",
+    "unchanged": "Already set, left as is: {{count}}",
+    "orphansMessage": "Grades in curriculums the new specialization doesn't take (grades affected: {{count}}) are kept as history, but they will no longer count toward the GPA. Save anyway?",
+    "back": "Back",
+    "reviewAction": "Review",
+    "save": "Save specialization",
+    "reviewSaveTitle": "Review the specialization",
+    "reviewSaveMessage": "The specialization changes from \"{{from}}\" to \"{{to}}\". It decides which major requirements count. Save?",
+    "withoutResult": "Students without a specialization",
+    "errors": {
+      "locked": "This semester's results are approved, so the specialization can no longer change.",
+      "required": "Choose the specialization of this major.",
+      "namesRequired": "Both names are required.",
+      "nameTaken": "This faculty already has a specialization with that name.",
+      "inUse": "Students or curriculums still use this specialization."
+    },
+    "nameAr": "Name (Arabic)",
+    "nameEn": "Name (English)",
+    "nameEnHint": "Printed on the results, which are in English.",
+    "add": "Add specialization",
+    "edit": "Edit specialization",
+    "editFor": "Edit {{name}}",
+    "deleteHint": "A specialization can be deleted only while no student or curriculum uses it.",
+    "deleteTitle": "Delete specialization",
+    "deleteMessage": "Delete \"{{name}}\"? This can't be undone."
+  },
+  "faculty": {
+    "title": "Faculties",
+    "columns": {
+      "name": "Faculty",
+      "abbreviation": "Code",
+      "specializations": "Specializations",
+      "students": "Students",
+      "curriculums": "Curriculums"
+    },
+    "noSpecializations": "No specializations",
+    "openFor": "Open {{name}}",
+    "open": "Open",
+    "empty": "No faculties",
+    "back": "Back to faculties",
+    "specializationCount": "Specializations: {{count}}",
+    "tabs": {
+      "details": "Details",
+      "specializations": "Specializations",
+      "curriculums": "Curriculums"
+    },
+    "fields": {
+      "nameAr": "Faculty name (Arabic)",
+      "nameEn": "Faculty name (English)",
+      "abbreviation": "Two-letter code"
+    },
+    "abbreviationHint": "New university numbers and curriculum codes are built from it; existing ones keep theirs.",
+    "save": "Save",
+    "errors": {
+      "namesRequired": "Both names are required.",
+      "abbreviationFormat": "Use two capital letters, e.g. EN.",
+      "nameTaken": "Another faculty has that name.",
+      "abbreviationTaken": "Another faculty uses that code."
+    },
+    "missingTitle": "Still without a specialization",
+    "goToStudents": "Go to students",
+    "goToCurriculums": "Go to curriculums"
   }
 }

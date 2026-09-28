@@ -27,6 +27,9 @@ import EditGradeDialog, { type GradeEdit } from "../../../components/editGradeDi
 import ConfirmDialog from "../../../components/confirmDialog";
 import { PenaltyTags } from "../../../components/penaltyTags";
 import ResitNote from "../../../components/resitNote";
+import SetSpecializationDialog from "../../../components/setSpecializationDialog";
+import { setStudentsSpecialization } from "../../../api/students";
+import { specializationName } from "../../../utils/specializations";
 import { conflictCode } from "../../../utils/apiError";
 import useAuth from "../../../auth/useAuth";
 import { smallSecondaryButtonClass } from "../../../styles/form";
@@ -61,6 +64,7 @@ const StudentDetails = () => {
 	const [pending, setPending] = useState<{ row: StudentYearGrade; edit: GradeEdit } | null>(null);
 	const [saving, setSaving] = useState(false);
 	const [confirmReinstate, setConfirmReinstate] = useState(false);
+	const [settingSpecialization, setSettingSpecialization] = useState(false);
 	// an i18n key saying why the last change was refused
 	const [actionError, setActionError] = useState<string | null>(null);
 
@@ -91,6 +95,8 @@ const StudentDetails = () => {
 	}, [studentId]);
 
 	const facultyName = (id: string) => faculties.find((f) => f.id === id)?.name[lang] ?? "";
+	const facultySpecializations =
+		faculties.find((f) => f.id === student?.facultyId)?.specializations ?? [];
 
 	const semesterGpa = (semester: number) =>
 		gpas?.semesters.find((s) => s.semester === semester) ?? null;
@@ -359,6 +365,22 @@ const StudentDetails = () => {
 								<Detail label={t("studentDetails.fields.nationalId")}>{student.nationalId || "—"}</Detail>
 							)}
 							<Detail label={t("studentDetails.fields.faculty")}>{facultyName(student.facultyId)}</Detail>
+							<Detail label={t("specialization.label")}>
+								{student.specializationId ? (
+									specializationName(faculties, student.specializationId, lang)
+								) : // once set, it changes from "edit details" instead
+								facultySpecializations.length > 0 && student.standing !== "dismissed" ? (
+									<button
+										type="button"
+										onClick={() => setSettingSpecialization(true)}
+										className={smallSecondaryButtonClass}
+									>
+										{t("specialization.set")}
+									</button>
+								) : (
+									"—"
+								)}
+							</Detail>
 							<Detail label={t("studentDetails.fields.level")}>{t(`student.levels.${student.level}`)}</Detail>
 							<Detail label={t("studentDetails.fields.acceptanceYear")}>{student.acceptanceYear}</Detail>
 							<Detail label={t("studentDetails.fields.acceptanceType")}>
@@ -509,6 +531,25 @@ const StudentDetails = () => {
 				onResolve={(resolution) => void handleResolve(resolution)}
 				onCancel={() => setResolving(null)}
 			/>
+
+			{student && settingSpecialization && (
+				<SetSpecializationDialog
+					open
+					title={t("specialization.setFor", { name: student.name[lang] })}
+					faculties={faculties}
+					facultyId={student.facultyId}
+					targets={[
+						{ id: student.id, name: student.name[lang], specializationId: student.specializationId },
+					]}
+					allowNone
+					onSave={async (value, confirmOrphans) => {
+						await setStudentsSpecialization([student.id], value, confirmOrphans);
+						// the year's curriculums (and GPAs) follow the specialization
+						await reload();
+					}}
+					onClose={() => setSettingSpecialization(false)}
+				/>
+			)}
 		</div>
 	);
 };

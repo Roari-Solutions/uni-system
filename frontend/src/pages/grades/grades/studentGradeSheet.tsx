@@ -30,6 +30,7 @@ import { gradeSchema, markToSend, takesNoMark, voidsMark } from "../../../utils/
 import { conflictCode } from "../../../utils/apiError";
 import ResitNote from "../../../components/resitNote";
 import { adjacentRowId, focusField, focusRow } from "../../../utils/rowNav";
+import { specializationName } from "../../../utils/specializations";
 
 // what the row's fields hold, typed or loaded
 type Draft = { grade: string; seatingStatus: SeatingStatus };
@@ -416,6 +417,12 @@ const StudentGradeSheet = () => {
 					{" · "}
 					{t(`student.levels.${student.level}`)}
 					{" · "}
+					{student.specializationId && (
+						<>
+							{specializationName(faculties, student.specializationId, lang)}
+							{" · "}
+						</>
+					)}
 					<Link
 						to={`/dashboards/grades/students/${student.id}`}
 						className="font-medium text-primary-hover underline-offset-4 transition-colors duration-150 ease-out hover:text-accent-deep hover:underline"

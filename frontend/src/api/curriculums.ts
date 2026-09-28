@@ -7,6 +7,8 @@ export type CurriculumFilters = {
 	academicYear?: number;
 	semester?: number;
 	requirementType?: RequirementType;
+	// a specialization's majors, or "none" for majors not tied to one yet
+	specializationId?: string;
 	q?: string;
 };
 
@@ -20,6 +22,8 @@ export type CurriculumPayload = {
 	semester: number;
 	requirementType: RequirementType;
 	courseHours: number;
+	// majors only; required for a new one
+	specializationId?: string | null;
 };
 
 export const fetchCurriculums = async (
@@ -68,6 +72,22 @@ export const updateCurriculum = async (
 ): Promise<Curriculum> => {
 	const { data } = await api.patch<Curriculum>(`/gr/curriculum/${id}`, {
 		...payload,
+		...(confirmOrphanedGrades ? { confirmOrphanedGrades } : {}),
+	});
+	return data;
+};
+
+/**
+ * Ties a major to a specialization, leaving the rest as it is. Fails with 409
+ * GRADES_ORPHANED when students outside it hold grades in it; resend with the flag.
+ */
+export const setCurriculumSpecialization = async (
+	id: string,
+	specializationId: string,
+	confirmOrphanedGrades = false,
+): Promise<Curriculum> => {
+	const { data } = await api.patch<Curriculum>(`/gr/curriculum/${id}`, {
+		specializationId,
 		...(confirmOrphanedGrades ? { confirmOrphanedGrades } : {}),
 	});
 	return data;

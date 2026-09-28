@@ -39,6 +39,7 @@ import {
 	submitButtonClass,
 } from "../../../styles/form";
 import { headerDefaults, type HeaderSuggestions } from "../../../utils/resultHeader";
+import { specializationName } from "../../../utils/specializations";
 import { generateError } from "../../../utils/resultErrors";
 
 // the regeneration dialog or the Sup & Sub one; both ask for the header
@@ -81,7 +82,12 @@ const ResultDetails = () => {
 		const resits =
 			row.kind === "regular" && row.status === "approved" ? await fetchResitCandidates(row.id) : [];
 		// an all-acceptance-years result's sibling covers all of them too
-		const other = batch.find((r) => r.kind !== row.kind && r.acceptanceYear === row.acceptanceYear);
+		const other = batch.find(
+			(r) =>
+				r.kind !== row.kind &&
+				r.acceptanceYear === row.acceptanceYear &&
+				r.specializationId === row.specializationId,
+		);
 		return { row, sibling: other ?? null, resits };
 	}, [resultId]);
 
@@ -135,6 +141,7 @@ const ResultDetails = () => {
 			facultyNameEn: faculties.find((f) => f.id === result.facultyId)?.name.en ?? "",
 			level: result.academicYear,
 			semester: result.semester,
+			specializationNameEn: result.sheet.specialization ?? undefined,
 		});
 		setGenerating({ kind, header: result.header, suggestions });
 	};
@@ -160,6 +167,7 @@ const ResultDetails = () => {
 					facultyId: result.facultyId,
 					academicYear: result.academicYear,
 					acceptanceYear: result.acceptanceYear ?? undefined,
+					specializationId: result.specializationId ?? undefined,
 					semester: result.semester,
 					// a regeneration leaves off who it did; Sup & Sub follows the semester's result
 					excludedStudentIds: generating.kind === result.kind ? result.excludedStudentIds : undefined,
@@ -228,6 +236,12 @@ const ResultDetails = () => {
 				</span>
 				<span aria-hidden>·</span>
 				<span>{t(`semesters.${result.semester}`)}</span>
+				{result.specializationId && (
+					<>
+						<span aria-hidden>·</span>
+						<span>{specializationName(faculties, result.specializationId, lang)}</span>
+					</>
+				)}
 				<span aria-hidden>·</span>
 				<ResultStatusTag status={result.status} />
 			</p>

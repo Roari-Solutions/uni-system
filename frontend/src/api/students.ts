@@ -5,6 +5,8 @@ export type StudentFilters = {
 	facultyId?: string;
 	level?: number;
 	acceptanceYear?: string;
+	// a specialization's id, or "none" for the students without one
+	specializationId?: string;
 	q?: string;
 };
 
@@ -20,6 +22,8 @@ export type StudentPayload = {
 	acceptanceYear: string;
 	acceptanceType: Student["acceptanceType"];
 	level: number;
+	// optional; null clears it
+	specializationId?: string | null;
 };
 
 export const fetchStudents = async (filters: StudentFilters = {}): Promise<Student[]> => {
@@ -56,6 +60,30 @@ export const updateStudent = async (
 /** Lifts a suspension or reverses a dismissal; admin only. */
 export const reinstateStudent = async (id: string): Promise<Student> => {
 	const { data } = await api.post<Student>(`/gr/students/${id}/reinstate`);
+	return data;
+};
+
+/** What a bulk specialization change did: students it changed, left as they were, or skipped. */
+export type SetSpecializationReport = {
+	updated: number;
+	unchanged: number;
+	skipped: { id: string; reason: "dismissed" | "resultsApproved" }[];
+};
+
+/**
+ * Sets one specialization (or none) on many students. Fails with 409
+ * GRADES_ORPHANED when grades would stop counting; resend with the flag to go ahead.
+ */
+export const setStudentsSpecialization = async (
+	studentIds: string[],
+	specializationId: string | null,
+	confirmOrphanedGrades = false,
+): Promise<SetSpecializationReport> => {
+	const { data } = await api.post<SetSpecializationReport>("/gr/students/specialization", {
+		studentIds,
+		specializationId,
+		...(confirmOrphanedGrades ? { confirmOrphanedGrades } : {}),
+	});
 	return data;
 };
 

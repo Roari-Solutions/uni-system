@@ -12,6 +12,7 @@ import {
   Matches,
   MaxLength,
   Min,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import { PartialType } from '@nestjs/mapped-types';
@@ -22,6 +23,7 @@ import {
   type AcademicYear,
 } from 'src/common/academic-year';
 import { STUDENT_STANDINGS, type StudentStanding } from 'src/common/student-standing';
+import { SPECIALIZATION_FILTER } from 'src/common/specialization';
 
 /** Admission routes offered to students; mirrors ACCEPTANCE_TYPES in the views. */
 export const ACCEPTANCE_TYPES = [
@@ -73,6 +75,12 @@ export class CreateStudentDto {
   @IsUUID()
   facultyId!: string;
 
+  /** Optional; one of the faculty's specializations. Null clears it. */
+  @IsOptional()
+  @ValidateIf((_dto: unknown, value: unknown) => value !== null)
+  @IsUUID()
+  specializationId?: string | null;
+
   /** Calendar year of admission, e.g. "2026" — the only calendar year we store. */
   @IsString()
   @Matches(/^\d{4}$/)
@@ -91,8 +99,8 @@ export class CreateStudentDto {
 export class UpdateStudentDto extends PartialType(CreateStudentDto) {
   /**
    * The caller has seen the GRADES_ORPHANED warning and accepts that grades in
-   * curriculums the new faculty doesn't offer stop counting. They are kept as
-   * history either way.
+   * curriculums the student no longer takes (another faculty's, or another
+   * specialization's majors) stop counting. They are kept as history either way.
    */
   @IsOptional()
   @IsBoolean()
@@ -118,6 +126,11 @@ export class ListStudentsQueryDto {
   @IsOptional()
   @IsIn(STUDENT_STANDINGS)
   standing?: StudentStanding;
+
+  /** A specialization's id, or "none" for the students without one. */
+  @IsOptional()
+  @Matches(SPECIALIZATION_FILTER)
+  specializationId?: string;
 
   /** Free-text match against either language's name or the university number. */
   @IsOptional()
@@ -145,4 +158,23 @@ export class BulkStudentsDto {
   @ValidateNested({ each: true })
   @Type(() => BulkStudentRowDto)
   rows!: BulkStudentRowDto[];
+}
+
+/** Body for POST /gr/students/specialization: one specialization for many students. */
+export class SetSpecializationDto {
+  @IsArray()
+  @ArrayNotEmpty()
+  @ArrayMaxSize(BULK_ROW_LIMIT)
+  @IsUUID('all', { each: true })
+  studentIds!: string[];
+
+  /** Null clears it. */
+  @ValidateIf((_dto: unknown, value: unknown) => value !== null)
+  @IsUUID()
+  specializationId!: string | null;
+
+  /** The caller has seen the GRADES_ORPHANED warning; see UpdateStudentDto. */
+  @IsOptional()
+  @IsBoolean()
+  confirmOrphanedGrades?: boolean;
 }

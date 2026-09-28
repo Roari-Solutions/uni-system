@@ -17,6 +17,7 @@ import {
   type AcademicYear,
   type Semester,
 } from 'src/common/academic-year';
+import { SPECIALIZATION_FILTER } from 'src/common/specialization';
 
 export const RESULT_KINDS = ['regular', 'resit'] as const;
 export type ResultKind = (typeof RESULT_KINDS)[number];
@@ -70,6 +71,11 @@ export class PreviewResultDto {
   @Matches(ACCEPTANCE_YEAR)
   acceptanceYear?: string;
 
+  /** The specialization the result is for; omitted for the students without one. */
+  @IsOptional()
+  @IsUUID()
+  specializationId?: string;
+
   @NormaliseSemester()
   @IsIn(SEMESTERS)
   semester!: Semester;
@@ -111,6 +117,11 @@ export class ListResultsQueryDto {
   @NormaliseSemester()
   @IsIn(SEMESTERS)
   semester?: Semester;
+
+  /** A specialization's results, or "none" for those of the students without one. */
+  @IsOptional()
+  @Matches(SPECIALIZATION_FILTER)
+  specializationId?: string;
 
   @IsOptional()
   @IsIn(RESULT_STATUSES)
