@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { eq } from 'drizzle-orm';
+import { and, eq, or } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
@@ -25,6 +25,26 @@ const FACULTIES = [
   },
   { nameEn: 'Business Studies', nameAr: 'الدراسات التجارية', abbreviation: 'CS' },
 ];
+
+/**
+ * Each faculty's specializations, keyed by the faculty's abbreviation, in both
+ * languages (both are required: the English name prints on the results). Like
+ * FACULTIES this is the source of truth: re-running the seed creates what's
+ * missing and corrects names that drifted. Nothing is ever deleted here.
+ *
+ * TODO(specializations): fill in the real list, e.g.
+ *   CS: [{ nameEn: 'Economics', nameAr: 'الاقتصاد' }],
+ * A faculty without specializations (e.g. Nursing) keeps an empty list.
+ */
+const SPECIALIZATIONS: Record<string, { nameEn: string; nameAr: string }[]> = {
+  EN: [],
+  AR: [],
+  NS: [],
+  LW: [],
+  IS: [],
+  IT: [],
+  CS: [],
+};
 
 /** Opens a Drizzle handle using the central database URL. */
 function getDb() {
@@ -60,6 +80,36 @@ async function ensureFaculty(
     .returning();
   console.log(`faculty ${abbreviation} created`);
   return { id: row.id, nameEn: row.nameEn, abbreviation };
+}
+
+/**
+ * Ensures a faculty's specialization exists. It is found by either name, so
+ * correcting one of the two names here renames the existing row.
+ */
+async function ensureSpecialization(
+  db: Db,
+  facultyId: string,
+  nameEn: string,
+  nameAr: string,
+): Promise<void> {
+  const found = await db.query.specializations.findFirst({
+    where: and(
+      eq(schema.specializations.facultyId, facultyId),
+      or(eq(schema.specializations.nameEn, nameEn), eq(schema.specializations.nameAr, nameAr)),
+    ),
+  });
+  if (found) {
+    if (found.nameEn !== nameEn || found.nameAr !== nameAr) {
+      await db
+        .update(schema.specializations)
+        .set({ nameEn, nameAr })
+        .where(eq(schema.specializations.id, found.id));
+      console.log(`specialization ${nameEn} names updated`);
+    }
+    return;
+  }
+  await db.insert(schema.specializations).values({ facultyId, nameEn, nameAr });
+  console.log(`specialization ${nameEn} created`);
 }
 
 /** Ensures a department exists; returns its id. */
@@ -122,7 +172,11 @@ async function main() {
   try {
     const rows = [];
     for (const f of FACULTIES) {
-      rows.push(await ensureFaculty(db, f.nameEn, f.nameAr, f.abbreviation));
+      const faculty = await ensureFaculty(db, f.nameEn, f.nameAr, f.abbreviation);
+      rows.push(faculty);
+      for (const spec of SPECIALIZATIONS[f.abbreviation] ?? []) {
+        await ensureSpecialization(db, faculty.id, spec.nameEn, spec.nameAr);
+      }
     }
     await ensureRole(db, 'admin');
     await ensureRole(db, 'data-entry');

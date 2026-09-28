@@ -6,6 +6,7 @@ import {
 	ArrowLeftStartOnRectangleIcon,
 	Bars3Icon,
 	BookOpenIcon,
+	BuildingLibraryIcon,
 	ChevronDownIcon,
 	ClipboardDocumentListIcon,
 	LanguageIcon,
@@ -20,13 +21,14 @@ const HOVER_DELAY = 130; // ms — expand/collapse delay on mouse enter/leave
 const BASE_PATH = "/dashboards/grades";
 
 type Section = {
-	id: "curriculum" | "students" | "grades" | "users";
+	id: "faculty" | "curriculum" | "students" | "grades" | "users";
 	icon: typeof BookOpenIcon;
 	// sections only some roles may reach
 	adminOnly?: boolean;
 };
 
 const SECTIONS: Section[] = [
+	{ id: "faculty", icon: BuildingLibraryIcon },
 	{ id: "curriculum", icon: BookOpenIcon },
 	{ id: "students", icon: AcademicCapIcon },
 	{ id: "grades", icon: ClipboardDocumentListIcon },
@@ -34,6 +36,11 @@ const SECTIONS: Section[] = [
 ];
 
 const SUB_OPTIONS = ["list", "entry"] as const;
+
+// sections whose options aren't the shared list/entry pair
+const OWN_OPTIONS: Partial<Record<Section["id"], string[]>> = {
+	faculty: ["view"],
+};
 
 // sections with an option of their own beyond the shared list/entry pair
 const EXTRA_OPTIONS: Partial<Record<Section["id"], string[]>> = {
@@ -188,7 +195,7 @@ const SideNav = () => {
 									}`}
 								>
 									<ul className="flex flex-col gap-1 overflow-hidden ps-9 pt-1">
-										{[...SUB_OPTIONS, ...(EXTRA_OPTIONS[id] ?? [])].map((option) => (
+										{(OWN_OPTIONS[id] ?? [...SUB_OPTIONS, ...(EXTRA_OPTIONS[id] ?? [])]).map((option) => (
 											<li key={option}>
 												{/* §32 — active item: light surface, deep accent text, heavier weight */}
 												<NavLink

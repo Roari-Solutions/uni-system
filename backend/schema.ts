@@ -211,6 +211,28 @@ export const news = pgTable('news', {
 
 // ============================================== ACADEMIC TABLES ==============================================
 
+/**
+ * A faculty's specializations (e.g. Business Studies -> Economics). Students
+ * may carry one; a major requirement belongs to one. Both names are required:
+ * the English one prints on the results sheets.
+ */
+export const specializations = pgTable(
+  'specializations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    facultyId: uuid('faculty_id')
+      .notNull()
+      .references(() => faculties.id),
+    nameEn: text('name_en').notNull(),
+    nameAr: text('name_ar').notNull(),
+    ...timestamps(),
+  },
+  (t) => [
+    unique('specialization_name_en_unique').on(t.facultyId, t.nameEn),
+    unique('specialization_name_ar_unique').on(t.facultyId, t.nameAr),
+  ],
+);
+
 /** Course curriculums with credit weight. */
 export const curriculums = pgTable('curriculums', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -224,6 +246,11 @@ export const curriculums = pgTable('curriculums', {
   /** Null only on rows that predate requirement types; the API requires it. */
   requirementType: requirementTypeEnum('requirement_type'),
   courseHours: integer('course_hours').notNull().default(1), // Course credit / weight
+  /**
+   * Major requirements only: the specialization whose students take it. Null on
+   * majors that predate specializations; those count for the whole faculty.
+   */
+  specializationId: uuid('specialization_id').references(() => specializations.id),
   ...timestamps(),
 });
 
@@ -273,6 +300,8 @@ export const students = pgTable('students', {
   facultyId: uuid('faculty_id')
     .notNull()
     .references(() => faculties.id),
+  /** Optional; it decides which of the faculty's major requirements the student takes. */
+  specializationId: uuid('specialization_id').references(() => specializations.id),
   ...timestamps(),
 });
 
@@ -345,6 +374,11 @@ export const results = pgTable(
     academicYear: studyLevelEnum('academic_year').notNull(),
     /** Null when the result covers every student at the level, whatever their acceptance year. */
     acceptanceYear: text('acceptance_year'),
+    /**
+     * The specialization the result is for; null for the students without one
+     * (the whole batch, in a faculty that has no specializations).
+     */
+    specializationId: uuid('specialization_id').references(() => specializations.id),
     semester: semesterEnum('semester').notNull(),
     kind: resultKindEnum('kind').notNull(),
     status: resultStatusEnum('status').notNull().default('pending'),
@@ -362,10 +396,11 @@ export const results = pgTable(
       t.facultyId,
       t.academicYear,
       t.acceptanceYear,
+      t.specializationId,
       t.semester,
       t.kind,
     )
-      // an all-acceptance-years result (null) is still one per level and semester
+      // an all-acceptance-years or no-specialization result (null) is still one per batch
       .nullsNotDistinct(),
   ],
 );
@@ -539,12 +574,27 @@ export const facultiesRelations = relations(faculties, ({ many, one }) => ({
   page: one(facultyPages),
   students: many(students),
   facultyCurriculums: many(facultyCurriculums),
+  specializations: many(specializations),
+}));
+
+/** Relations for specializations: faculty, students, curriculums. */
+export const specializationsRelations = relations(specializations, ({ one, many }) => ({
+  faculty: one(faculties, {
+    fields: [specializations.facultyId],
+    references: [faculties.id],
+  }),
+  students: many(students),
+  curriculums: many(curriculums),
 }));
 
 /** Relations for curriculums: faculties, grades. */
-export const curriculumsRelations = relations(curriculums, ({ many }) => ({
+export const curriculumsRelations = relations(curriculums, ({ many, one }) => ({
   facultyCurriculums: many(facultyCurriculums),
   grades: many(grades),
+  specialization: one(specializations, {
+    fields: [curriculums.specializationId],
+    references: [specializations.id],
+  }),
 }));
 
 /** Relations for faculty-curriculum links: faculty, curriculum. */
@@ -564,6 +614,10 @@ export const studentsRelations = relations(students, ({ one, many }) => ({
   faculty: one(faculties, {
     fields: [students.facultyId],
     references: [faculties.id],
+  }),
+  specialization: one(specializations, {
+    fields: [students.specializationId],
+    references: [specializations.id],
   }),
   grades: many(grades),
   gpas: many(gpas),

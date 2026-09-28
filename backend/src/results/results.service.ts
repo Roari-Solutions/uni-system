@@ -12,6 +12,7 @@ import { and, desc, eq, inArray, isNull, type SQL } from 'drizzle-orm';
 import {
   faculties,
   facultyCurriculums,
+  specializations,
   grades,
   results,
   resultStudents,
@@ -34,6 +35,7 @@ import { letterOf, type LetterGrade } from 'src/grades/letter-grade';
 import { resitKindOf, type ResitView } from 'src/grades/grades.service';
 import { backfillSerialNos } from 'src/curriculums/serial-no';
 import { approvedStudents } from './result-lock';
+import { takesCurriculum } from 'src/common/specialization';
 import {
   GenerateResultDto,
   ListResultsQueryDto,
@@ -56,6 +58,8 @@ interface Batch {
   facultyId: string;
   academicYear: AcademicYear;
   acceptanceYear: string | null;
+  /** Null for the students without a specialization (the whole batch, where there are none). */
+  specializationId: string | null;
   semester: Semester;
 }
 
@@ -69,6 +73,8 @@ export interface ResultSummaryView {
   academicYear: number;
   /** Null when the result covers every acceptance year at the level. */
   acceptanceYear: string | null;
+  /** Null for the students without a specialization. */
+  specializationId: string | null;
   semester: number;
   kind: ResultKind;
   status: 'pending' | 'approved';
@@ -184,11 +190,16 @@ export class ResultsService {
 
   constructor(@Inject(DATABASE) private readonly db: Db) {}
 
-  /** The curriculums a faculty offers in one year and semester, in S.No. order. */
+  /**
+   * The curriculums a faculty offers in one year and semester that the batch's
+   * students take (the shared ones, and the majors of their specialization or
+   * of none), in S.No. order.
+   */
   private async coursesOf(
     facultyId: string,
     academicYear: AcademicYear,
     semester: Semester,
+    specializationId: string | null,
   ): Promise<ResultCourse[]> {
     const links = await this.db.query.facultyCurriculums.findMany({
       where: eq(facultyCurriculums.facultyId, facultyId),
@@ -201,6 +212,8 @@ export class ResultsService {
             academicYear: true,
             semester: true,
             courseHours: true,
+            requirementType: true,
+            specializationId: true,
           },
         },
       },
@@ -209,7 +222,8 @@ export class ResultsService {
       .filter(
         (l) =>
           l.curriculum.academicYear === academicYear &&
-          l.curriculum.semester === semester,
+          l.curriculum.semester === semester &&
+          takesCurriculum(specializationId, l.curriculum),
       )
       .map((l) => ({
         sNo: l.serialNo ?? 0,
@@ -245,6 +259,18 @@ export class ResultsService {
       columns: { nameEn: true },
     });
     if (!faculty) throw new BadRequestException();
+    const specialization = batch.specializationId
+      ? await this.db.query.specializations.findFirst({
+          where: eq(specializations.id, batch.specializationId),
+          columns: { nameEn: true, facultyId: true },
+        })
+      : null;
+    if (
+      batch.specializationId &&
+      specialization?.facultyId !== batch.facultyId
+    ) {
+      throw new BadRequestException({ code: 'SPECIALIZATION_MISMATCH' });
+    }
 
     // curriculums from before S.No.s existed get theirs before they are printed
     await backfillSerialNos(this.db);
@@ -252,10 +278,16 @@ export class ResultsService {
       batch.facultyId,
       batch.academicYear,
       batch.semester,
+      batch.specializationId,
     );
     const yearSheet = batch.semester === '2';
     const firstCourses = yearSheet
-      ? await this.coursesOf(batch.facultyId, batch.academicYear, '1')
+      ? await this.coursesOf(
+          batch.facultyId,
+          batch.academicYear,
+          '1',
+          batch.specializationId,
+        )
       : [];
 
     const everyone = await this.db.query.students.findMany({
@@ -265,6 +297,10 @@ export class ResultsService {
         batch.acceptanceYear
           ? eq(students.acceptanceYear, batch.acceptanceYear)
           : undefined,
+        // one result per specialization, and one for the students without one
+        batch.specializationId
+          ? eq(students.specializationId, batch.specializationId)
+          : isNull(students.specializationId),
       ),
       columns: { id: true, uniNumber: true, nameEn: true, standing: true },
     });
@@ -305,6 +341,7 @@ export class ResultsService {
       college: faculty.nameEn,
       academicYear: academicYearToNumber(batch.academicYear),
       acceptanceYear: batch.acceptanceYear,
+      specialization: specialization?.nameEn ?? null,
       semester: semesterToNumber(batch.semester),
       kind,
       courses,
@@ -359,6 +396,7 @@ export class ResultsService {
       facultyId: row.facultyId,
       academicYear: row.academicYear,
       acceptanceYear: row.acceptanceYear,
+      specializationId: row.specializationId,
       semester: row.semester,
     };
   }
@@ -369,6 +407,7 @@ export class ResultsService {
       facultyId: row.facultyId,
       academicYear: academicYearToNumber(row.academicYear),
       acceptanceYear: row.acceptanceYear,
+      specializationId: row.specializationId,
       semester: semesterToNumber(row.semester),
       kind: row.kind,
       status: row.status,
@@ -445,6 +484,11 @@ export class ResultsService {
       if (query.acceptanceYear) {
         filters.push(eq(results.acceptanceYear, query.acceptanceYear));
       }
+      if (query.specializationId === 'none') {
+        filters.push(isNull(results.specializationId));
+      } else if (query.specializationId) {
+        filters.push(eq(results.specializationId, query.specializationId));
+      }
       if (query.semester) filters.push(eq(results.semester, query.semester));
       if (query.status) filters.push(eq(results.status, query.status));
 
@@ -483,6 +527,7 @@ export class ResultsService {
       facultyId,
       academicYear: dto.academicYear,
       acceptanceYear: dto.acceptanceYear ?? null,
+      specializationId: dto.specializationId ?? null,
       semester: dto.semester,
     };
   }
@@ -547,6 +592,9 @@ export class ResultsService {
           batch.acceptanceYear
             ? eq(results.acceptanceYear, batch.acceptanceYear)
             : isNull(results.acceptanceYear),
+          batch.specializationId
+            ? eq(results.specializationId, batch.specializationId)
+            : isNull(results.specializationId),
           eq(results.semester, batch.semester),
           eq(results.kind, kind),
         );

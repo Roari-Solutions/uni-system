@@ -26,6 +26,7 @@ import {
 	submitButtonClass,
 	smallSecondaryButtonClass,
 } from "../../../styles/form";
+import { specializationName } from "../../../utils/specializations";
 
 /** The sheet's own row, plus whatever the API found wrong with it. */
 type PreviewRow = BulkRow & { apiProblems: string[] };
@@ -194,6 +195,11 @@ const StudentImport = () => {
 				faculties.find((f) => f.id === r.facultyId)?.name[lang] ?? (
 					<span className="text-error">{r.facultyName || "—"}</span>
 				),
+		},
+		{
+			key: "specialization",
+			header: t("specialization.label"),
+			render: (r) => specializationName(faculties, r.specializationId, lang) || "—",
 		},
 		{
 			key: "problems",
@@ -392,6 +398,7 @@ const toPayload = (row: BulkRow): BulkStudentRow => ({
 	acceptanceYear: row.acceptanceYear,
 	acceptanceType: row.acceptanceType,
 	level: row.level,
+	...(row.specializationId ? { specializationId: row.specializationId } : {}),
 });
 
 export default StudentImport;

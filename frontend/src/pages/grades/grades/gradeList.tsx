@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import DataTable, { type Column } from "../../../components/dataTable";
 import FilterSelect from "../../../components/filterSelect";
+import SpecializationFilter from "../../../components/specializationFilter";
+import { WITHOUT_SPECIALIZATION } from "../../../types/faculty";
 import useFaculties from "../../../hooks/useFaculties";
 import { fetchGrades, resolveCheating, updateGrade } from "../../../api/grades";
 import { SeatingStatusTag } from "../../../components/seatingStatusSelect";
@@ -37,6 +39,8 @@ const GradeList = () => {
 	const [curriculumId, setCurriculumId] = useState("");
 	const [letter, setLetter] = useState("");
 	const [seatingStatus, setSeatingStatus] = useState("");
+	// the students' specialization; the grades carry only the student's id, so it narrows here
+	const [specializationId, setSpecializationId] = useState("");
 	// the cheating row being decided, if any
 	const [resolving, setResolving] = useState<Grade | null>(null);
 	const [saving, setSaving] = useState(false);
@@ -80,11 +84,18 @@ const GradeList = () => {
 	}, [effectiveFacultyId, curriculumId, letter, seatingStatus]);
 
 	const student = (g: Grade) => students.find((s) => s.id === g.studentId);
+	const shown = grades.filter((g) => {
+		if (!specializationId) return true;
+		const spec = student(g)?.specializationId ?? null;
+		return specializationId === WITHOUT_SPECIALIZATION ? spec === null : spec === specializationId;
+	});
 	const facultyName = (id?: string) => faculties.find((f) => f.id === id)?.name[lang] ?? "";
 	const curriculumName = (id: string) => curriculums.find((c) => c.id === id)?.name[lang] ?? "";
 
 	const changeFaculty = (id: string) => {
 		setFacultyId(id);
+		// a specialization belongs to its faculty
+		setSpecializationId("");
 		// drop a curriculum selection the new faculty doesn't offer; every faculty
 		// offers a university requirement, so that selection always stays
 		const selected = curriculums.find((c) => c.id === curriculumId);
@@ -228,6 +239,12 @@ const GradeList = () => {
 					// an <option> can't take its own direction; the mark keeps "A+" from reading "+A" in Arabic
 					options={LETTER_GRADES.map((l) => ({ value: l, label: `${l}\u200E` }))}
 				/>
+				<SpecializationFilter
+					faculties={faculties}
+					facultyId={effectiveFacultyId}
+					value={specializationId}
+					onChange={setSpecializationId}
+				/>
 			</div>
 
 			{failed && (
@@ -243,7 +260,7 @@ const GradeList = () => {
 
 			<DataTable
 				columns={columns}
-				rows={grades}
+				rows={shown}
 				getRowId={(g) => g.id}
 				emptyText={loading ? t("common.loading") : t("gradeList.empty")}
 				// §39 — the tint repeats what the status cell already says

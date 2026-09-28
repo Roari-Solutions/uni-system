@@ -1,24 +1,46 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
-import { PencilSquareIcon } from "@heroicons/react/24/outline";
+import { PencilSquareIcon, PlusIcon } from "@heroicons/react/24/outline";
 import ConfirmDialog from "../../../components/confirmDialog";
 import DataTable, { type Column } from "../../../components/dataTable";
 import DeleteButton from "../../../components/deleteButton";
 import FilterSelect from "../../../components/filterSelect";
 import SearchField from "../../../components/searchField";
+import SetSpecializationDialog from "../../../components/setSpecializationDialog";
+import SpecializationFilter from "../../../components/specializationFilter";
 import useAuth from "../../../auth/useAuth";
 import useFaculties from "../../../hooks/useFaculties";
-import { deleteCurriculum, fetchCurriculums } from "../../../api/curriculums";
+import {
+	deleteCurriculum,
+	fetchCurriculums,
+	setCurriculumSpecialization,
+} from "../../../api/curriculums";
+import { WITHOUT_SPECIALIZATION } from "../../../types/faculty";
+import { smallSecondaryButtonClass, submitButtonClass } from "../../../styles/form";
+import { specializationName } from "../../../utils/specializations";
 import type { Curriculum } from "../../../types/curriculum";
 import { SEMESTERS, STUDY_LEVELS } from "../../../utils/academicYears";
 import { REQUIREMENT_TYPES, type RequirementType } from "../../../types/requirementType";
 
-const CurriculumList = () => {
+type CurriculumListProps = {
+	/**
+	 * Shown on a faculty's tab: fixed to that faculty, without the page title,
+	 * and adding or editing opens in place through these instead of a new page.
+	 */
+	facultyId?: string;
+	onAdd?: () => void;
+	onEdit?: (curriculum: Curriculum) => void;
+	/** Bumped by the tab after a save, so the list reloads. */
+	reloadKey?: number;
+};
+
+const CurriculumList = ({ facultyId: fixedFacultyId, onAdd, onEdit, reloadKey = 0 }: CurriculumListProps = {}) => {
 	const { t, i18n } = useTranslation();
 	const lang = i18n.language === "ar" ? "ar" : "en";
 	const { faculties, locked, lockedFacultyId } = useFaculties();
 	const { user } = useAuth();
+	const embedded = fixedFacultyId !== undefined;
 
 	const [curriculums, setCurriculums] = useState<Curriculum[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -28,10 +50,14 @@ const CurriculumList = () => {
 	const [semester, setSemester] = useState("");
 	const [requirementType, setRequirementType] = useState<RequirementType | "">("");
 	const [search, setSearch] = useState("");
+	const [specializationId, setSpecializationId] = useState("");
 	const [pendingDelete, setPendingDelete] = useState<Curriculum | null>(null);
+	// the major whose specialization is being set
+	const [settingFor, setSettingFor] = useState<Curriculum | null>(null);
+	const [ownReload, setOwnReload] = useState(0);
 
-	// a locked caller only ever sees their own faculty
-	const effectiveFacultyId = locked ? (lockedFacultyId ?? "") : facultyId;
+	// a faculty's tab fixes it; otherwise a locked caller only ever sees their own
+	const effectiveFacultyId = fixedFacultyId ?? (locked ? (lockedFacultyId ?? "") : facultyId);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -41,6 +67,7 @@ const CurriculumList = () => {
 			academicYear: academicYear ? Number(academicYear) : undefined,
 			semester: semester ? Number(semester) : undefined,
 			requirementType: requirementType || undefined,
+			specializationId: specializationId || undefined,
 			q: search.trim() || undefined,
 		})
 			.then((rows) => {
@@ -58,7 +85,23 @@ const CurriculumList = () => {
 		return () => {
 			cancelled = true;
 		};
-	}, [effectiveFacultyId, academicYear, semester, requirementType, search]);
+	}, [
+		effectiveFacultyId,
+		academicYear,
+		semester,
+		requirementType,
+		specializationId,
+		search,
+		reloadKey,
+		ownReload,
+	]);
+
+	const hasSpecializations = (id: string) =>
+		(faculties.find((f) => f.id === id)?.specializations.length ?? 0) > 0;
+	// majors still waiting for a specialization, in what's listed
+	const missing = curriculums.filter(
+		(c) => c.requirementType === "major" && !c.specializationId && hasSpecializations(c.facultyId),
+	).length;
 
 	const facultyName = (id: string) => faculties.find((f) => f.id === id)?.name[lang] ?? "";
 
@@ -93,6 +136,28 @@ const CurriculumList = () => {
 			render: (c) => (c.requirementType ? t(`requirementTypes.${c.requirementType}`) : t("curriculumList.notSet")),
 		},
 		{
+			key: "specialization",
+			header: t("specialization.label"),
+			render: (c) => {
+				// only a major belongs to a specialization; the rest are shared by the faculty
+				if (c.requirementType !== "major") return t("specialization.shared");
+				if (c.specializationId) return specializationName(faculties, c.specializationId, lang);
+				// once it's set, the edit form is where it changes
+				return hasSpecializations(c.facultyId) ? (
+					<button
+						type="button"
+						onClick={() => setSettingFor(c)}
+						aria-label={t("specialization.setFor", { name: c.name[lang] })}
+						className={`whitespace-nowrap ${smallSecondaryButtonClass}`}
+					>
+						{t("specialization.set")}
+					</button>
+				) : (
+					"—"
+				);
+			},
+		},
+		{
 			key: "courseHours",
 			header: t("curriculumList.columns.courseHours"),
 			render: (c) => <span dir="ltr">{c.courseHours}</span>,
@@ -103,16 +168,27 @@ const CurriculumList = () => {
 			render: (c) => (
 				<div className="flex items-center gap-1">
 					{/* a university requirement spans every faculty, so only an admin edits one */}
-					{(c.requirementType !== "university" || user?.role === "admin") && (
-						<Link
-							to={`../${c.id}/edit`}
-							aria-label={t("curriculumList.editItem", { name: c.name[lang] })}
-							title={t("curriculumList.editItem", { name: c.name[lang] })}
-							className="rounded-xs p-2 text-foreground transition-colors duration-150 ease-out hover:bg-background hover:text-primary-hover"
-						>
-							<PencilSquareIcon className="size-5" aria-hidden />
-						</Link>
-					)}
+					{(c.requirementType !== "university" || user?.role === "admin") &&
+						(onEdit ? (
+							<button
+								type="button"
+								onClick={() => onEdit(c)}
+								aria-label={t("curriculumList.editItem", { name: c.name[lang] })}
+								title={t("curriculumList.editItem", { name: c.name[lang] })}
+								className="rounded-xs p-2 text-foreground transition-colors duration-150 ease-out hover:bg-background hover:text-primary-hover"
+							>
+								<PencilSquareIcon className="size-5" aria-hidden />
+							</button>
+						) : (
+							<Link
+								to={`../${c.id}/edit`}
+								aria-label={t("curriculumList.editItem", { name: c.name[lang] })}
+								title={t("curriculumList.editItem", { name: c.name[lang] })}
+								className="rounded-xs p-2 text-foreground transition-colors duration-150 ease-out hover:bg-background hover:text-primary-hover"
+							>
+								<PencilSquareIcon className="size-5" aria-hidden />
+							</Link>
+						))}
 					<DeleteButton
 						label={t("common.deleteItem", { name: c.name[lang] })}
 						onClick={() => setPendingDelete(c)}
@@ -122,11 +198,22 @@ const CurriculumList = () => {
 		},
 	];
 
+	// the faculty column says nothing on a faculty's own tab
+	const shownColumns = embedded ? columns.filter((col) => col.key !== "faculty") : columns;
+
 	return (
 		<div>
-			<h1 className="mb-8 border-s-3 border-primary ps-4 text-heading-3 text-accent-deep">
-				{t("curriculumList.title")}
-			</h1>
+			{!embedded && (
+				<h1 className="mb-8 border-s-3 border-primary ps-4 text-heading-3 text-accent-deep">
+					{t("curriculumList.title")}
+				</h1>
+			)}
+			{onAdd && (
+				<button type="button" onClick={onAdd} className={`mb-6 ${submitButtonClass}`}>
+					<PlusIcon className="me-2 size-5" aria-hidden />
+					{t("curriculumEntry.title")}
+				</button>
+			)}
 
 			<div className="mb-6 flex flex-wrap items-end gap-6">
 				<SearchField
@@ -136,15 +223,21 @@ const CurriculumList = () => {
 					value={search}
 					onChange={setSearch}
 				/>
-				<FilterSelect
-					id="facultyFilter"
-					label={t("curriculumList.faculty")}
-					value={effectiveFacultyId}
-					onChange={setFacultyId}
-					allLabel={t("curriculumList.allFaculties")}
-					options={faculties.map((f) => ({ value: f.id, label: f.name[lang] }))}
-					disabled={locked}
-				/>
+				{!embedded && (
+					<FilterSelect
+						id="facultyFilter"
+						label={t("curriculumList.faculty")}
+						value={effectiveFacultyId}
+						onChange={(id) => {
+							setFacultyId(id);
+							// a specialization belongs to its faculty
+							setSpecializationId("");
+						}}
+						allLabel={t("curriculumList.allFaculties")}
+						options={faculties.map((f) => ({ value: f.id, label: f.name[lang] }))}
+						disabled={locked}
+					/>
+				)}
 				<FilterSelect
 					id="yearFilter"
 					label={t("curriculumList.academicYear")}
@@ -169,6 +262,13 @@ const CurriculumList = () => {
 					allLabel={t("curriculumList.allRequirementTypes")}
 					options={REQUIREMENT_TYPES.map((r) => ({ value: r, label: t(`requirementTypes.${r}`) }))}
 				/>
+				<SpecializationFilter
+					id={embedded ? "facultyCurriculumSpecialization" : undefined}
+					faculties={faculties}
+					facultyId={effectiveFacultyId}
+					value={specializationId}
+					onChange={setSpecializationId}
+				/>
 			</div>
 
 			{failed && (
@@ -177,8 +277,24 @@ const CurriculumList = () => {
 				</p>
 			)}
 
+			{/* what still needs a specialization, one click from the list of it */}
+			{missing > 0 && specializationId !== WITHOUT_SPECIALIZATION && (
+				<div className="mb-6 flex flex-wrap items-center gap-3 rounded-sm border-s-3 border-primary bg-accent-soft/30 p-4">
+					<p className="text-body-md text-foreground">{t("specialization.missingMajors", { count: missing })}</p>
+					{effectiveFacultyId && (
+						<button
+							type="button"
+							onClick={() => setSpecializationId(WITHOUT_SPECIALIZATION)}
+							className={smallSecondaryButtonClass}
+						>
+							{t("specialization.showMissing")}
+						</button>
+					)}
+				</div>
+			)}
+
 			<DataTable
-				columns={columns}
+				columns={shownColumns}
 				rows={curriculums}
 				// a university requirement is listed once per faculty, all under one id
 				getRowId={(c) => `${c.id}:${c.facultyId}`}
@@ -194,6 +310,29 @@ const CurriculumList = () => {
 				onConfirm={() => void confirmDelete()}
 				onCancel={() => setPendingDelete(null)}
 			/>
+
+			{settingFor && (
+				<SetSpecializationDialog
+					open
+					title={t("specialization.setFor", { name: settingFor.name[lang] })}
+					faculties={faculties}
+					facultyId={settingFor.facultyId}
+					targets={[
+						{
+							id: settingFor.id,
+							name: settingFor.name[lang],
+							specializationId: settingFor.specializationId,
+						},
+					]}
+					allowNone={false}
+					onSave={async (value, confirmOrphans) => {
+						if (!value) return;
+						await setCurriculumSpecialization(settingFor.id, value, confirmOrphans);
+						setOwnReload((k) => k + 1);
+					}}
+					onClose={() => setSettingFor(null)}
+				/>
+			)}
 		</div>
 	);
 };

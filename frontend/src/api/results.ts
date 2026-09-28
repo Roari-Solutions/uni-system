@@ -13,6 +13,8 @@ export type ResultFilters = {
 	facultyId?: string;
 	academicYear?: number;
 	acceptanceYear?: string;
+	// a specialization's id, or "none" for the results of the students without one
+	specializationId?: string;
 	semester?: number;
 	status?: ResultStatus;
 };
@@ -23,6 +25,8 @@ export type ResultBatch = {
 	academicYear: number;
 	// omitted for every acceptance year at the level
 	acceptanceYear?: string;
+	// omitted for the students without a specialization
+	specializationId?: string;
 	semester: number;
 	// students left off the sheet by hand
 	excludedStudentIds?: string[];

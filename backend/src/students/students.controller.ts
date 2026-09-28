@@ -21,6 +21,7 @@ import {
   BulkStudentsDto,
   CreateStudentDto,
   ListStudentsQueryDto,
+  SetSpecializationDto,
   UpdateStudentDto,
 } from './dto/students.dto';
 
@@ -48,6 +49,12 @@ export class StudentsController {
   }
 
   /** POST /gr/students/bulk/check — the import's dry run; writes nothing. */
+  /** POST /gr/students/specialization — one specialization for many students, after review. */
+  @Post('specialization')
+  async SetSpecialization(@Body() dto: SetSpecializationDto, @Req() req: GrRequest) {
+    return await this.studentsService.setSpecialization(dto, req.grCaller);
+  }
+
   @Post('bulk/check')
   @HttpCode(HttpStatus.OK)
   async CheckBulkStudents(@Body() dto: BulkStudentsDto, @Req() req: GrRequest) {

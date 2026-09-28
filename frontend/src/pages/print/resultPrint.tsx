@@ -87,6 +87,7 @@ const ResultPrint = () => {
 		document.title = [
 			version === "board" ? "Board Results" : "Final Results",
 			sheet.college,
+			sheet.specialization ?? "",
 			levelText(sheet.academicYear),
 			sheet.acceptanceYear,
 			`Semester ${sheet.semester}`,

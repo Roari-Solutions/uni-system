@@ -1,6 +1,6 @@
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
-import { faculties } from 'schema';
+import { faculties, specializations } from 'schema';
 import type { Db } from 'src/database/database.module';
 import type { GrCaller } from 'src/gr-gurd/gr-gurd.guard';
 
@@ -32,4 +32,22 @@ export function scopeFacultyId(caller: GrCaller): string | null {
     throw new UnauthorizedException();
   }
   return caller.facultyId;
+}
+
+/**
+ * Verifies a specialization belongs to the faculty; a specialization from
+ * another faculty is refused with SPECIALIZATION_MISMATCH.
+ */
+export async function assertSpecializationOf(
+  db: Db,
+  specializationId: string,
+  facultyId: string,
+): Promise<void> {
+  const row = await db.query.specializations.findFirst({
+    where: eq(specializations.id, specializationId),
+    columns: { facultyId: true },
+  });
+  if (row?.facultyId !== facultyId) {
+    throw new BadRequestException({ code: 'SPECIALIZATION_MISMATCH' });
+  }
 }

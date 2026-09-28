@@ -6,6 +6,10 @@ import axios from "axios";
 import ConfirmDialog from "../../../components/confirmDialog";
 import FacultyField from "../../../components/facultyField";
 import FormField from "../../../components/formField";
+import SpecializationField from "../../../components/specializationField";
+import useFaculties from "../../../hooks/useFaculties";
+import { conflictCode } from "../../../utils/apiError";
+import { specializationName } from "../../../utils/specializations";
 import {
 	createStudent,
 	fetchStudent,
@@ -36,6 +40,8 @@ const studentSchema = z.object({
 	acceptanceType: z.enum(ACCEPTANCE_TYPES, { error: REQUIRED }),
 	level: z.string().min(1, REQUIRED).transform(Number),
 	facultyId: z.string().min(1, REQUIRED),
+	// optional: "" is no specialization
+	specializationId: z.string(),
 });
 
 type StudentForm = z.input<typeof studentSchema>;
@@ -52,20 +58,27 @@ const EMPTY_FORM: StudentForm = {
 	acceptanceType: "" as StudentForm["acceptanceType"],
 	level: "",
 	facultyId: "",
+	specializationId: "",
 };
 
 /** Adds a student, or edits one when the route carries its id. */
 const StudentEntry = () => {
-	const { t } = useTranslation();
+	const { t, i18n } = useTranslation();
+	const lang = i18n.language === "ar" ? "ar" : "en";
 	const navigate = useNavigate();
 	const { studentId } = useParams();
 	const editing = studentId !== undefined;
+	const { faculties } = useFaculties();
+	// the specialization as stored, so a change to it is reviewed before saving
+	const [storedSpecialization, setStoredSpecialization] = useState<string | null>(null);
+	// a save waiting on its review: the specialization changes
+	const [pendingReview, setPendingReview] = useState<StudentPayload | null>(null);
 
 	const [form, setForm] = useState<StudentForm>(EMPTY_FORM);
 	const [errors, setErrors] = useState<FormErrors>({});
 	const [submitting, setSubmitting] = useState(false);
 	const [saved, setSaved] = useState(false);
-	const [failure, setFailure] = useState<"taken" | "failed" | null>(null);
+	const [failure, setFailure] = useState<"taken" | "locked" | "failed" | null>(null);
 	const [loadState, setLoadState] = useState<"loading" | "ready" | "failed">(
 		editing ? "loading" : "ready",
 	);
@@ -94,7 +107,9 @@ const StudentEntry = () => {
 					acceptanceType: s.acceptanceType,
 					level: String(s.level),
 					facultyId: s.facultyId,
+					specializationId: s.specializationId ?? "",
 				});
+				setStoredSpecialization(s.specializationId);
 				setLoadState("ready");
 			})
 			.catch(() => {
@@ -110,8 +125,11 @@ const StudentEntry = () => {
 	};
 
 	// stable identity: FacultyField reports the locked faculty from an effect
+	// a specialization belongs to its faculty, so another faculty starts without one
 	const setFacultyId = useCallback((facultyId: string) => {
-		setForm((prev) => (prev.facultyId === facultyId ? prev : { ...prev, facultyId }));
+		setForm((prev) =>
+			prev.facultyId === facultyId ? prev : { ...prev, facultyId, specializationId: "" },
+		);
 	}, []);
 
 	const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -126,7 +144,8 @@ const StudentEntry = () => {
 		setErrors({});
 		// on an edit a blank document number clears the stored one; omitting it would keep it
 		const documentNumber = result.data.documentNumber || (editing ? "" : undefined);
-		await save({
+		const specializationId = result.data.specializationId || null;
+		const payload: StudentPayload = {
 			// English is optional; omitting it makes the API store "-"
 			name: { ar: result.data.nameAr, en: result.data.nameEn || undefined },
 			uniNumber: result.data.uniNumber,
@@ -138,7 +157,15 @@ const StudentEntry = () => {
 			acceptanceYear: result.data.acceptanceYear,
 			acceptanceType: result.data.acceptanceType,
 			level: result.data.level,
-		});
+			// on an edit null clears it; a new student simply goes without
+			...(editing || specializationId ? { specializationId } : {}),
+		};
+		// a new or changed specialization is reviewed before it's saved
+		if (specializationId !== storedSpecialization) {
+			setPendingReview(payload);
+			return;
+		}
+		await save(payload);
 	};
 
 	const save = async (payload: StudentPayload, confirmOrphanedGrades = false) => {
@@ -153,12 +180,17 @@ const StudentEntry = () => {
 				return;
 			}
 			await createStudent(payload);
-			setForm({ ...EMPTY_FORM, facultyId: form.facultyId });
+			// the next student is likely from the same faculty and specialization
+			setForm({ ...EMPTY_FORM, facultyId: form.facultyId, specializationId: form.specializationId });
 			setSaved(true);
 		} catch (error) {
 			const count = orphanedGradeCount(error);
 			if (count !== null) {
 				setPendingOrphans({ count, payload });
+				return;
+			}
+			if (conflictCode(error) === "RESULTS_APPROVED") {
+				setFailure("locked");
 				return;
 			}
 			// any other 409 is a university number or document someone else holds
@@ -278,6 +310,15 @@ const StudentEntry = () => {
 							error={errors.facultyId?.[0]}
 						/>
 
+						<SpecializationField
+							faculties={faculties}
+							facultyId={form.facultyId}
+							value={form.specializationId}
+							onChange={(value) => setField("specializationId", value)}
+							allowNone
+							hint={t("specialization.studentHint")}
+						/>
+
 						<FormField
 							id="acceptanceYear"
 							label={t("studentEntry.acceptanceYear")}
@@ -352,7 +393,13 @@ const StudentEntry = () => {
 				)}
 				{failure && (
 					<p role="alert" className="text-body-sm text-error">
-						{t(failure === "taken" ? "studentEntry.errors.taken" : "common.saveFailed")}
+						{t(
+							failure === "taken"
+								? "studentEntry.errors.taken"
+								: failure === "locked"
+									? "specialization.errors.locked"
+									: "common.saveFailed",
+						)}
 					</p>
 				)}
 
@@ -369,6 +416,28 @@ const StudentEntry = () => {
 				cancelLabel={t("common.cancel")}
 				onConfirm={confirmOrphans}
 				onCancel={() => setPendingOrphans(null)}
+			/>
+
+			<ConfirmDialog
+				open={pendingReview !== null}
+				tone="primary"
+				title={t("specialization.reviewSaveTitle")}
+				message={t("specialization.reviewSaveMessage", {
+					from: storedSpecialization
+						? specializationName(faculties, storedSpecialization, lang)
+						: t("specialization.none"),
+					to: pendingReview?.specializationId
+						? specializationName(faculties, pendingReview.specializationId, lang)
+						: t("specialization.none"),
+				})}
+				confirmLabel={t("specialization.save")}
+				cancelLabel={t("common.cancel")}
+				onConfirm={() => {
+					const payload = pendingReview;
+					setPendingReview(null);
+					if (payload) void save(payload);
+				}}
+				onCancel={() => setPendingReview(null)}
 			/>
 		</div>
 	);

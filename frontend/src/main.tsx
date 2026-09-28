@@ -22,6 +22,8 @@ import StudentGradeSheet from './pages/grades/grades/studentGradeSheet';
 import ResultList from './pages/grades/results/resultList';
 import ResultDetails from './pages/grades/results/resultDetails';
 import ResultPrint from './pages/print/resultPrint';
+import FacultyIndex from './pages/grades/faculty/facultyIndex';
+import FacultyDetails from './pages/grades/faculty/facultyDetails';
 import UserList from './pages/admin/userList';
 import UserEntry from './pages/admin/userEntry';
 import AccountSettings from './pages/account/accountSettings';
@@ -75,6 +77,14 @@ const router = createBrowserRouter([
 											{ path: ":resultId", element: <ResultDetails /> },
 										],
 									},
+								],
+							},
+							{
+								// admins pick a faculty; a faculty's data entry goes straight to theirs
+								path: "faculty",
+								children: [
+									{ path: "view", element: <FacultyIndex /> },
+									{ path: ":facultyId", element: <FacultyDetails /> },
 								],
 							},
 							// every signed-in user manages their own account here

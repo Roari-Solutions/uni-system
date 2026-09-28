@@ -30,6 +30,7 @@ import {
 } from './letter-grade';
 import { assertFaculty, scopeFacultyId } from 'src/gr-scope/gr-scope';
 import type { RequirementType } from 'src/common/requirement-type';
+import { takesCurriculum } from 'src/common/specialization';
 import {
   academicYearToNumber,
   semesterToNumber,
@@ -180,6 +181,7 @@ export interface PendingGradesView {
     name: { en: string; ar: string };
     uniNumber: string;
     acceptanceYear: string;
+    specializationId: string | null;
     /** The student's grade row for this curriculum; null until one exists. */
     gradeId: string | null;
     /** Null until a mark is entered, even when a row exists. */
@@ -250,7 +252,7 @@ export class GradesService {
 
     const student = await this.db.query.students.findFirst({
       where: eq(students.id, studentId),
-      columns: { facultyId: true },
+      columns: { facultyId: true, specializationId: true },
     });
     if (!student) throw new NotFoundException();
 
@@ -258,14 +260,23 @@ export class GradesService {
       where: eq(facultyCurriculums.facultyId, student.facultyId),
       with: {
         curriculum: {
-          columns: { id: true, academicYear: true, semester: true, courseHours: true },
+          columns: {
+            id: true,
+            academicYear: true,
+            semester: true,
+            courseHours: true,
+            requirementType: true,
+            specializationId: true,
+          },
         },
       },
     });
-    // only this academic year's curriculums, and only this semester's
+    // only this academic year's curriculums, only this semester's, and only the
+    // majors of the student's own specialization
     const offered = links
       .map((link) => link.curriculum)
-      .filter((c) => c.academicYear === academicYear && c.semester === semester);
+      .filter((c) => c.academicYear === academicYear && c.semester === semester)
+      .filter((c) => takesCurriculum(student.specializationId, c));
     if (!offered.length) return empty;
 
     const rows = await this.db.query.grades.findMany({
@@ -552,8 +563,19 @@ export class GradesService {
           eq(students.academicYear, curriculum.academicYear),
           // suspended and dismissed students take no new marks
           eq(students.standing, 'active'),
+          // a specialization's major is taken by that specialization's students only
+          curriculum.requirementType === 'major' && curriculum.specializationId
+            ? eq(students.specializationId, curriculum.specializationId)
+            : undefined,
         ),
-        columns: { id: true, nameEn: true, nameAr: true, uniNumber: true, acceptanceYear: true },
+        columns: {
+          id: true,
+          nameEn: true,
+          nameAr: true,
+          uniNumber: true,
+          acceptanceYear: true,
+          specializationId: true,
+        },
       });
 
       // a student with a row, marked or not, is edited through it (student_curriculum_unique)
@@ -606,6 +628,7 @@ export class GradesService {
               name: { en: s.nameEn, ar: s.nameAr },
               uniNumber: s.uniNumber,
               acceptanceYear: s.acceptanceYear,
+              specializationId: s.specializationId,
               gradeId: mark?.id ?? null,
               grade,
               // the stored letter: a mark keeps the scale it was entered under
@@ -636,7 +659,7 @@ export class GradesService {
     try {
       const student = await this.db.query.students.findFirst({
         where: eq(students.id, studentId),
-        columns: { id: true, facultyId: true, academicYear: true },
+        columns: { id: true, facultyId: true, academicYear: true, specializationId: true },
       });
       if (!student) throw new NotFoundException();
       assertFaculty(caller, student.facultyId);
@@ -647,7 +670,8 @@ export class GradesService {
       });
       const yearCurriculums = links
         .map((link) => link.curriculum)
-        .filter((c) => c.academicYear === student.academicYear);
+        .filter((c) => c.academicYear === student.academicYear)
+        .filter((c) => takesCurriculum(student.specializationId, c));
       if (!yearCurriculums.length) return [];
 
       const marks = await this.db.query.grades.findMany({

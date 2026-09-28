@@ -24,6 +24,8 @@ export type BulkRow = {
 	facultyId: string;
 	/** Faculty text as the sheet wrote it, shown when it matches nothing. */
 	facultyName: string;
+	/** The specialization the faculty cell names after its dash, if any. */
+	specializationId: string | null;
 	/** i18n keys for what the sheet itself got wrong; the API adds its own. */
 	problems: string[];
 };
@@ -119,11 +121,30 @@ function acceptanceTypeOf(
 	return ACCEPTANCE_TYPES.find((type) => normalise(labels[type]) === needle) ?? null;
 }
 
+// the sheets separate "faculty - specialization" with a hyphen or a dash, spaced or not
+const FACULTY_SEPARATOR = /[-–—]/;
+
 /** The faculty a cell names: everything before the first dash is its name. */
 function facultyOf(cellValue: string, faculties: Faculty[]): Faculty | null {
-	const name = normalise(cellValue.split("-")[0] ?? "");
+	const name = normalise(cellValue.split(FACULTY_SEPARATOR)[0] ?? "");
 	if (!name) return null;
 	return faculties.find((faculty) => normalise(faculty.name.ar) === name) ?? null;
+}
+
+/**
+ * The specialization a faculty cell names after its dash, in Arabic:
+ * "الدراسات التجارية - الاقتصاد". `named` is false when the cell names none
+ * (the student goes without); a name that matches none of the faculty's is
+ * `named` with no id.
+ */
+function specializationOf(
+	cellValue: string,
+	faculty: Faculty | null,
+): { id: string | null; named: boolean } {
+	const name = normalise(cellValue.split(FACULTY_SEPARATOR).slice(1).join(" "));
+	if (!name) return { id: null, named: false };
+	const found = faculty?.specializations.find((spec) => normalise(spec.name.ar) === name);
+	return { id: found?.id ?? null, named: true };
 }
 
 /** XX-00-00000000: the faculty's letters, the acceptance year, the form number. */
@@ -196,6 +217,10 @@ export function toBulkRows(
 		if (matched && defaults.facultyId && matched.id !== defaults.facultyId) {
 			problems.push("bulkImport.problems.facultyMismatch");
 		}
+		const specialization = specializationOf(facultyCell, faculty);
+		if (specialization.named && !specialization.id) {
+			problems.push("bulkImport.problems.specializationUnknown");
+		}
 
 		// the ministry sheet spreads a name over its columns; the other holds it whole
 		const nameAr = ministry
@@ -241,6 +266,7 @@ export function toBulkRows(
 			level: ministry ? 1 : defaults.level,
 			facultyId: faculty?.id ?? "",
 			facultyName: facultyCell,
+			specializationId: specialization.id,
 			problems,
 		};
 	});

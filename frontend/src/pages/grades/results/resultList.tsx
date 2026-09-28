@@ -37,6 +37,8 @@ import { conflictCode } from "../../../utils/apiError";
 import { headerDefaults, type HeaderSuggestions } from "../../../utils/resultHeader";
 import { generateError } from "../../../utils/resultErrors";
 import { clearDraft, EMPTY_DRAFT, loadDraft, saveDraft } from "../../../utils/resultDraft";
+import { WITHOUT_SPECIALIZATION } from "../../../types/faculty";
+import { specializationName } from "../../../utils/specializations";
 
 // the cell being corrected, then a correction to a recorded mark waiting on its confirmation
 type CellEdit = { student: ResultStudent; course: ResultCourse };
@@ -48,7 +50,13 @@ type PendingEdit = CellEdit & {
 
 /** Which batch a result is for, in the same form as the filters' own key. */
 const batchKeyOf = (r: ResultSummary) =>
-	[r.facultyId, String(r.academicYear), r.acceptanceYear ?? "", String(r.semester)].join("|");
+	[
+		r.facultyId,
+		String(r.academicYear),
+		r.acceptanceYear ?? "",
+		r.specializationId ?? "",
+		String(r.semester),
+	].join("|");
 
 /**
  * Results per batch. The top section builds a new batch's board results: pick
@@ -74,6 +82,8 @@ const ResultList = () => {
 	// a result covers every student at the level unless narrowed to one acceptance year
 	const [byAcceptanceYear, setByAcceptanceYear] = useState(restored.byAcceptanceYear);
 	const [acceptanceYear, setAcceptanceYear] = useState(restored.acceptanceYear);
+	// a faculty with specializations issues one result per specialization, and one for the rest
+	const [specializationId, setSpecializationId] = useState(restored.specializationId);
 	const [semester, setSemester] = useState(restored.semester);
 
 	const [preview, setPreview] = useState<ResultPreview | null>(null);
@@ -103,6 +113,13 @@ const ResultList = () => {
 	// a locked caller only ever sees their own faculty
 	const effectiveFacultyId = locked ? (lockedFacultyId ?? "") : facultyId;
 	const chosenYear = byAcceptanceYear ? acceptanceYear : "";
+	const facultySpecializations =
+		faculties.find((f) => f.id === effectiveFacultyId)?.specializations ?? [];
+	const hasSpecializations = facultySpecializations.length > 0;
+	// a specialization of another faculty (the faculty changed) counts as none
+	const chosenSpecialization = facultySpecializations.some((s) => s.id === specializationId)
+		? specializationId
+		: "";
 	// a board result belongs to one batch in one semester
 	const batchChosen = !!(
 		effectiveFacultyId &&
@@ -110,7 +127,7 @@ const ResultList = () => {
 		semester &&
 		(!byAcceptanceYear || acceptanceYear)
 	);
-	const batchKey = [effectiveFacultyId, level, chosenYear, semester].join("|");
+	const batchKey = [effectiveFacultyId, level, chosenYear, chosenSpecialization, semester].join("|");
 
 	// a new batch starts with nobody left off and a fresh header, unless it's a result being loaded
 	const [shownBatch, setShownBatch] = useState(batchKey);
@@ -131,6 +148,7 @@ const ResultList = () => {
 		level ||
 		semester ||
 		byAcceptanceYear ||
+		specializationId ||
 		excluded.length ||
 		headerDraft ||
 		loadedResultId
@@ -150,6 +168,7 @@ const ResultList = () => {
 			byAcceptanceYear,
 			acceptanceYear,
 			semester,
+			specializationId,
 			excluded,
 			header: headerDraft,
 			loadedResultId,
@@ -162,6 +181,7 @@ const ResultList = () => {
 		byAcceptanceYear,
 		acceptanceYear,
 		semester,
+		specializationId,
 		excluded,
 		headerDraft,
 		loadedResultId,
@@ -175,6 +195,7 @@ const ResultList = () => {
 		setByAcceptanceYear(EMPTY_DRAFT.byAcceptanceYear);
 		setAcceptanceYear(EMPTY_DRAFT.acceptanceYear);
 		setSemester(EMPTY_DRAFT.semester);
+		setSpecializationId(EMPTY_DRAFT.specializationId);
 		setExcluded(EMPTY_DRAFT.excluded);
 		setHeaderDraft(EMPTY_DRAFT.header);
 		setLoadedResultId(EMPTY_DRAFT.loadedResultId);
@@ -195,6 +216,7 @@ const ResultList = () => {
 		setSemester(String(result.semester));
 		setByAcceptanceYear(result.acceptanceYear !== null);
 		setAcceptanceYear(result.acceptanceYear ?? "");
+		setSpecializationId(result.specializationId ?? "");
 		if (key === batchKey) {
 			// the same batch is already chosen, so nothing resets it
 			setExcluded(result.excludedStudentIds);
@@ -214,6 +236,8 @@ const ResultList = () => {
 			facultyId: effectiveFacultyId || undefined,
 			academicYear: level ? Number(level) : undefined,
 			acceptanceYear: chosenYear || undefined,
+			// where the faculty has specializations, the chosen one's results (or those of the rest)
+			specializationId: hasSpecializations ? chosenSpecialization || WITHOUT_SPECIALIZATION : undefined,
 			semester: semester ? Number(semester) : undefined,
 		})
 			.then((rows) => {
@@ -231,7 +255,7 @@ const ResultList = () => {
 		return () => {
 			cancelled = true;
 		};
-	}, [effectiveFacultyId, level, chosenYear, semester]);
+	}, [effectiveFacultyId, level, chosenYear, hasSpecializations, chosenSpecialization, semester]);
 
 	const excludedKey = excluded.join(",");
 	useEffect(() => {
@@ -242,6 +266,7 @@ const ResultList = () => {
 				facultyId: effectiveFacultyId,
 				academicYear: Number(level),
 				acceptanceYear: chosenYear || undefined,
+				specializationId: chosenSpecialization || undefined,
 				semester: Number(semester),
 				excludedStudentIds: excludedKey ? excludedKey.split(",") : [],
 			},
@@ -260,11 +285,25 @@ const ResultList = () => {
 		return () => {
 			cancelled = true;
 		};
-	}, [batchChosen, effectiveFacultyId, level, chosenYear, semester, excludedKey, reloadKey]);
+	}, [
+		batchChosen,
+		effectiveFacultyId,
+		level,
+		chosenYear,
+		chosenSpecialization,
+		semester,
+		excludedKey,
+		reloadKey,
+	]);
 
 	// the chosen batch's regular results, if they were generated already
 	const existing = batchChosen
-		? results.find((r) => r.kind === "regular" && r.acceptanceYear === (chosenYear || null))
+		? results.find(
+				(r) =>
+					r.kind === "regular" &&
+					r.acceptanceYear === (chosenYear || null) &&
+					r.specializationId === (chosenSpecialization || null),
+			)
 		: undefined;
 	// it was loaded here for editing, and can still change
 	const editingExisting = existing?.status === "pending" && existing.id === loadedResultId;
@@ -283,6 +322,7 @@ const ResultList = () => {
 			facultyNameEn: faculty?.name.en ?? "",
 			level: Number(level),
 			semester: Number(semester),
+			specializationNameEn: facultySpecializations.find((s) => s.id === chosenSpecialization)?.name.en,
 		});
 		// a header typed earlier (before a refresh, say) is picked up where it was left
 		setGenerating({ ...defaults, initial: headerDraft ?? defaults.initial });
@@ -295,6 +335,7 @@ const ResultList = () => {
 			facultyId: effectiveFacultyId,
 			academicYear: Number(level),
 			acceptanceYear: chosenYear || undefined,
+			specializationId: chosenSpecialization || undefined,
 			semester: Number(semester),
 			excludedStudentIds: excluded,
 		};
@@ -377,6 +418,14 @@ const ResultList = () => {
 			header: t("results.columns.acceptanceYear"),
 			render: (r) =>
 				r.acceptanceYear ? <span dir="ltr">{r.acceptanceYear}</span> : t("results.allAcceptanceYears"),
+		},
+		{
+			key: "specialization",
+			header: t("specialization.label"),
+			render: (r) =>
+				r.specializationId
+					? specializationName(faculties, r.specializationId, lang)
+					: t("specialization.withoutResult"),
 		},
 		{ key: "semester", header: t("results.columns.semester"), render: (r) => t(`semesters.${r.semester}`) },
 		{ key: "kind", header: t("results.columns.kind"), render: (r) => t(`results.kinds.${r.kind}`) },
@@ -514,6 +563,17 @@ const ResultList = () => {
 							))}
 						</select>
 					</div>
+					{/* one result per specialization, and one for the students without one */}
+					{hasSpecializations && (
+						<FilterSelect
+							id="resultSpecialization"
+							label={t("specialization.label")}
+							value={chosenSpecialization}
+							onChange={setSpecializationId}
+							allLabel={t("specialization.withoutResult")}
+							options={facultySpecializations.map((spec) => ({ value: spec.id, label: spec.name[lang] }))}
+						/>
+					)}
 				</div>
 
 				{!batchChosen ? (

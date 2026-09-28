@@ -10,10 +10,22 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { and, eq, inArray, like } from 'drizzle-orm';
-import { curriculums, faculties, facultyCurriculums, grades, students } from 'schema';
+import {
+  curriculums,
+  faculties,
+  facultyCurriculums,
+  grades,
+  specializations,
+  students,
+} from 'schema';
 import { DATABASE, type Db } from 'src/database/database.module';
 import { GrCaller } from 'src/gr-gurd/gr-gurd.guard';
-import { assertFaculty, assertFacultyExists, scopeFacultyId } from 'src/gr-scope/gr-scope';
+import {
+  assertFaculty,
+  assertFacultyExists,
+  assertSpecializationOf,
+  scopeFacultyId,
+} from 'src/gr-scope/gr-scope';
 import { academicYearToNumber, semesterToNumber } from 'src/common/academic-year';
 import { MISSING_NAME } from 'src/common/dto/localized-name.dto';
 import type { RequirementType } from 'src/common/requirement-type';
@@ -41,6 +53,8 @@ export interface CurriculumView {
   courseHours: number;
   /** S.No. on the results sheets, within this faculty -> year -> semester. */
   serialNo: number | null;
+  /** Majors only: the specialization whose students take it; null on other types and older majors. */
+  specializationId: string | null;
 }
 
 /** CRUD for curriculums with faculty scoping. */
@@ -114,6 +128,7 @@ export class CurriculumsService implements OnModuleInit {
           requirementType: link.curriculum.requirementType,
           courseHours: link.curriculum.courseHours,
           serialNo: link.serialNo,
+          specializationId: link.curriculum.specializationId,
         });
       }
 
@@ -127,6 +142,12 @@ export class CurriculumsService implements OnModuleInit {
       }
       if (query.requirementType) {
         views = views.filter((v) => v.requirementType === query.requirementType);
+      }
+      // "none" finds the majors still waiting for a specialization
+      if (query.specializationId === 'none') {
+        views = views.filter((v) => v.requirementType === 'major' && v.specializationId === null);
+      } else if (query.specializationId) {
+        views = views.filter((v) => v.specializationId === query.specializationId);
       }
       if (query.q?.trim()) {
         const needle = query.q.trim().toLowerCase();
@@ -238,6 +259,15 @@ export class CurriculumsService implements OnModuleInit {
       const facultyId = university ? null : await assertFacultyExists(this.db, dto.facultyId);
       if (facultyId) assertFaculty(caller, facultyId);
 
+      // a new major names the specialization whose students take it; nothing else carries one
+      const specializationId = dto.requirementType === 'major' ? (dto.specializationId ?? null) : null;
+      if (dto.requirementType === 'major') {
+        if (!specializationId || !facultyId) {
+          throw new BadRequestException({ code: 'SPECIALIZATION_REQUIRED' });
+        }
+        await assertSpecializationOf(this.db, specializationId, facultyId);
+      }
+
       // the abbreviation is the identifier; names are free text
       const abbreviation = dto.abbreviation.trim();
       const existing = await this.db.query.curriculums.findFirst({
@@ -256,6 +286,7 @@ export class CurriculumsService implements OnModuleInit {
           requirementType: dto.requirementType,
           courseHours: dto.courseHours,
           abbreviation,
+          specializationId,
         })
         .returning();
 
@@ -304,6 +335,7 @@ export class CurriculumsService implements OnModuleInit {
         requirementType: created.requirementType,
         courseHours: created.courseHours,
         serialNo: placed?.serialNo ?? null,
+        specializationId: created.specializationId,
       };
     } catch (error) {
       if (
@@ -342,6 +374,7 @@ export class CurriculumsService implements OnModuleInit {
         requirementType: row.requirementType,
         courseHours: row.courseHours,
         serialNo: shown.serialNo,
+        specializationId: row.specializationId,
       };
     } catch (error) {
       if (error instanceof NotFoundException || error instanceof UnauthorizedException) {
@@ -352,6 +385,37 @@ export class CurriculumsService implements OnModuleInit {
         cause: error,
       });
     }
+  }
+
+  /**
+   * The specialization a curriculum ends up with after an edit. Only a major
+   * carries one: a curriculum becoming a major must name one, and a major that
+   * has one can change it but not clear it (it would reopen to the whole
+   * faculty). A major moved to another faculty needs one of that faculty's.
+   * Majors that predate specializations may stay without one until it's set.
+   */
+  private async specializationFor(
+    row: typeof curriculums.$inferSelect,
+    requirementType: RequirementType | null,
+    after: string[],
+    changes: UpdateCurriculumDto,
+  ): Promise<string | null> {
+    if (requirementType !== 'major') return null;
+    const sent = changes.specializationId;
+    const required = () => new BadRequestException({ code: 'SPECIALIZATION_REQUIRED' });
+    if (sent === null && row.specializationId) throw required();
+    if (sent === undefined && row.requirementType !== 'major') throw required();
+
+    const specializationId = sent !== undefined ? sent : row.specializationId;
+    if (!specializationId) return null;
+    const spec = await this.db.query.specializations.findFirst({
+      where: eq(specializations.id, specializationId),
+      columns: { facultyId: true },
+    });
+    if (spec?.facultyId === after[0]) return specializationId;
+    // the one sent doesn't belong here; one carried over from another faculty must be replaced
+    if (sent !== undefined) throw new BadRequestException({ code: 'SPECIALIZATION_MISMATCH' });
+    throw required();
   }
 
   /**
@@ -409,16 +473,28 @@ export class CurriculumsService implements OnModuleInit {
         if (clash) throw new ConflictException();
       }
 
+      const specializationId = await this.specializationFor(row, requirementType, after, changes);
+      const specializationChanged = specializationId !== row.specializationId;
+
       const dropped = before.filter((f) => !after.includes(f));
       const added = after.filter((f) => !before.includes(f));
-      if (dropped.length && !confirmOrphanedGrades) {
-        const orphaned = await this.db
-          .select({ id: grades.id })
+      if ((dropped.length || (specializationChanged && specializationId)) && !confirmOrphanedGrades) {
+        // grades held by students of faculties that stop offering it, or, once it is
+        // tied to a specialization, by students outside that specialization
+        const holders = await this.db
+          .select({ facultyId: students.facultyId, specializationId: students.specializationId })
           .from(grades)
           .innerJoin(students, eq(students.id, grades.studentId))
-          .where(and(eq(grades.curriculumId, row.id), inArray(students.facultyId, dropped)));
-        if (orphaned.length) {
-          throw new ConflictException({ code: 'GRADES_ORPHANED', count: orphaned.length });
+          .where(eq(grades.curriculumId, row.id));
+        const orphaned = holders.filter(
+          (h) =>
+            dropped.includes(h.facultyId) ||
+            (specializationChanged &&
+              specializationId !== null &&
+              h.specializationId !== specializationId),
+        ).length;
+        if (orphaned) {
+          throw new ConflictException({ code: 'GRADES_ORPHANED', count: orphaned });
         }
       }
 
@@ -436,6 +512,7 @@ export class CurriculumsService implements OnModuleInit {
             ...(changes.semester !== undefined ? { semester: changes.semester } : {}),
             ...(changes.courseHours !== undefined ? { courseHours: changes.courseHours } : {}),
             requirementType,
+            specializationId,
             ...(abbreviation !== undefined ? { abbreviation } : {}),
           })
           .where(eq(curriculums.id, row.id))
@@ -481,6 +558,7 @@ export class CurriculumsService implements OnModuleInit {
       const moved =
         dropped.length > 0 ||
         added.length > 0 ||
+        specializationChanged ||
         updated.academicYear !== row.academicYear ||
         updated.semester !== row.semester;
       if (moved) {
@@ -515,6 +593,7 @@ export class CurriculumsService implements OnModuleInit {
         semester: semesterToNumber(updated.semester),
         requirementType: updated.requirementType,
         courseHours: updated.courseHours,
+        specializationId: updated.specializationId,
         serialNo:
           (
             await this.db.query.facultyCurriculums.findFirst({

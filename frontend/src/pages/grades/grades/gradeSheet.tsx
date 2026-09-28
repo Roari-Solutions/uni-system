@@ -14,6 +14,9 @@ import ConfirmDialog from "../../../components/confirmDialog";
 import DeleteButton from "../../../components/deleteButton";
 import FilterSelect from "../../../components/filterSelect";
 import SearchField from "../../../components/searchField";
+import SpecializationFilter from "../../../components/specializationFilter";
+import useFaculties from "../../../hooks/useFaculties";
+import { WITHOUT_SPECIALIZATION } from "../../../types/faculty";
 import {
 	createGrade,
 	deleteGrade,
@@ -98,6 +101,8 @@ const GradeSheet = () => {
 	const [search, setSearch] = useState("");
 	const [markFilter, setMarkFilter] = useState<MarkFilter>("");
 	const [acceptanceYear, setAcceptanceYear] = useState("");
+	const [specializationId, setSpecializationId] = useState("");
+	const { faculties } = useFaculties();
 	const [pendingEdit, setPendingEdit] = useState<PendingEdit | null>(null);
 	const [pendingDelete, setPendingDelete] = useState<SheetStudent | null>(null);
 	// an i18n key saying why the last delete failed
@@ -133,6 +138,10 @@ const GradeSheet = () => {
 			return false;
 		}
 		if (acceptanceYear && s.acceptanceYear !== acceptanceYear) return false;
+		if (specializationId === WITHOUT_SPECIALIZATION && s.specializationId) return false;
+		if (specializationId && specializationId !== WITHOUT_SPECIALIZATION && s.specializationId !== specializationId) {
+			return false;
+		}
 		// a row saved this visit stays in view, so "not entered" doesn't whisk it away mid-entry
 		if (markFilter === "notEntered") return !hasMark(s) || saved.has(s.id);
 		if (markFilter === "entered") return hasMark(s);
@@ -563,6 +572,12 @@ const GradeSheet = () => {
 					onChange={setAcceptanceYear}
 					allLabel={t("gradeEntry.allAcceptanceYears")}
 					options={ACCEPTANCE_YEARS.map((year) => ({ value: year, label: year }))}
+				/>
+				<SpecializationFilter
+					faculties={faculties}
+					facultyId={sheet?.curriculum.facultyId ?? ""}
+					value={specializationId}
+					onChange={setSpecializationId}
 				/>
 			</div>
 
