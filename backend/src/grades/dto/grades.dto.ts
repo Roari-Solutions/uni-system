@@ -1,4 +1,13 @@
-import { IsBoolean, IsIn, IsNumber, IsOptional, IsUUID, Max, Min } from 'class-validator';
+import {
+  IsBoolean,
+  IsIn,
+  IsNumber,
+  IsOptional,
+  IsUUID,
+  Max,
+  Min,
+  ValidateIf,
+} from 'class-validator';
 import { SUSPENSION_YEARS, type SuspensionYears } from 'src/common/student-standing';
 import { PartialType } from '@nestjs/mapped-types';
 import {
@@ -9,7 +18,7 @@ import {
 import { LETTER_GRADES, type LetterGrade } from '../letter-grade';
 
 /** Mirrors seatingStatusEnum in the schema. */
-export const SEATING_STATUSES = ['attended', 'absent', 'cheating'] as const;
+export const SEATING_STATUSES = ['attended', 'absent', 'cheating', 'barred', 'substitute'] as const;
 export type SeatingStatus = (typeof SEATING_STATUSES)[number];
 
 /** Body for creating a grade. */
@@ -20,10 +29,12 @@ export class CreateGradeDto {
   @IsUUID()
   curriculumId!: string;
 
+  /** Not sent for a substitute: it has no mark until the substitute exam. */
+  @ValidateIf((dto: CreateGradeDto) => dto.seatingStatus !== 'substitute' || dto.grade !== undefined)
   @IsNumber()
   @Min(0)
   @Max(100)
-  grade!: number;
+  grade?: number;
 
   @IsIn(SEATING_STATUSES)
   seatingStatus!: SeatingStatus;
@@ -36,6 +47,14 @@ export class CreateGradeDto {
 
 /** Body for patching a grade (all fields optional). */
 export class UpdateGradeDto extends PartialType(CreateGradeDto) {}
+
+/** Body for PUT /gr/grades/:id/resit: the Sup & Sub re-exam mark. */
+export class ResitGradeDto {
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  grade!: number;
+}
 
 /** How a cheating case ends: accept the mark, or keep the case and score 0. */
 export const CHEATING_OUTCOMES = ['accept', 'zero'] as const;

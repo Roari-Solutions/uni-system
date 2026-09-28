@@ -8,31 +8,66 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { and, eq, inArray, isNotNull } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, or } from 'drizzle-orm';
 import { curriculums, facultyCurriculums, gpas, grades, students } from 'schema';
 import { DATABASE, type Db } from 'src/database/database.module';
 import { GrCaller } from 'src/gr-gurd/gr-gurd.guard';
 import {
   CreateGradeDto,
   ListGradesQueryDto,
+  ResitGradeDto,
   ResolveCheatingDto,
   UpdateGradeDto,
   type SeatingStatus,
 } from './dto/grades.dto';
 import { assertNotFrozen, type StudentStanding } from 'src/common/student-standing';
-import { letterOf, pointsOf, type LetterGrade } from './letter-grade';
+import {
+  capLetter,
+  letterOf,
+  pointsOf,
+  SUPPLEMENTARY_CAP,
+  type LetterGrade,
+} from './letter-grade';
 import { assertFaculty, scopeFacultyId } from 'src/gr-scope/gr-scope';
 import type { RequirementType } from 'src/common/requirement-type';
 import {
   academicYearToNumber,
   semesterToNumber,
+  SEMESTERS,
   type AcademicYear,
   type Semester,
 } from 'src/common/academic-year';
+import {
+  approvedStudents,
+  assertGradesOpen,
+  hasApprovedResults,
+} from 'src/results/result-lock';
 
-/** Absence voids the mark: the grade is stored as 0, so its letter is F. */
-function voidsMark(status: SeatingStatus | null): boolean {
-  return status === 'absent';
+/** Absence and a bar void the mark: the grade is stored as 0, so its letter is F. */
+export function voidsMark(status: SeatingStatus | null): boolean {
+  return status === 'absent' || status === 'barred';
+}
+
+/** A substitute (accepted excuse) has no mark until the substitute exam. */
+export function takesNoMark(status: SeatingStatus | null): boolean {
+  return status === 'substitute';
+}
+
+type ResitKind = NonNullable<(typeof grades.$inferSelect)['resitKind']>;
+
+/**
+ * Which re-exam a row may take, if any: a substitute exam after an excuse, or a
+ * supplementary one after any F (a failing mark, an absence, a bar or a
+ * cheating zero). An undecided cheating case takes none.
+ */
+export function resitKindOf(row: {
+  seatingStatus: SeatingStatus | null;
+  letter: LetterGrade | null;
+  cheatingResolved: boolean;
+}): ResitKind | null {
+  if (row.seatingStatus === 'substitute') return 'substitute';
+  if (awaitsDecision(row.seatingStatus, row.cheatingResolved)) return null;
+  return row.letter === 'F' ? 'supplementary' : null;
 }
 
 /**
@@ -85,16 +120,48 @@ function gpOf(letter: LetterGrade, courseHours: number): string {
   return (pointsOf(letter) * courseHours).toFixed(2);
 }
 
+/** A Sup & Sub re-exam mark, and the letter it counts as. */
+export interface ResitView {
+  kind: ResitKind;
+  grade: number;
+  letter: LetterGrade;
+}
+
 /** A grade as the views consume it; `letter` comes from the mark on every write. */
 export interface GradeView {
   id: string;
   studentId: string;
   curriculumId: string;
-  grade: number;
-  letter: LetterGrade;
+  /** Null for a substitute, which has no mark until its re-exam. */
+  grade: number | null;
+  letter: LetterGrade | null;
   // null only on rows saved before seating status existed
   seatingStatus: SeatingStatus | null;
   cheatingResolved: boolean;
+  resit: ResitView | null;
+}
+
+type GradeRow = typeof grades.$inferSelect;
+
+/** The resit a row carries, if any. */
+function resitOf(row: Pick<GradeRow, 'resitKind' | 'resitGrade' | 'resitLetter'>): ResitView | null {
+  if (!row.resitKind || row.resitGrade === null || !row.resitLetter) return null;
+  return { kind: row.resitKind, grade: Number(row.resitGrade), letter: row.resitLetter };
+}
+
+/** A stored row as the views consume it. */
+function toGradeView(row: GradeRow): GradeView {
+  const grade = row.grade === null ? null : Number(row.grade);
+  return {
+    id: row.id,
+    studentId: row.studentId,
+    curriculumId: row.curriculumId,
+    grade,
+    letter: grade === null ? null : letterOf(grade),
+    seatingStatus: row.seatingStatus,
+    cheatingResolved: row.cheatingResolved,
+    resit: resitOf(row),
+  };
 }
 
 /** A curriculum's entry sheet: the curriculum and its year's students, each with their mark if any. */
@@ -119,6 +186,9 @@ export interface PendingGradesView {
     letter: LetterGrade | null;
     seatingStatus: SeatingStatus | null;
     cheatingResolved: boolean;
+    resit: ResitView | null;
+    /** The semester's results are approved, so the mark can no longer change. */
+    locked: boolean;
   }[];
 }
 
@@ -140,6 +210,9 @@ export interface StudentYearGradeView {
   penaltyWarning: boolean;
   penaltySuspensionYears: number | null;
   penaltyDismissal: boolean;
+  resit: ResitView | null;
+  /** The semester's results are approved, so the mark can no longer change. */
+  locked: boolean;
 }
 
 /** CRUD for grades and per-semester GPAs, with faculty scoping. */
@@ -167,8 +240,9 @@ export class GradesService {
   /**
    * One semester's grade points for a student: the rows that count, the course
    * hours behind them, and whether the semester is fully marked. An undecided
-   * cheating case is skipped on every count, so the semester can complete around
-   * it and its points stay out until staff settle the case.
+   * cheating case and a substitute still waiting on its re-exam are skipped on
+   * every count, so the semester can complete around them and their points stay
+   * out until they are settled. `gp` already follows any resit letter.
    */
   async semesterCoverage(studentId: string, academicYear: AcademicYear, semester: Semester) {
     const empty = { complete: false, gpSum: 0, courseHours: 0 };
@@ -193,23 +267,21 @@ export class GradesService {
       .filter((c) => c.academicYear === academicYear && c.semester === semester);
     if (!offered.length) return empty;
 
-    const marked = await this.db.query.grades.findMany({
+    const rows = await this.db.query.grades.findMany({
       where: and(
         eq(grades.studentId, studentId),
         inArray(
           grades.curriculumId,
           offered.map((c) => c.id),
         ),
-        isNotNull(grades.gp),
       ),
     });
 
-    const counted = marked.filter((g) => !awaitsDecision(g.seatingStatus, g.cheatingResolved));
-    const pending = new Set(
-      marked
-        .filter((g) => awaitsDecision(g.seatingStatus, g.cheatingResolved))
-        .map((g) => g.curriculumId),
-    );
+    const waiting = (g: GradeRow) =>
+      awaitsDecision(g.seatingStatus, g.cheatingResolved) ||
+      (takesNoMark(g.seatingStatus) && g.gp === null);
+    const counted = rows.filter((g) => g.gp !== null && !waiting(g));
+    const pending = new Set(rows.filter(waiting).map((g) => g.curriculumId));
 
     const countedIds = new Set(counted.map((g) => g.curriculumId));
     const complete = offered.every((c) => countedIds.has(c.id) || pending.has(c.id));
@@ -299,14 +371,16 @@ export class GradesService {
 
     const rows = await this.db.query.grades.findMany({
       where: eq(grades.curriculumId, curriculum.id),
-      columns: { id: true, studentId: true, letter: true },
+      columns: { id: true, studentId: true, letter: true, resitLetter: true },
     });
 
     for (const row of rows) {
-      if (!row.letter) continue;
+      // a resit's letter replaces the original in the points
+      const letter = row.resitLetter ?? row.letter;
+      if (!letter) continue;
       await this.db
         .update(grades)
-        .set({ gp: gpOf(row.letter, curriculum.courseHours) })
+        .set({ gp: gpOf(letter, curriculum.courseHours) })
         .where(eq(grades.id, row.id));
     }
 
@@ -400,7 +474,8 @@ export class GradesService {
 
   /**
    * Lists grades, narrowed by the caller's faculty scope and the list view's
-   * filters. Rows with no mark yet are omitted: every listed grade has a letter.
+   * filters. Rows with no mark yet are omitted, except a substitute, which has
+   * none until its re-exam.
    */
   async listGrades(caller: GrCaller, query: ListGradesQueryDto = {}): Promise<GradeView[]> {
     try {
@@ -412,7 +487,7 @@ export class GradesService {
       }
 
       const rows = await this.db.query.grades.findMany({
-        where: isNotNull(grades.grade),
+        where: or(isNotNull(grades.grade), eq(grades.seatingStatus, 'substitute')),
         with: {
           student: { columns: { id: true, facultyId: true } },
           curriculum: { columns: { id: true, academicYear: true } },
@@ -424,18 +499,7 @@ export class GradesService {
         .filter((row) => !query.curriculumId || row.curriculumId === query.curriculumId)
         .filter((row) => !query.academicYear || row.curriculum.academicYear === query.academicYear)
         .filter((row) => !query.seatingStatus || row.seatingStatus === query.seatingStatus)
-        .map((row) => {
-          const grade = Number(row.grade);
-          return {
-            id: row.id,
-            studentId: row.studentId,
-            curriculumId: row.curriculumId,
-            grade,
-            letter: letterOf(grade),
-            seatingStatus: row.seatingStatus,
-            cheatingResolved: row.cheatingResolved,
-          };
-        });
+        .map(toGradeView);
 
       if (query.letter) views = views.filter((v) => v.letter === query.letter);
 
@@ -508,10 +572,19 @@ export class GradesService {
               letter: true,
               seatingStatus: true,
               cheatingResolved: true,
+              resitKind: true,
+              resitGrade: true,
+              resitLetter: true,
             },
           })
         : [];
       const markOf = new Map(graded.map((g) => [g.studentId, g]));
+      const locked = await approvedStudents(
+        this.db,
+        cohort.map((s) => s.id),
+        curriculum.academicYear,
+        curriculum.semester,
+      );
 
       return {
         curriculum: {
@@ -538,6 +611,8 @@ export class GradesService {
               letter: grade === null ? null : (mark?.letter ?? null),
               seatingStatus: mark?.seatingStatus ?? null,
               cheatingResolved: mark?.cheatingResolved ?? false,
+              resit: mark ? resitOf(mark) : null,
+              locked: locked.has(s.id),
             };
           }),
       };
@@ -591,9 +666,18 @@ export class GradesService {
           penaltyWarning: true,
           penaltySuspensionYears: true,
           penaltyDismissal: true,
+          resitKind: true,
+          resitGrade: true,
+          resitLetter: true,
         },
       });
       const markOf = new Map(marks.map((m) => [m.curriculumId, m]));
+      // each semester's results lock on their own
+      const lockedSemesters = new Set<number>();
+      for (const semester of SEMESTERS) {
+        const locked = await approvedStudents(this.db, [student.id], student.academicYear, semester);
+        if (locked.size) lockedSemesters.add(semesterToNumber(semester));
+      }
 
       return yearCurriculums
         .map((c) => {
@@ -614,6 +698,8 @@ export class GradesService {
             penaltyWarning: mark?.penaltyWarning ?? false,
             penaltySuspensionYears: mark?.penaltySuspensionYears ?? null,
             penaltyDismissal: mark?.penaltyDismissal ?? false,
+            resit: mark ? resitOf(mark) : null,
+            locked: lockedSemesters.has(semesterToNumber(c.semester)),
           };
         })
         .sort(
@@ -631,6 +717,25 @@ export class GradesService {
     }
   }
 
+  /**
+   * The stored mark, letter and points for a status. An absence or a bar stores
+   * 0 whatever was sent; a substitute stores none. Otherwise the sent mark is
+   * used, or the stored one when a PATCH sends only the status.
+   */
+  private markFor(
+    status: SeatingStatus | null,
+    sent: number | undefined,
+    stored: string | null,
+    courseHours: number,
+  ): Pick<GradeRow, 'grade' | 'letter' | 'gp'> {
+    if (takesNoMark(status)) return { grade: null, letter: null, gp: null };
+    const grade = voidsMark(status) ? 0 : (sent ?? (stored === null ? undefined : Number(stored)));
+    // switching a substitute back to a sat exam needs the mark it got
+    if (grade === undefined) throw new BadRequestException();
+    const letter = letterOf(grade);
+    return { grade: String(grade), letter, gp: gpOf(letter, courseHours) };
+  }
+
   /** Creates a grade; the student's faculty governs access. */
   async createGrade(dto: CreateGradeDto, caller: GrCaller): Promise<GradeView> {
     try {
@@ -643,6 +748,7 @@ export class GradesService {
       assertNotFrozen(student.standing);
 
       const curriculum = await this.curriculumOrThrow(dto.curriculumId, false);
+      await assertGradesOpen(this.db, student.id, curriculum.academicYear, curriculum.semester);
 
       const existing = await this.db.query.grades.findFirst({
         where: and(eq(grades.studentId, student.id), eq(grades.curriculumId, curriculum.id)),
@@ -650,17 +756,13 @@ export class GradesService {
       });
       if (existing) throw new ConflictException();
 
-      // an absence stores 0 whatever mark was sent
-      const grade = voidsMark(dto.seatingStatus) ? 0 : dto.grade;
-      const letter = letterOf(grade);
+      const mark = this.markFor(dto.seatingStatus, dto.grade, null, curriculum.courseHours);
       const [created] = await this.db
         .insert(grades)
         .values({
           studentId: student.id,
           curriculumId: curriculum.id,
-          grade: String(grade),
-          letter,
-          gp: gpOf(letter, curriculum.courseHours),
+          ...mark,
           seatingStatus: dto.seatingStatus,
           cheatingResolved: dto.seatingStatus === 'cheating' && (dto.cheatingResolved ?? false),
         })
@@ -669,15 +771,7 @@ export class GradesService {
       await this.refreshSemesterGpa(student.id, curriculum.academicYear, curriculum.semester);
 
       this.logger.log(`Created grade for student: ${student.uniNumber}`);
-      return {
-        id: created.id,
-        studentId: created.studentId,
-        curriculumId: created.curriculumId,
-        grade,
-        letter,
-        seatingStatus: created.seatingStatus,
-        cheatingResolved: created.cheatingResolved,
-      };
+      return toGradeView(created);
     } catch (error) {
       if (
         error instanceof BadRequestException ||
@@ -709,6 +803,12 @@ export class GradesService {
       if (!row) throw new NotFoundException();
       assertFaculty(caller, row.student.facultyId);
       assertNotFrozen(row.student.standing);
+      await assertGradesOpen(
+        this.db,
+        row.studentId,
+        row.curriculum.academicYear,
+        row.curriculum.semester,
+      );
 
       if (dto.studentId !== undefined && dto.studentId !== row.studentId) {
         throw new BadRequestException();
@@ -732,29 +832,30 @@ export class GradesService {
           columns: { id: true },
         });
         if (clash && clash.id !== row.id) throw new ConflictException();
+        await assertGradesOpen(this.db, row.studentId, academicYear, semester);
       }
 
       // judge the status the row ends up with: a PATCH may send only one of grade and status.
-      // An absence stores 0; switching back off it keeps the 0 until a new mark is sent.
+      // An absence or a bar stores 0; switching back off it keeps the 0 until a new mark is sent.
       const seatingStatus = dto.seatingStatus ?? row.seatingStatus;
-      const nextGrade = voidsMark(seatingStatus) ? 0 : dto.grade;
       // only a cheating row can carry a decision; any other status drops it
       const cheatingResolved =
         seatingStatus === 'cheating' ? (dto.cheatingResolved ?? row.cheatingResolved) : false;
 
       // the letter and its points are stored, so they are rebuilt on every write
-      const mark = nextGrade ?? Number(row.grade ?? 0);
-      const letter = letterOf(mark);
+      const mark = this.markFor(seatingStatus, dto.grade, row.grade, courseHours);
 
       const [updated] = await this.db
         .update(grades)
         .set({
           curriculumId,
-          ...(nextGrade !== undefined ? { grade: String(nextGrade) } : {}),
+          ...mark,
           ...(dto.seatingStatus !== undefined ? { seatingStatus: dto.seatingStatus } : {}),
           cheatingResolved,
-          letter,
-          gp: gpOf(letter, courseHours),
+          // a changed mark leaves any old re-exam behind
+          resitKind: null,
+          resitGrade: null,
+          resitLetter: null,
         })
         .where(eq(grades.id, row.id))
         .returning();
@@ -768,17 +869,8 @@ export class GradesService {
         );
       }
 
-      const grade = Number(updated.grade);
       this.logger.log(`Updated grade: ${row.id}`);
-      return {
-        id: updated.id,
-        studentId: updated.studentId,
-        curriculumId: updated.curriculumId,
-        grade,
-        letter,
-        seatingStatus: updated.seatingStatus,
-        cheatingResolved: updated.cheatingResolved,
-      };
+      return toGradeView(updated);
     } catch (error) {
       if (
         error instanceof BadRequestException ||
@@ -831,6 +923,13 @@ export class GradesService {
       if (!awaitsDecision(row.seatingStatus, row.cheatingResolved)) {
         throw new ConflictException({ code: 'NOT_PENDING' });
       }
+      // a case still open when the results were approved stays open for good
+      await assertGradesOpen(
+        this.db,
+        row.student.id,
+        row.curriculum.academicYear,
+        row.curriculum.semester,
+      );
 
       // accepting keeps the mark; keeping the case scores the curriculum 0
       const grade = dto.outcome === 'accept' ? Number(row.grade ?? 0) : 0;
@@ -878,15 +977,7 @@ export class GradesService {
         `Resolved cheating case ${row.id} for ${row.student.uniNumber}: ${dto.outcome}` +
           (standing !== row.student.standing ? `, student now ${standing}` : ''),
       );
-      return {
-        id: updated.id,
-        studentId: updated.studentId,
-        curriculumId: updated.curriculumId,
-        grade,
-        letter,
-        seatingStatus: updated.seatingStatus,
-        cheatingResolved: updated.cheatingResolved,
-      };
+      return toGradeView(updated);
     } catch (error) {
       if (
         error instanceof BadRequestException ||
@@ -897,6 +988,122 @@ export class GradesService {
         throw error;
       }
       this.logger.error(`Failed to resolve cheating case: ${id}`, error);
+      throw new InternalServerErrorException('Grades operation failed', {
+        cause: error,
+      });
+    }
+  }
+
+  /**
+   * Loads a row for a Sup & Sub re-exam and checks it may take one: the regular
+   * results for its semester are approved, the Sup & Sub results are not yet,
+   * and the row is an F or a substitute.
+   */
+  private async resitRowOrThrow(id: string, caller: GrCaller) {
+    const row = await this.db.query.grades.findFirst({
+      where: eq(grades.id, id),
+      with: {
+        student: { columns: { id: true, facultyId: true, standing: true } },
+        curriculum: { columns: { academicYear: true, semester: true, courseHours: true } },
+      },
+    });
+    if (!row) throw new NotFoundException();
+    assertFaculty(caller, row.student.facultyId);
+    assertNotFrozen(row.student.standing);
+
+    const { academicYear, semester } = row.curriculum;
+    const approved = await approvedStudents(this.db, [row.studentId], academicYear, semester);
+    if (!approved.size) throw new ConflictException({ code: 'RESULTS_NOT_APPROVED' });
+    const resitApproved = await approvedStudents(
+      this.db,
+      [row.studentId],
+      academicYear,
+      semester,
+      'resit',
+    );
+    if (resitApproved.size) throw new ConflictException({ code: 'RESULTS_APPROVED' });
+
+    const kind = resitKindOf(row);
+    if (!kind) throw new ConflictException({ code: 'NO_RESIT' });
+    return { row, kind };
+  }
+
+  /**
+   * Records a Sup & Sub re-exam mark. A supplementary mark counts for at most a
+   * C; a substitute mark counts as it is. The original mark stays for the
+   * record, and the semester GPA is rebuilt from the resit's letter.
+   */
+  async enterResit(id: string, dto: ResitGradeDto, caller: GrCaller): Promise<GradeView> {
+    try {
+      const { row, kind } = await this.resitRowOrThrow(id, caller);
+      const earned = letterOf(dto.grade);
+      const letter = kind === 'supplementary' ? capLetter(earned, SUPPLEMENTARY_CAP) : earned;
+
+      const [updated] = await this.db
+        .update(grades)
+        .set({
+          resitKind: kind,
+          resitGrade: String(dto.grade),
+          resitLetter: letter,
+          gp: gpOf(letter, row.curriculum.courseHours),
+        })
+        .where(eq(grades.id, row.id))
+        .returning();
+
+      await this.refreshSemesterGpa(
+        row.studentId,
+        row.curriculum.academicYear,
+        row.curriculum.semester,
+      );
+      this.logger.log(`Entered ${kind} resit for grade: ${row.id}`);
+      return toGradeView(updated);
+    } catch (error) {
+      if (
+        error instanceof ConflictException ||
+        error instanceof NotFoundException ||
+        error instanceof UnauthorizedException
+      ) {
+        throw error;
+      }
+      this.logger.error(`Failed to enter resit: ${id}`, error);
+      throw new InternalServerErrorException('Grades operation failed', {
+        cause: error,
+      });
+    }
+  }
+
+  /** Removes a re-exam mark; the original mark counts again. */
+  async clearResit(id: string, caller: GrCaller): Promise<GradeView> {
+    try {
+      const { row } = await this.resitRowOrThrow(id, caller);
+      const [updated] = await this.db
+        .update(grades)
+        .set({
+          resitKind: null,
+          resitGrade: null,
+          resitLetter: null,
+          // back to the original letter's points; a substitute has none
+          gp: row.letter ? gpOf(row.letter, row.curriculum.courseHours) : null,
+        })
+        .where(eq(grades.id, row.id))
+        .returning();
+
+      await this.refreshSemesterGpa(
+        row.studentId,
+        row.curriculum.academicYear,
+        row.curriculum.semester,
+      );
+      this.logger.log(`Cleared resit for grade: ${row.id}`);
+      return toGradeView(updated);
+    } catch (error) {
+      if (
+        error instanceof ConflictException ||
+        error instanceof NotFoundException ||
+        error instanceof UnauthorizedException
+      ) {
+        throw error;
+      }
+      this.logger.error(`Failed to clear resit: ${id}`, error);
       throw new InternalServerErrorException('Grades operation failed', {
         cause: error,
       });
@@ -916,6 +1123,12 @@ export class GradesService {
       if (!row) throw new NotFoundException();
       assertFaculty(caller, row.student.facultyId);
       assertNotFrozen(row.student.standing);
+      await assertGradesOpen(
+        this.db,
+        row.studentId,
+        row.curriculum.academicYear,
+        row.curriculum.semester,
+      );
 
       await this.db.delete(grades).where(eq(grades.id, row.id));
       await this.refreshSemesterGpa(
@@ -952,6 +1165,9 @@ export class GradesService {
       if (!student) throw new NotFoundException();
       assertFaculty(caller, student.facultyId);
       assertNotFrozen(student.standing);
+      if (await hasApprovedResults(this.db, student.id)) {
+        throw new ConflictException({ code: 'RESULTS_APPROVED' });
+      }
 
       await this.db.transaction(async (tx) => {
         await tx.delete(grades).where(eq(grades.studentId, student.id));

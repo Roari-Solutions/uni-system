@@ -19,6 +19,9 @@ import GradeEntry from './pages/grades/grades/gradeEntry';
 import GradeSheet from './pages/grades/grades/gradeSheet';
 import SingleEntry from './pages/grades/grades/singleEntry';
 import StudentGradeSheet from './pages/grades/grades/studentGradeSheet';
+import ResultList from './pages/grades/results/resultList';
+import ResultDetails from './pages/grades/results/resultDetails';
+import ResultPrint from './pages/print/resultPrint';
 import UserList from './pages/admin/userList';
 import UserEntry from './pages/admin/userEntry';
 import AccountSettings from './pages/account/accountSettings';
@@ -30,6 +33,8 @@ const router = createBrowserRouter([
 		// everything below requires a session
 		element: <RequireAuth />,
 		children: [
+			// the exported sheet prints alone, outside the dashboard's chrome
+			{ path: "/print/results/:resultId", element: <ResultPrint /> },
 			{
 				path: "/dashboards",
 				children: [
@@ -63,6 +68,13 @@ const router = createBrowserRouter([
 									{ path: "entry/:curriculumId", element: <GradeSheet /> },
 									{ path: "single", element: <SingleEntry /> },
 									{ path: "single/:studentId", element: <StudentGradeSheet /> },
+									{
+										path: "results",
+										children: [
+											{ index: true, element: <ResultList /> },
+											{ path: ":resultId", element: <ResultDetails /> },
+										],
+									},
 								],
 							},
 							// every signed-in user manages their own account here

@@ -81,6 +81,12 @@ const CurriculumList = () => {
 		{ key: "academicYear", header: t("curriculumList.columns.academicYear"), render: (c) => t(`student.levels.${c.academicYear}`) },
 		{ key: "semester", header: t("curriculumList.columns.semester"), render: (c) => t(`semesters.${c.semester}`) },
 		{
+			key: "serialNo",
+			header: t("curriculumList.columns.serialNo"),
+			// the column number on the results sheets, counted per faculty, year and semester
+			render: (c) => <span dir="ltr">{c.serialNo ?? "—"}</span>,
+		},
+		{
 			key: "requirementType",
 			header: t("curriculumList.columns.requirementType"),
 			// curriculums from before requirement types have none recorded

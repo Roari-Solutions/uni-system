@@ -1,6 +1,6 @@
 import api from "../lib/api";
 import type { Curriculum } from "../types/curriculum";
-import type { Grade, SeatingStatus } from "../types/grade";
+import type { Grade, Resit, SeatingStatus } from "../types/grade";
 import type { Student, SuspensionYears } from "../types/student";
 
 export type GradeFilters = {
@@ -14,7 +14,8 @@ export type GradeFilters = {
 export type GradePayload = {
 	studentId: string;
 	curriculumId: string;
-	grade: number;
+	// omitted for a substitute
+	grade?: number;
 	seatingStatus: SeatingStatus;
 	cheatingResolved?: boolean;
 };
@@ -32,6 +33,9 @@ export type SheetStudent = Pick<Student, "id" | "name" | "uniNumber" | "acceptan
 	letter: Grade["letter"] | null;
 	seatingStatus: SeatingStatus | null;
 	cheatingResolved: boolean;
+	resit: Resit | null;
+	// the semester's results are approved, so the mark can no longer change
+	locked: boolean;
 };
 
 export type PendingGrades = {
@@ -68,6 +72,9 @@ export type StudentYearGrade = {
 	penaltyWarning: boolean;
 	penaltySuspensionYears: SuspensionYears | null;
 	penaltyDismissal: boolean;
+	resit: Resit | null;
+	// the semester's results are approved, so the mark can no longer change
+	locked: boolean;
 };
 
 export const fetchStudentYearGrades = async (studentId: string): Promise<StudentYearGrade[]> => {
@@ -92,6 +99,17 @@ export type CheatingDecision = {
 
 export const resolveCheating = async (id: string, decision: CheatingDecision): Promise<Grade> => {
 	const { data } = await api.post<Grade>(`/gr/grades/${id}/resolve`, decision);
+	return data;
+};
+
+/** Records a Sup & Sub re-exam mark; the API caps a supplementary one at C. */
+export const enterResit = async (id: string, grade: number): Promise<Grade> => {
+	const { data } = await api.put<Grade>(`/gr/grades/${id}/resit`, { grade });
+	return data;
+};
+
+export const clearResit = async (id: string): Promise<Grade> => {
+	const { data } = await api.delete<Grade>(`/gr/grades/${id}/resit`);
 	return data;
 };
 

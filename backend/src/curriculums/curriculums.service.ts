@@ -6,6 +6,7 @@ import {
   InternalServerErrorException,
   Logger,
   NotFoundException,
+  OnModuleInit,
   UnauthorizedException,
 } from '@nestjs/common';
 import { and, eq, inArray, like } from 'drizzle-orm';
@@ -24,6 +25,7 @@ import {
   UpdateCurriculumDto,
 } from './dto/curriculums.dto';
 import { abbreviationLetters, buildAbbreviation, serialOf } from './abbreviation';
+import { assignSerialNos, backfillSerialNos } from './serial-no';
 
 /** A curriculum as the views consume it: one faculty, one study year, one semester. */
 export interface CurriculumView {
@@ -37,17 +39,30 @@ export interface CurriculumView {
   requirementType: RequirementType | null;
   /** Credit hours; they weight this curriculum's grade points in the GPA. */
   courseHours: number;
+  /** S.No. on the results sheets, within this faculty -> year -> semester. */
+  serialNo: number | null;
 }
 
 /** CRUD for curriculums with faculty scoping. */
 @Injectable()
-export class CurriculumsService {
+export class CurriculumsService implements OnModuleInit {
   private readonly logger = new Logger(CurriculumsService.name);
 
   constructor(
     @Inject(DATABASE) private readonly db: Db,
     @Inject() private readonly gradesService: GradesService,
   ) {}
+
+  /** Numbers the curriculums created before S.No.s existed. */
+  async onModuleInit(): Promise<void> {
+    try {
+      const count = await backfillSerialNos(this.db);
+      if (count) this.logger.log(`Assigned S.No. to ${count} curriculum placements`);
+    } catch (error) {
+      // the app still serves without them; the results sheets need them
+      this.logger.error('Failed to assign S.No. to existing curriculums', error);
+    }
+  }
 
   /** Resolves the curriculum plus the faculty that offers it, or throws. */
   private async offeringOrThrow(id: string) {
@@ -98,6 +113,7 @@ export class CurriculumsService {
           semester: semesterToNumber(link.curriculum.semester),
           requirementType: link.curriculum.requirementType,
           courseHours: link.curriculum.courseHours,
+          serialNo: link.serialNo,
         });
       }
 
@@ -252,6 +268,20 @@ export class CurriculumsService {
       await this.db
         .insert(facultyCurriculums)
         .values(offering.map((id) => ({ facultyId: id, curriculumId: created.id })));
+      await assignSerialNos(
+        this.db,
+        created.id,
+        offering,
+        created.academicYear,
+        created.semester,
+      );
+      const placed = await this.db.query.facultyCurriculums.findFirst({
+        where: and(
+          eq(facultyCurriculums.facultyId, offering[0]),
+          eq(facultyCurriculums.curriculumId, created.id),
+        ),
+        columns: { serialNo: true },
+      });
 
       // the new curriculum leaves its semester unmarked for that cohort, so any
       // GPA already stored for them no longer holds
@@ -273,6 +303,7 @@ export class CurriculumsService {
         semester: semesterToNumber(created.semester),
         requirementType: created.requirementType,
         courseHours: created.courseHours,
+        serialNo: placed?.serialNo ?? null,
       };
     } catch (error) {
       if (
@@ -299,16 +330,18 @@ export class CurriculumsService {
       const scope = scopeFacultyId(caller);
       const offering = row.facultyCurriculums.map((l) => l.facultyId);
       if (scope && !offering.includes(scope)) throw new UnauthorizedException();
+      const shown = row.facultyCurriculums.find((l) => l.facultyId === scope) ?? link;
 
       return {
         id: row.id,
         name: { en: row.nameEn, ar: row.nameAr },
-        facultyId: scope ?? link.facultyId,
+        facultyId: shown.facultyId,
         abbreviation: row.abbreviation,
         academicYear: academicYearToNumber(row.academicYear),
         semester: semesterToNumber(row.semester),
         requirementType: row.requirementType,
         courseHours: row.courseHours,
+        serialNo: shown.serialNo,
       };
     } catch (error) {
       if (error instanceof NotFoundException || error instanceof UnauthorizedException) {
@@ -426,6 +459,18 @@ export class CurriculumsService {
         return next;
       });
 
+      // a curriculum moved to another year or semester takes that group's next
+      // S.No.; a faculty that newly offers it numbers it too
+      const regrouped =
+        updated.academicYear !== row.academicYear || updated.semester !== row.semester;
+      await assignSerialNos(
+        this.db,
+        row.id,
+        regrouped ? after : added,
+        updated.academicYear,
+        updated.semester,
+      );
+
       // the hours weight each grade's points, so those are rebuilt first
       if (updated.courseHours !== row.courseHours) {
         await this.gradesService.recomputeCurriculum(row.id);
@@ -470,6 +515,16 @@ export class CurriculumsService {
         semester: semesterToNumber(updated.semester),
         requirementType: updated.requirementType,
         courseHours: updated.courseHours,
+        serialNo:
+          (
+            await this.db.query.facultyCurriculums.findFirst({
+              where: and(
+                eq(facultyCurriculums.facultyId, after[0]),
+                eq(facultyCurriculums.curriculumId, row.id),
+              ),
+              columns: { serialNo: true },
+            })
+          )?.serialNo ?? null,
       };
     } catch (error) {
       if (

@@ -6,6 +6,7 @@ import {
 	ArrowLeftIcon,
 	ArrowUturnLeftIcon,
 	CheckIcon,
+	LockClosedIcon,
 	PencilSquareIcon,
 } from "@heroicons/react/24/outline";
 import DataTable, { type Column } from "../../../components/dataTable";
@@ -22,9 +23,11 @@ import {
 	type SheetStudent,
 } from "../../../api/grades";
 import SeatingStatusSelect, { SeatingStatusTag } from "../../../components/seatingStatusSelect";
+import ResitNote from "../../../components/resitNote";
 import type { Grade, SeatingStatus } from "../../../types/grade";
 import { smallPrimaryButtonClass, smallSecondaryButtonClass } from "../../../styles/form";
-import { gradeSchema, voidsMark } from "../../../utils/gradeInput";
+import { gradeSchema, markToSend, takesNoMark, voidsMark } from "../../../utils/gradeInput";
+import { conflictCode } from "../../../utils/apiError";
 import { adjacentRowId, afterRender, focusField, focusRow } from "../../../utils/rowNav";
 import { ACCEPTANCE_YEARS } from "../../../utils/academicYears";
 
@@ -41,7 +44,8 @@ type MarkFilter = (typeof MARK_FILTERS)[number] | "";
 // a changed mark waits here for its confirmation; `advance` carries Enter's move to the next row
 type PendingEdit = {
 	student: SheetStudent;
-	grade: number;
+	// none for a substitute
+	grade: number | undefined;
 	seatingStatus: SeatingStatus;
 	advance: boolean;
 };
@@ -55,7 +59,16 @@ const selectId = (studentId: string) => `seating-status-${studentId}`;
 // the common case, so a row opens ready for the grade alone
 const DEFAULT_STATUS: SeatingStatus = "attended";
 
-const hasMark = (s: SheetStudent) => s.grade !== null;
+// a substitute is entered without a mark: it waits on its re-exam
+const hasMark = (s: SheetStudent) => s.grade !== null || s.seatingStatus === "substitute";
+
+/** Why a write was refused, as an i18n key: approved results, or a clash with someone else's entry. */
+const writeError = (error: unknown) => {
+	if (conflictCode(error) === "RESULTS_APPROVED") return "results.lockedError";
+	return axios.isAxiosError(error) && error.response?.status === 409
+		? "gradeSheet.errors.alreadyGraded"
+		: "common.saveFailed";
+};
 
 /** Folds Arabic spelling variants and case, so a search finds a name however it is typed. */
 const fold = (value: string) =>
@@ -87,7 +100,8 @@ const GradeSheet = () => {
 	const [acceptanceYear, setAcceptanceYear] = useState("");
 	const [pendingEdit, setPendingEdit] = useState<PendingEdit | null>(null);
 	const [pendingDelete, setPendingDelete] = useState<SheetStudent | null>(null);
-	const [deleteFailed, setDeleteFailed] = useState(false);
+	// an i18n key saying why the last delete failed
+	const [deleteFailed, setDeleteFailed] = useState<string | null>(null);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -157,6 +171,8 @@ const GradeSheet = () => {
 
 	/** Opens a row with what it holds, ready for a new mark or a correction. */
 	const openRow = (student: SheetStudent) => {
+		// approved results lock the row; the API refuses it too
+		if (student.locked) return;
 		markSaved(student.id, false);
 		setRow(student.id, {
 			mode: "editing",
@@ -168,7 +184,7 @@ const GradeSheet = () => {
 	/** Sends the mark; true once it is stored. */
 	const write = async (
 		student: SheetStudent,
-		grade: number,
+		grade: number | undefined,
 		seatingStatus: SeatingStatus,
 		draft: string,
 	): Promise<boolean> => {
@@ -183,14 +199,8 @@ const GradeSheet = () => {
 			markSaved(student.id, true);
 			return true;
 		} catch (error) {
-			// 409: someone else graded this student since the sheet loaded
-			const status = axios.isAxiosError(error) ? error.response?.status : undefined;
-			setRow(student.id, {
-				mode: "editing",
-				draft,
-				seatingStatus,
-				error: status === 409 ? "gradeSheet.errors.alreadyGraded" : "common.saveFailed",
-			});
+			// 409: someone else graded this student since the sheet loaded, or the results were approved
+			setRow(student.id, { mode: "editing", draft, seatingStatus, error: writeError(error) });
 			return false;
 		}
 	};
@@ -203,26 +213,30 @@ const GradeSheet = () => {
 		const row = rowOf(student.id);
 		if (row.mode !== "editing") return false;
 
-		// a voided mark needs no entry: the grade is 0 whatever was typed
-		const result = gradeSchema.safeParse(voidsMark(row.seatingStatus) ? "0" : row.draft);
-		if (!result.success) {
-			setRow(student.id, { ...row, error: result.error.issues[0]?.message });
-			return false;
+		// a voided mark needs no entry: the grade is 0 whatever was typed; a substitute takes none
+		let grade: number | undefined;
+		if (!takesNoMark(row.seatingStatus)) {
+			const result = gradeSchema.safeParse(voidsMark(row.seatingStatus) ? "0" : row.draft);
+			if (!result.success) {
+				setRow(student.id, { ...row, error: result.error.issues[0]?.message });
+				return false;
+			}
+			grade = markToSend(row.seatingStatus, result.data);
 		}
 
-		if (student.grade !== null) {
+		if (hasMark(student)) {
 			const unchanged =
-				result.data === student.grade &&
+				(grade ?? null) === student.grade &&
 				row.seatingStatus === (student.seatingStatus ?? DEFAULT_STATUS);
 			if (unchanged) {
 				setRow(student.id, IDLE);
 				return true;
 			}
-			setPendingEdit({ student, grade: result.data, seatingStatus: row.seatingStatus, advance });
+			setPendingEdit({ student, grade, seatingStatus: row.seatingStatus, advance });
 			return false;
 		}
 
-		return write(student, result.data, row.seatingStatus, row.draft);
+		return write(student, grade, row.seatingStatus, row.draft);
 	};
 
 	const confirmEdit = async () => {
@@ -230,7 +244,7 @@ const GradeSheet = () => {
 		if (!edit) return;
 		setPendingEdit(null);
 		const row = rowOf(edit.student.id);
-		const draft = row.mode === "idle" ? String(edit.grade) : row.draft;
+		const draft = row.mode === "idle" ? String(edit.grade ?? "") : row.draft;
 		const stored = await write(edit.student, edit.grade, edit.seatingStatus, draft);
 		if (!stored) return;
 		if (edit.advance) openNext(edit.student.id);
@@ -245,15 +259,18 @@ const GradeSheet = () => {
 			await deleteGrade(student.gradeId);
 			storeMark(student.id, null);
 			markSaved(student.id, false);
-			setDeleteFailed(false);
-		} catch {
-			setDeleteFailed(true);
+			setDeleteFailed(null);
+		} catch (error) {
+			setDeleteFailed(
+				conflictCode(error) === "RESULTS_APPROVED" ? "results.lockedError" : "gradeSheet.deleteFailed",
+			);
 		}
 		afterRender(() => focusRow(NAV_GROUP, student.id));
 	};
 
 	/** Enter on a row: open it, or return to its open field. */
 	const activateRow = (student: SheetStudent) => {
+		if (student.locked) return;
 		const row = rowOf(student.id);
 		// the field mounts focused (autoFocus)
 		if (row.mode === "idle") openRow(student);
@@ -308,20 +325,25 @@ const GradeSheet = () => {
 				return <span className="text-primary-hover">{t("gradeSheet.notEntered")}</span>;
 			}
 			return (
-				<span className="inline-flex items-center gap-2 font-semibold">
-					{student.grade}
-					{saved.has(student.id) && (
-						<span className="inline-flex items-center gap-1 text-body-sm font-normal text-primary-hover">
-							<CheckIcon className="size-4" aria-hidden />
-							{t("common.saved")}
-						</span>
-					)}
-				</span>
+				<div className="flex flex-col items-start gap-1">
+					<span className="inline-flex items-center gap-2 font-semibold">
+						{/* a substitute has no mark until its re-exam */}
+						{student.grade ?? "—"}
+						{saved.has(student.id) && (
+							<span className="inline-flex items-center gap-1 text-body-sm font-normal text-primary-hover">
+								<CheckIcon className="size-4" aria-hidden />
+								{t("common.saved")}
+							</span>
+						)}
+					</span>
+					<ResitNote resit={student.resit} />
+				</div>
 			);
 		}
 
 		const errorId = `grade-${student.id}-error`;
 		const voided = voidsMark(row.seatingStatus);
+		const noMark = takesNoMark(row.seatingStatus);
 		return (
 			<div className="flex flex-col gap-1">
 				<input
@@ -335,8 +357,8 @@ const GradeSheet = () => {
 					autoFocus
 					// a correction replaces the whole mark
 					onFocus={(e) => e.currentTarget.select()}
-					value={voided ? "0" : row.draft}
-					disabled={row.mode === "saving" || voided}
+					value={voided ? "0" : noMark ? "" : row.draft}
+					disabled={row.mode === "saving" || voided || noMark}
 					onChange={(e) =>
 						setRow(student.id, {
 							mode: "editing",
@@ -353,6 +375,7 @@ const GradeSheet = () => {
 					}`}
 				/>
 				{voided && <p className="text-body-sm text-primary-hover">{t("gradeSheet.voidedGrade")}</p>}
+				{noMark && <p className="text-body-sm text-primary-hover">{t("gradeSheet.substituteGrade")}</p>}
 				{row.error && (
 					<p id={errorId} role="alert" className="text-body-sm text-error">
 						{t(row.error)}
@@ -393,6 +416,15 @@ const GradeSheet = () => {
 	const renderActions = (student: SheetStudent) => {
 		const row = rowOf(student.id);
 		const name = student.name[lang];
+		// §39 — the icon and words say why the row takes no changes
+		if (row.mode === "idle" && student.locked) {
+			return (
+				<span className="inline-flex items-center gap-1 whitespace-nowrap text-body-sm text-primary-hover">
+					<LockClosedIcon className="size-4" aria-hidden />
+					{t("results.locked")}
+				</span>
+			);
+		}
 		if (row.mode === "idle") {
 			if (!hasMark(student)) {
 				return (
@@ -541,7 +573,7 @@ const GradeSheet = () => {
 			)}
 			{deleteFailed && (
 				<p role="alert" className="mb-6 text-body-sm text-error">
-					{t("gradeSheet.deleteFailed")}
+					{t(deleteFailed)}
 				</p>
 			)}
 
@@ -568,9 +600,9 @@ const GradeSheet = () => {
 					pendingEdit
 						? t("editGrade.confirmMessage", {
 								name: pendingEdit.student.name[lang],
-								fromGrade: pendingEdit.student.grade,
+								fromGrade: pendingEdit.student.grade ?? "—",
 								fromStatus: statusLabel(pendingEdit.student.seatingStatus ?? DEFAULT_STATUS),
-								toGrade: pendingEdit.grade,
+								toGrade: pendingEdit.grade ?? "—",
 								toStatus: statusLabel(pendingEdit.seatingStatus),
 							})
 						: ""

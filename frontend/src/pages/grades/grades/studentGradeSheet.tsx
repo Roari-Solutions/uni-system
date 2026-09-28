@@ -6,6 +6,7 @@ import {
 	ArrowLeftIcon,
 	ArrowUturnLeftIcon,
 	CheckIcon,
+	LockClosedIcon,
 	NoSymbolIcon,
 	PauseCircleIcon,
 } from "@heroicons/react/24/outline";
@@ -25,7 +26,9 @@ import type { SeatingStatus } from "../../../types/grade";
 import type { Student } from "../../../types/student";
 import { smallSecondaryButtonClass, submitButtonClass } from "../../../styles/form";
 import { SEMESTERS } from "../../../utils/academicYears";
-import { gradeSchema, voidsMark } from "../../../utils/gradeInput";
+import { gradeSchema, markToSend, takesNoMark, voidsMark } from "../../../utils/gradeInput";
+import { conflictCode } from "../../../utils/apiError";
+import ResitNote from "../../../components/resitNote";
 import { adjacentRowId, focusField, focusRow } from "../../../utils/rowNav";
 
 // what the row's fields hold, typed or loaded
@@ -52,12 +55,23 @@ const draftOf = (row: StudentYearGrade): Draft => ({
 /** Whether the row's fields differ from what the API holds for it. */
 const isDirty = (row: StudentYearGrade, draft: Draft): boolean => {
 	const voided = voidsMark(draft.seatingStatus);
+	const noMark = takesNoMark(draft.seatingStatus);
 	const typed = draft.grade.trim();
 	// nothing typed on an unmarked row is nothing to save
-	if (row.gradeId === null) return voided || typed !== "";
+	if (row.gradeId === null) return voided || noMark || typed !== "";
 	if (draft.seatingStatus !== (row.seatingStatus ?? DEFAULT_STATUS)) return true;
 	if (voided) return row.grade !== 0;
+	if (noMark) return false;
 	return typed === "" || Number(typed) !== row.grade;
+};
+
+/** Why a write was refused, as an i18n key. */
+const writeError = (error: unknown) => {
+	if (conflictCode(error) === "RESULTS_APPROVED") return "results.lockedError";
+	// 409: someone else graded this curriculum since the sheet loaded
+	return axios.isAxiosError(error) && error.response?.status === 409
+		? "gradeSheet.errors.alreadyGraded"
+		: "common.saveFailed";
 };
 
 // step two of single entry: one student's curriculums for the year, all saved together
@@ -108,8 +122,11 @@ const StudentGradeSheet = () => {
 	// a suspension or dismissal freezes the record; the API refuses its marks too
 	const frozen = student !== null && student.standing !== "active";
 
+	// approved results lock their semester's rows; the API refuses them too
+	const readOnly = (row: StudentYearGrade) => frozen || row.locked;
+
 	const draftFor = (row: StudentYearGrade) => drafts[row.curriculumId] ?? draftOf(row);
-	const dirtyRows = frozen ? [] : rows.filter((row) => isDirty(row, draftFor(row)));
+	const dirtyRows = rows.filter((row) => !readOnly(row) && isDirty(row, draftFor(row)));
 	const added = dirtyRows.filter((row) => row.gradeId === null).length;
 	const changed = dirtyRows.length - added;
 
@@ -181,6 +198,7 @@ const StudentGradeSheet = () => {
 		const found: Record<string, string> = {};
 		for (const row of dirtyRows) {
 			const draft = draftFor(row);
+			if (takesNoMark(draft.seatingStatus)) continue;
 			const parsed = gradeSchema.safeParse(voidsMark(draft.seatingStatus) ? "0" : draft.grade);
 			if (!parsed.success) found[row.curriculumId] = parsed.error.issues[0]?.message ?? "";
 		}
@@ -198,7 +216,7 @@ const StudentGradeSheet = () => {
 
 		for (const row of dirtyRows) {
 			const draft = draftFor(row);
-			const grade = voidsMark(draft.seatingStatus) ? 0 : Number(draft.grade.trim());
+			const grade = markToSend(draft.seatingStatus, Number(draft.grade.trim()));
 			try {
 				if (row.gradeId === null) {
 					await createGrade({
@@ -212,10 +230,7 @@ const StudentGradeSheet = () => {
 				}
 				written.add(row.curriculumId);
 			} catch (error) {
-				// 409: someone else graded this curriculum since the sheet loaded
-				const status = axios.isAxiosError(error) ? error.response?.status : undefined;
-				failures[row.curriculumId] =
-					status === 409 ? "gradeSheet.errors.alreadyGraded" : "common.saveFailed";
+				failures[row.curriculumId] = writeError(error);
 			}
 		}
 
@@ -243,7 +258,7 @@ const StudentGradeSheet = () => {
 	};
 
 	const renderSeatingStatus = (row: StudentYearGrade) => {
-		if (frozen) return <SeatingStatusTag status={row.seatingStatus} />;
+		if (readOnly(row)) return <SeatingStatusTag status={row.seatingStatus} />;
 		const draft = draftFor(row);
 		return (
 			<div className="flex flex-col items-start gap-1">
@@ -263,16 +278,21 @@ const StudentGradeSheet = () => {
 	};
 
 	const renderGrade = (row: StudentYearGrade) => {
-		if (frozen) {
-			return row.grade === null ? (
-				<span className="text-primary-hover">{t("gradeSheet.notEntered")}</span>
-			) : (
-				<span className="font-semibold">{row.grade}</span>
+		if (readOnly(row)) {
+			if (row.grade === null && row.seatingStatus !== "substitute") {
+				return <span className="text-primary-hover">{t("gradeSheet.notEntered")}</span>;
+			}
+			return (
+				<div className="flex flex-col items-start gap-1">
+					<span className="font-semibold">{row.grade ?? "—"}</span>
+					<ResitNote resit={row.resit} />
+				</div>
 			);
 		}
 
 		const draft = draftFor(row);
 		const voided = voidsMark(draft.seatingStatus);
+		const noMark = takesNoMark(draft.seatingStatus);
 		const error = errors[row.curriculumId];
 		const errorId = `grade-${row.curriculumId}-error`;
 		return (
@@ -284,8 +304,8 @@ const StudentGradeSheet = () => {
 					max={100}
 					step="any"
 					dir="ltr"
-					value={voided ? "0" : draft.grade}
-					disabled={saving || voided}
+					value={voided ? "0" : noMark ? "" : draft.grade}
+					disabled={saving || voided || noMark}
 					onChange={(e) => editDraft(row, { grade: e.target.value })}
 					onKeyDown={(e) => handleFieldKeyDown(e, row)}
 					aria-label={t("singleEntry.gradeFor", { name: row.name[lang] })}
@@ -296,6 +316,7 @@ const StudentGradeSheet = () => {
 					}`}
 				/>
 				{voided && <p className="text-body-sm text-primary-hover">{t("gradeSheet.voidedGrade")}</p>}
+				{noMark && <p className="text-body-sm text-primary-hover">{t("gradeSheet.substituteGrade")}</p>}
 				{error && (
 					<p id={errorId} role="alert" className="text-body-sm text-error">
 						{t(error)}
@@ -319,7 +340,7 @@ const StudentGradeSheet = () => {
 			header: t("singleEntry.columns.letter"),
 			// the API derives the letter; a changed row shows none until it is saved
 			render: (g) =>
-				g.letter && (frozen || !isDirty(g, draftFor(g))) ? (
+				g.letter && (readOnly(g) || !isDirty(g, draftFor(g))) ? (
 					<span dir="ltr" className="font-semibold">
 						{g.letter}
 					</span>
@@ -339,7 +360,15 @@ const StudentGradeSheet = () => {
 						</span>
 					);
 				}
-				if (!frozen && isDirty(g, draftFor(g))) {
+				if (g.locked) {
+					return (
+						<span className="inline-flex items-center gap-1 whitespace-nowrap text-body-sm text-primary-hover">
+							<LockClosedIcon className="size-4" aria-hidden />
+							{t("results.locked")}
+						</span>
+					);
+				}
+				if (!readOnly(g) && isDirty(g, draftFor(g))) {
 					return (
 						<div className="flex flex-wrap items-center gap-3">
 							<span className="text-body-sm text-accent-deep">{t("singleEntry.unsavedRow")}</span>
@@ -455,7 +484,14 @@ const StudentGradeSheet = () => {
 									rows={rows.filter((g) => g.semester === s)}
 									getRowId={(g) => g.curriculumId}
 									// a frozen record has nothing to enter, so its rows are no keyboard stops
-									onRowActivate={frozen ? undefined : (g) => focusRowField(g.curriculumId)}
+									// and a locked row has no field to go to
+									onRowActivate={
+										frozen
+											? undefined
+											: (g) => {
+													if (!g.locked) focusRowField(g.curriculumId);
+												}
+									}
 									navGroup={NAV_GROUP}
 									emptyText={t("studentDetails.noCurriculums")}
 								/>

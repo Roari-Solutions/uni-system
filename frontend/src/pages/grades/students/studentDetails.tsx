@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import {
 	ArrowLeftIcon,
+	LockClosedIcon,
 	NoSymbolIcon,
 	PauseCircleIcon,
 	PencilSquareIcon,
@@ -25,6 +26,8 @@ import ResolveCheatingDialog, {
 import EditGradeDialog, { type GradeEdit } from "../../../components/editGradeDialog";
 import ConfirmDialog from "../../../components/confirmDialog";
 import { PenaltyTags } from "../../../components/penaltyTags";
+import ResitNote from "../../../components/resitNote";
+import { conflictCode } from "../../../utils/apiError";
 import useAuth from "../../../auth/useAuth";
 import { smallSecondaryButtonClass } from "../../../styles/form";
 import type { Student } from "../../../types/student";
@@ -58,6 +61,8 @@ const StudentDetails = () => {
 	const [pending, setPending] = useState<{ row: StudentYearGrade; edit: GradeEdit } | null>(null);
 	const [saving, setSaving] = useState(false);
 	const [confirmReinstate, setConfirmReinstate] = useState(false);
+	// an i18n key saying why the last change was refused
+	const [actionError, setActionError] = useState<string | null>(null);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -90,8 +95,15 @@ const StudentDetails = () => {
 	const semesterGpa = (semester: number) =>
 		gpas?.semesters.find((s) => s.semester === semester) ?? null;
 
-	// a GPA stands only once every curriculum behind it carries a mark
-	const missingIn = (rows: StudentYearGrade[]) => rows.some((g) => g.grade === null);
+	// a GPA stands only once every curriculum behind it carries a mark (a substitute waits on its re-exam)
+	const missingIn = (rows: StudentYearGrade[]) =>
+		rows.some((g) => g.grade === null && g.seatingStatus !== "substitute");
+
+	/** Says why a change was refused: approved results lock the semester. */
+	const refused = (error: unknown) =>
+		setActionError(
+			conflictCode(error) === "RESULTS_APPROVED" ? "results.lockedError" : "common.saveFailed",
+		);
 	const semesterMissing = (semester: number) =>
 		missingIn(grades.filter((g) => g.semester === semester));
 	const yearMissing = () => missingIn(grades);
@@ -124,8 +136,10 @@ const StudentDetails = () => {
 			});
 			await reload();
 			setPending(null);
-		} catch {
-			setFailed(true);
+			setActionError(null);
+		} catch (error) {
+			refused(error);
+			setPending(null);
 		} finally {
 			setSaving(false);
 		}
@@ -138,8 +152,10 @@ const StudentDetails = () => {
 			await resolveCheating(resolving.gradeId, resolution);
 			await reload();
 			setResolving(null);
-		} catch {
-			setFailed(true);
+			setActionError(null);
+		} catch (error) {
+			refused(error);
+			setResolving(null);
 		} finally {
 			setSaving(false);
 		}
@@ -174,10 +190,14 @@ const StudentDetails = () => {
 			key: "grade",
 			header: t("studentDetails.columns.grade"),
 			render: (g) =>
-				g.grade === null ? (
+				g.grade === null && g.seatingStatus !== "substitute" ? (
 					<span className="text-primary-hover">{t("studentDetails.notEntered")}</span>
 				) : (
-					<span className="font-semibold">{g.grade}</span>
+					<div className="flex flex-col items-start gap-1">
+						{/* a substitute has no mark until its re-exam */}
+						<span className="font-semibold">{g.grade ?? "—"}</span>
+						<ResitNote resit={g.resit} />
+					</div>
 				),
 		},
 		{
@@ -188,9 +208,15 @@ const StudentDetails = () => {
 		{
 			key: "actions",
 			header: t("common.actions"),
-			// only a curriculum that carries a mark can have it edited, and never on a frozen record
+			// only a curriculum that carries a mark can have it edited, never on a frozen record,
+			// and not once the semester's results are approved
 			render: (g) =>
-				g.gradeId === null || frozen ? null : (
+				g.locked ? (
+					<span className="inline-flex items-center gap-1 whitespace-nowrap text-body-sm text-primary-hover">
+						<LockClosedIcon className="size-4" aria-hidden />
+						{t("results.locked")}
+					</span>
+				) : g.gradeId === null || frozen ? null : (
 					<button
 						type="button"
 						onClick={() => setEditing(g)}
@@ -207,7 +233,8 @@ const StudentDetails = () => {
 			render: (g) => (
 				<div className="flex flex-col items-start gap-1">
 					<SeatingStatusTag status={g.seatingStatus} />
-					{awaitsDecision(g) && (
+					{/* a case still open when the results were approved stays open */}
+					{awaitsDecision(g) && !g.locked && (
 						<>
 							<span className="text-body-sm text-error">{t("resolveCheating.pending")}</span>
 							<button
@@ -293,6 +320,11 @@ const StudentDetails = () => {
 			{failed && (
 				<p role="alert" className="mb-6 text-body-sm text-error">
 					{t("common.loadFailed")}
+				</p>
+			)}
+			{actionError && (
+				<p role="alert" className="mb-6 text-body-sm text-error">
+					{t(actionError)}
 				</p>
 			)}
 			{loading && !student && <p className="text-body-md text-foreground">{t("common.loading")}</p>}
@@ -431,7 +463,7 @@ const StudentDetails = () => {
 								name: pending.row.name[lang],
 								fromGrade: pending.row.grade ?? "—",
 								fromStatus: t(`seatingStatuses.${pending.row.seatingStatus ?? "attended"}`),
-								toGrade: pending.edit.grade,
+								toGrade: pending.edit.grade ?? "—",
 								toStatus: t(`seatingStatuses.${pending.edit.seatingStatus}`),
 							})
 						: ""
