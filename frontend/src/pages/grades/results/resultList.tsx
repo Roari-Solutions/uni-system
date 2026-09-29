@@ -16,6 +16,7 @@ import FilterSelect from "../../../components/filterSelect";
 import GenerateResultDialog from "../../../components/results/generateResultDialog";
 import ResultStatusTag from "../../../components/results/resultStatusTag";
 import ResultTable, { type ResultTableEditing } from "../../../components/results/resultTable";
+import StudentOrderSelect from "../../../components/studentOrderSelect";
 import useFaculties from "../../../hooks/useFaculties";
 import { createGrade, updateGrade } from "../../../api/grades";
 import { fetchResults, generateResult, previewResult, type ResultBatch } from "../../../api/results";
@@ -39,6 +40,7 @@ import { generateError } from "../../../utils/resultErrors";
 import { clearDraft, EMPTY_DRAFT, loadDraft, saveDraft } from "../../../utils/resultDraft";
 import { WITHOUT_SPECIALIZATION } from "../../../types/faculty";
 import { specializationName } from "../../../utils/specializations";
+import { orderSheet, type StudentOrder } from "../../../utils/studentOrder";
 
 // the cell being corrected, then a correction to a recorded mark waiting on its confirmation
 type CellEdit = { student: ResultStudent; course: ResultCourse };
@@ -90,6 +92,7 @@ const ResultList = () => {
 	// an i18n key when the preview can't be built
 	const [previewError, setPreviewError] = useState<string | null>(null);
 	const [excluded, setExcluded] = useState<string[]>(restored.excluded);
+	const [order, setOrder] = useState<StudentOrder>("");
 	// the header typed so far, kept until the result is generated
 	const [headerDraft, setHeaderDraft] = useState<ResultHeader | null>(restored.header);
 	// the pending result loaded back in for editing, if any
@@ -676,9 +679,12 @@ const ResultList = () => {
 
 						{preview ? (
 							<>
-								<p className="mb-3 text-body-sm text-primary-hover">{t("results.previewHint")}</p>
+								<div className="mb-3 flex flex-wrap items-end justify-between gap-4">
+									<p className="text-body-sm text-primary-hover">{t("results.previewHint")}</p>
+									<StudentOrderSelect id="previewOrder" value={order} onChange={setOrder} />
+								</div>
 								<div className="overflow-x-auto rounded-md border border-border-subtle bg-surface p-4">
-									<ResultTable sheet={preview.sheet} version="board" editing={tableEditing} />
+									<ResultTable sheet={orderSheet(preview.sheet, order)} version="board" editing={tableEditing} />
 								</div>
 							</>
 						) : (

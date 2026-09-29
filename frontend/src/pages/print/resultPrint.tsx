@@ -7,6 +7,7 @@ import { fetchResult } from "../../api/results";
 import type { Result, ResultVersion } from "../../types/result";
 import { submitButtonClass } from "../../styles/form";
 import { levelText } from "../../utils/resultText";
+import { isStudentOrder, orderSheet, type StudentOrder } from "../../utils/studentOrder";
 
 // A4 landscape with 8mm margins, and room below for the page number; the page
 // background prints white whatever the dashboard's canvas is
@@ -60,6 +61,9 @@ const ResultPrint = () => {
 	const [searchParams] = useSearchParams();
 	// only an approved result has a final version
 	const requested: ResultVersion = searchParams.get("version") === "final" ? "final" : "board";
+	// the order the students were in on the page the export came from
+	const orderParam = searchParams.get("order");
+	const order: StudentOrder = isStudentOrder(orderParam) ? orderParam : "";
 
 	const [result, setResult] = useState<Result | null>(null);
 	const [failed, setFailed] = useState(false);
@@ -133,7 +137,7 @@ const ResultPrint = () => {
 			</div>
 			{/* laid out at the printable width, so what fits here fits the page */}
 			<div className="mx-auto w-[281mm] py-4 print:py-0">
-				<ResultDocument header={result.header} sheet={result.sheet} version={version} />
+				<ResultDocument header={result.header} sheet={orderSheet(result.sheet, order)} version={version} />
 			</div>
 		</main>
 	);

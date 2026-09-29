@@ -11,6 +11,7 @@ import SetSpecializationDialog, {
 	type SpecializationTarget,
 } from "../../../components/setSpecializationDialog";
 import SpecializationFilter from "../../../components/specializationFilter";
+import StudentOrderSelect from "../../../components/studentOrderSelect";
 import useFaculties from "../../../hooks/useFaculties";
 import { deleteStudent, fetchStudents, setStudentsSpecialization } from "../../../api/students";
 import type { Student } from "../../../types/student";
@@ -18,6 +19,7 @@ import { WITHOUT_SPECIALIZATION } from "../../../types/faculty";
 import { smallSecondaryButtonClass } from "../../../styles/form";
 import { ACCEPTANCE_YEARS, STUDY_LEVELS } from "../../../utils/academicYears";
 import { specializationName } from "../../../utils/specializations";
+import { orderStudents, type StudentOrder } from "../../../utils/studentOrder";
 
 // columns that can't be hidden
 const ALWAYS_VISIBLE = ["select", "name", "actions"];
@@ -38,6 +40,7 @@ const StudentList = () => {
 	const [acceptanceYear, setAcceptanceYear] = useState("");
 	const [specializationId, setSpecializationId] = useState("");
 	const [search, setSearch] = useState("");
+	const [order, setOrder] = useState<StudentOrder>("");
 	// ticked students, for setting one specialization on all of them
 	const [selected, setSelected] = useState<string[]>([]);
 	const [setting, setSetting] = useState<Setting | null>(null);
@@ -112,6 +115,7 @@ const StudentList = () => {
 	const selectable = !!effectiveFacultyId && hasSpecializations(effectiveFacultyId);
 	const selectableRows = students.filter((s) => s.standing !== "dismissed");
 	const allSelected = selectableRows.length > 0 && selectableRows.every((s) => selected.includes(s.id));
+	const ordered = orderStudents(students, order, lang, (s) => ({ name: s.name[lang], uniNumber: s.uniNumber }));
 	const missing = students.filter((s) => !s.specializationId && hasSpecializations(s.facultyId)).length;
 
 	const toggleSelected = (id: string) =>
@@ -276,6 +280,7 @@ const StudentList = () => {
 					value={specializationId}
 					onChange={setSpecializationId}
 				/>
+				<StudentOrderSelect id="studentOrder" value={order} onChange={setOrder} />
 
 				<div className="ms-auto">
 					<ColumnToggle
@@ -337,7 +342,7 @@ const StudentList = () => {
 
 			<DataTable
 				columns={columns.filter((col) => !hiddenColumns.includes(col.key))}
-				rows={students}
+				rows={ordered}
 				getRowId={(s) => s.id}
 				onRowClick={(s) => void navigate(`../${s.id}`)}
 				emptyText={loading ? t("common.loading") : t("studentList.empty")}

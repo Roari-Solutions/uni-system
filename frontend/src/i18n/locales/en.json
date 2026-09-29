@@ -186,6 +186,11 @@
     "faculty": "Faculty requirement",
     "major": "Major requirement"
   },
+  "studentOrder": {
+    "label": "Order by",
+    "uniNumber": "University number",
+    "name": "Name (A–Z)"
+  },
   "common": {
     "actions": "Actions",
     "delete": "Delete",

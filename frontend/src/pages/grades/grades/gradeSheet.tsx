@@ -15,6 +15,7 @@ import DeleteButton from "../../../components/deleteButton";
 import FilterSelect from "../../../components/filterSelect";
 import SearchField from "../../../components/searchField";
 import SpecializationFilter from "../../../components/specializationFilter";
+import StudentOrderSelect from "../../../components/studentOrderSelect";
 import useFaculties from "../../../hooks/useFaculties";
 import { WITHOUT_SPECIALIZATION } from "../../../types/faculty";
 import {
@@ -33,6 +34,7 @@ import { gradeSchema, markToSend, takesNoMark, voidsMark } from "../../../utils/
 import { conflictCode } from "../../../utils/apiError";
 import { adjacentRowId, afterRender, focusField, focusRow } from "../../../utils/rowNav";
 import { ACCEPTANCE_YEARS } from "../../../utils/academicYears";
+import { orderStudents, type StudentOrder } from "../../../utils/studentOrder";
 
 // a row is idle, showing what is stored, until it is opened to enter or edit its mark
 type RowState =
@@ -102,6 +104,7 @@ const GradeSheet = () => {
 	const [markFilter, setMarkFilter] = useState<MarkFilter>("");
 	const [acceptanceYear, setAcceptanceYear] = useState("");
 	const [specializationId, setSpecializationId] = useState("");
+	const [order, setOrder] = useState<StudentOrder>("");
 	const { faculties } = useFaculties();
 	const [pendingEdit, setPendingEdit] = useState<PendingEdit | null>(null);
 	const [pendingDelete, setPendingDelete] = useState<SheetStudent | null>(null);
@@ -133,7 +136,11 @@ const GradeSheet = () => {
 	const entered = students.filter(hasMark).length;
 
 	const needle = fold(search);
-	const visible = students.filter((s) => {
+	// the order on screen is the order Enter moves through
+	const visible = orderStudents(students, order, lang, (s) => ({
+		name: s.name[lang],
+		uniNumber: s.uniNumber,
+	})).filter((s) => {
 		if (needle && ![s.name.ar, s.name.en, s.uniNumber].some((v) => fold(v).includes(needle))) {
 			return false;
 		}
@@ -579,6 +586,7 @@ const GradeSheet = () => {
 					value={specializationId}
 					onChange={setSpecializationId}
 				/>
+				<StudentOrderSelect id="studentOrder" value={order} onChange={setOrder} />
 			</div>
 
 			{failed && (

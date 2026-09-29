@@ -17,6 +17,7 @@ import GenerateResultDialog from "../../../components/results/generateResultDial
 import ResitEntry from "../../../components/results/resitEntry";
 import ResultStatusTag from "../../../components/results/resultStatusTag";
 import ResultTable from "../../../components/results/resultTable";
+import StudentOrderSelect from "../../../components/studentOrderSelect";
 import useFaculties from "../../../hooks/useFaculties";
 import {
 	discardResult,
@@ -41,6 +42,7 @@ import {
 import { headerDefaults, type HeaderSuggestions } from "../../../utils/resultHeader";
 import { specializationName } from "../../../utils/specializations";
 import { generateError } from "../../../utils/resultErrors";
+import { orderSheet, type StudentOrder } from "../../../utils/studentOrder";
 
 // the regeneration dialog or the Sup & Sub one; both ask for the header
 type Generating = { kind: ResultKind; header: ResultHeader; suggestions: HeaderSuggestions } | null;
@@ -63,6 +65,7 @@ const ResultDetails = () => {
 	const [candidates, setCandidates] = useState<ResitCandidate[]>([]);
 	const [failed, setFailed] = useState(false);
 	const [version, setVersion] = useState<ResultVersion>("board");
+	const [order, setOrder] = useState<StudentOrder>("");
 	const [approving, setApproving] = useState(false);
 	const [confirmDiscard, setConfirmDiscard] = useState(false);
 	const [generating, setGenerating] = useState<Generating>(null);
@@ -203,7 +206,9 @@ const ResultDetails = () => {
 
 	const pending = result.status === "pending";
 	const facultyName = faculties.find((f) => f.id === result.facultyId)?.name[lang] ?? "";
-	const printPath = (v: ResultVersion) => `/print/results/${result.id}?version=${v}`;
+	// the export prints in the order chosen here
+	const printPath = (v: ResultVersion) =>
+		`/print/results/${result.id}?version=${v}${order ? `&order=${order}` : ""}`;
 
 	return (
 		<div>
@@ -334,27 +339,31 @@ const ResultDetails = () => {
 
 			{pending && <p className="mb-6 text-body-sm text-primary-hover">{t("results.pendingHint")}</p>}
 
-			{!pending && (
-				// the two printed versions, as a toggle; the chosen one is the preview below
-				<div role="group" aria-label={t("results.versionLabel")} className="mb-4 inline-flex rounded-sm border border-border-accent">
-					{(["final", "board"] as const).map((v) => (
-						<button
-							key={v}
-							type="button"
-							aria-pressed={version === v}
-							onClick={() => setVersion(v)}
-							className={`h-11 px-4 text-body-sm font-semibold transition-colors duration-200 ease-out ${
-								version === v ? "bg-primary text-foreground" : "text-primary-hover hover:bg-accent-soft/30"
-							}`}
-						>
-							{t(`results.versions.${v}`)}
-						</button>
-					))}
-				</div>
-			)}
+			<div className="mb-4 flex flex-wrap items-end justify-between gap-4">
+				{!pending && (
+					// the two printed versions, as a toggle; the chosen one is the preview below
+					<div role="group" aria-label={t("results.versionLabel")} className="inline-flex rounded-sm border border-border-accent">
+						{(["final", "board"] as const).map((v) => (
+							<button
+								key={v}
+								type="button"
+								aria-pressed={version === v}
+								onClick={() => setVersion(v)}
+								className={`h-11 px-4 text-body-sm font-semibold transition-colors duration-200 ease-out ${
+									version === v ? "bg-primary text-foreground" : "text-primary-hover hover:bg-accent-soft/30"
+								}`}
+							>
+								{t(`results.versions.${v}`)}
+							</button>
+						))}
+					</div>
+				)}
+
+				<StudentOrderSelect id="resultOrder" value={order} onChange={setOrder} />
+			</div>
 
 			<section aria-label={t("results.preview")} className="mb-10 overflow-x-auto rounded-md border border-border-subtle bg-surface p-4 shadow-md">
-				<ResultTable sheet={result.sheet} version={pending ? "board" : version} />
+				<ResultTable sheet={orderSheet(result.sheet, order)} version={pending ? "board" : version} />
 			</section>
 
 			{result.kind === "regular" && !pending && (

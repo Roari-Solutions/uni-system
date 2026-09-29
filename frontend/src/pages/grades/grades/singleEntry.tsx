@@ -6,7 +6,9 @@ import DataTable, { type Column } from "../../../components/dataTable";
 import FilterSelect from "../../../components/filterSelect";
 import SearchField from "../../../components/searchField";
 import SpecializationFilter from "../../../components/specializationFilter";
+import StudentOrderSelect from "../../../components/studentOrderSelect";
 import { specializationName } from "../../../utils/specializations";
+import { orderStudents, type StudentOrder } from "../../../utils/studentOrder";
 import useFaculties from "../../../hooks/useFaculties";
 import { fetchStudents } from "../../../api/students";
 import type { Student } from "../../../types/student";
@@ -30,6 +32,7 @@ const SingleEntry = () => {
 	const [specializationId, setSpecializationId] = useState("");
 	// students carry no semester, so this one narrows the sheet the student opens into
 	const [semester, setSemester] = useState("");
+	const [order, setOrder] = useState<StudentOrder>("");
 
 	// a locked caller only ever sees their own faculty
 	const effectiveFacultyId = locked ? (lockedFacultyId ?? "") : facultyId;
@@ -62,6 +65,7 @@ const SingleEntry = () => {
 	}, [effectiveFacultyId, level, acceptanceYear, specializationId, search]);
 
 	const facultyName = (id: string) => faculties.find((f) => f.id === id)?.name[lang] ?? "";
+	const ordered = orderStudents(students, order, lang, (s) => ({ name: s.name[lang], uniNumber: s.uniNumber }));
 	const sheetPath = (s: Student) => (semester ? `${s.id}?semester=${semester}` : s.id);
 
 	const columns: Column<Student>[] = [
@@ -173,6 +177,7 @@ const SingleEntry = () => {
 					allLabel={t("gradeEntry.allSemesters")}
 					options={SEMESTERS.map((s) => ({ value: String(s), label: t(`semesters.${s}`) }))}
 				/>
+				<StudentOrderSelect id="studentOrder" value={order} onChange={setOrder} />
 			</div>
 
 			{failed && (
@@ -183,7 +188,7 @@ const SingleEntry = () => {
 
 			<DataTable
 				columns={columns}
-				rows={students}
+				rows={ordered}
 				getRowId={(s) => s.id}
 				onRowClick={(s) => void navigate(sheetPath(s))}
 				emptyText={loading ? t("common.loading") : t("singleEntry.empty")}

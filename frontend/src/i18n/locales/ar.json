@@ -186,6 +186,11 @@
     "faculty": "متطلب كلية",
     "major": "متطلب تخصص"
   },
+  "studentOrder": {
+    "label": "الترتيب حسب",
+    "uniNumber": "الرقم الجامعي",
+    "name": "الاسم (أبجدياً)"
+  },
   "common": {
     "actions": "الإجراءات",
     "delete": "حذف",
