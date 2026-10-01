@@ -27,6 +27,8 @@ type ResultTableProps = {
 	sheet: ResultSheet;
 	version: ResultVersion;
 	editing?: ResultTableEditing;
+	/** The S.No. of the first row; a printed page after the first carries on from the last. */
+	firstNumber?: number;
 };
 
 // a thin rule on every cell, as on the university's printed sheet
@@ -43,7 +45,7 @@ const failedCell = "bg-accent-soft font-bold";
  * semester sheet, and an empty Remarks column. Always English and LTR: it is
  * the exported document, whatever language the dashboard is in.
  */
-const ResultTable = ({ sheet, version, editing }: ResultTableProps) => {
+const ResultTable = ({ sheet, version, editing, firstNumber = 1 }: ResultTableProps) => {
 	const yearSheet = sheet.semester === 2;
 	const totalColumns = yearSheet ? ["CH", "GP", "GPA", "CH", "GP", "GPA"] : ["CH", "GP", "GPA"];
 
@@ -117,7 +119,7 @@ const ResultTable = ({ sheet, version, editing }: ResultTableProps) => {
 					const year = student.year ? totalsText(student.year) : null;
 					return (
 						<tr key={student.id} className="break-inside-avoid">
-							<td className={cell}>{index + 1}</td>
+							<td className={cell}>{firstNumber + index}</td>
 							<td className={`${cell} text-start font-semibold`}>{student.uniNumber}</td>
 							<td className={`${cell} text-start font-semibold`}>{student.name}</td>
 							{student.cells.map((c, i) => {

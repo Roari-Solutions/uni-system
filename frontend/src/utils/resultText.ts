@@ -13,15 +13,25 @@ const SEMESTERS = ["First", "Second"];
 /** "First Year" for study year 1. */
 export const levelText = (academicYear: number) => `${LEVELS[academicYear - 1] ?? academicYear} Year`;
 
-/** "(First Semester Examinations Result)", "(Second Semester & Year Sup & Sub Examinations Result)"… */
+/**
+ * "(First Semester Examinations Result)"; the second semester's sheet carries
+ * the whole year, so it is the year's result: "(Year Sup & Sub Examinations Result)".
+ */
 export const sheetTitle = (semester: number, kind: ResultKind) => {
-	const term = `${SEMESTERS[semester - 1] ?? semester} Semester${semester === 2 ? " & Year" : ""}`;
+	const term = semester === 2 ? "Year" : `${SEMESTERS[semester - 1] ?? semester} Semester`;
 	return `(${term}${kind === "resit" ? " Sup & Sub" : ""} Examinations Result)`;
 };
 
+/** The board copy's line under the title, unless staff typed another (or none). */
+export const DEFAULT_RESULT_TITLE = "College Board Results";
+
 /** The version line under the title: the board's copy, or the approved final one. */
 export const versionText = (version: ResultVersion) =>
-	version === "board" ? "College Board Results" : "Final Results";
+	version === "board" ? DEFAULT_RESULT_TITLE : "Final Results";
+
+/** "2024", "2023 and 2024", "2022, 2023 and 2024": the batch named by its acceptance years. */
+export const joinYears = (years: string[]) =>
+	years.length < 2 ? (years[0] ?? "") : `${years.slice(0, -1).join(", ")} and ${years[years.length - 1]}`;
 
 /**
  * What one cell prints, and whether it is shaded as a fail. The board version

@@ -121,6 +121,8 @@ export interface ResultPreviewView {
   lockedStudentIds: string[];
   /** The students left off, so they can be put back. */
   excluded: { id: string; uniNumber: string; name: string }[];
+  /** The acceptance years of the students on the sheet, oldest first; they name the batch. */
+  acceptanceYears: string[];
 }
 
 /** A cell that may take a Sup & Sub re-exam, with what it holds now. */
@@ -597,12 +599,19 @@ export class ResultsService {
         dto.kind,
         dto.excludedStudentIds ?? [],
       );
+      const studentIds = sheet.students.map((s) => s.id);
       const locked = await approvedStudents(
         this.db,
-        sheet.students.map((s) => s.id),
+        studentIds,
         batch.academicYear,
         batch.semester,
       );
+      const years = studentIds.length
+        ? await this.db
+            .selectDistinct({ year: students.acceptanceYear })
+            .from(students)
+            .where(inArray(students.id, studentIds))
+        : [];
       return {
         sheet,
         grades: Object.fromEntries(
@@ -618,6 +627,7 @@ export class ResultsService {
         ),
         lockedStudentIds: [...locked],
         excluded,
+        acceptanceYears: years.map((y) => y.year).sort(),
       };
     } catch (error) {
       this.fail('Failed to preview result', error);
@@ -674,14 +684,23 @@ export class ResultsService {
 
       const sheet = await this.buildSheet(batch, dto.kind, excluded);
       const header: ResultHeader = {
+        // left out when not sent, so the sheet prints the default
+        ...(dto.header.degree !== undefined
+          ? { degree: dto.header.degree.trim() }
+          : {}),
         program: dto.header.program.trim(),
+        ...(dto.header.resultTitle !== undefined
+          ? { resultTitle: dto.header.resultTitle.trim() }
+          : {}),
         batch: dto.header.batch.trim(),
         academicYearLabel: dto.header.academicYearLabel.trim(),
-        examDate: dto.header.examDate.trim(),
-        collegeBoardDate: dto.header.collegeBoardDate.trim(),
+        examDate: (dto.header.examDate ?? '').trim(),
+        collegeBoardDate: (dto.header.collegeBoardDate ?? '').trim(),
         // only the second semester's (year) result goes to the central board
         centralBoardDate:
-          batch.semester === '2' ? dto.header.centralBoardDate.trim() : '',
+          batch.semester === '2'
+            ? (dto.header.centralBoardDate ?? '').trim()
+            : '',
       };
 
       const saved = await this.db.transaction(async (tx) => {

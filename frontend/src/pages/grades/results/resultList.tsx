@@ -13,7 +13,7 @@ import ConfirmDialog from "../../../components/confirmDialog";
 import DataTable, { type Column } from "../../../components/dataTable";
 import EditGradeDialog, { type GradeEdit } from "../../../components/editGradeDialog";
 import FilterSelect from "../../../components/filterSelect";
-import GenerateResultDialog from "../../../components/results/generateResultDialog";
+import ResultHeaderForm from "../../../components/results/resultHeaderForm";
 import ResultStatusTag from "../../../components/results/resultStatusTag";
 import ResultTable, { type ResultTableEditing } from "../../../components/results/resultTable";
 import StudentOrderSelect from "../../../components/studentOrderSelect";
@@ -35,7 +35,8 @@ import {
 } from "../../../styles/form";
 import { ACCEPTANCE_YEARS, SEMESTERS, STUDY_LEVELS } from "../../../utils/academicYears";
 import { conflictCode } from "../../../utils/apiError";
-import { headerDefaults, type HeaderSuggestions } from "../../../utils/resultHeader";
+import { distinct, editableHeader, headerDefaults, type HeaderSuggestions } from "../../../utils/resultHeader";
+import { joinYears } from "../../../utils/resultText";
 import { generateError } from "../../../utils/resultErrors";
 import { clearDraft, EMPTY_DRAFT, loadDraft, saveDraft } from "../../../utils/resultDraft";
 import { WITHOUT_DEPARTMENT, WITHOUT_SPECIALIZATION } from "../../../types/faculty";
@@ -109,7 +110,9 @@ const ResultList = () => {
 	const [pendingEdit, setPendingEdit] = useState<PendingEdit | null>(null);
 	const [editError, setEditError] = useState<string | null>(null);
 
-	const [generating, setGenerating] = useState<{
+	// what the header starts from for the chosen batch, and what each line offers to pick
+	const [headerSetup, setHeaderSetup] = useState<{
+		batchKey: string;
 		initial: ResultHeader;
 		suggestions: HeaderSuggestions;
 	} | null>(null);
@@ -158,6 +161,7 @@ const ResultList = () => {
 		setPreview(null);
 		setPreviewError(null);
 		setEditError(null);
+		setError(null);
 	}
 
 	const hasDraft = !!(
@@ -352,27 +356,49 @@ const ResultList = () => {
 
 	const facultyName = (id: string) => faculties.find((f) => f.id === id)?.name[lang] ?? "";
 
-	const openGenerate = async () => {
-		setError(null);
-		const faculty = faculties.find((f) => f.id === effectiveFacultyId);
-		// the faculty's earlier results supply the program, batch and exam period
-		const previous = await fetchResults({ facultyId: effectiveFacultyId }).catch(
-			() => [] as ResultSummary[],
-		);
-		const defaults = headerDefaults({
-			previous,
-			facultyNameEn: faculty?.name.en ?? "",
-			level: Number(level),
-			semester: Number(semester),
-			specializationNameEn:
-				facultySpecializations.find((s) => s.id === chosenSpecialization)?.name.en ??
-				facultyDepartments.find((d) => d.id === resultDepartment)?.name.en,
-		});
-		// a header typed earlier (before a refresh, say) is picked up where it was left
-		setGenerating({ ...defaults, initial: headerDraft ?? defaults.initial });
-	};
+	const facultyNameEn = faculties.find((f) => f.id === effectiveFacultyId)?.name.en ?? "";
+	// the specialization's name, or else the department's, names the program
+	const programNameEn =
+		facultySpecializations.find((s) => s.id === chosenSpecialization)?.name.en ??
+		facultyDepartments.find((d) => d.id === resultDepartment)?.name.en;
+	useEffect(() => {
+		if (!batchChosen) return;
+		let cancelled = false;
+		// the faculty's earlier results supply the degree, program and exam period
+		fetchResults({ facultyId: effectiveFacultyId })
+			.catch(() => [] as ResultSummary[])
+			.then((previous) => {
+				if (cancelled) return;
+				const defaults = headerDefaults({
+					previous,
+					facultyNameEn,
+					level: Number(level),
+					specializationNameEn: programNameEn,
+				});
+				setHeaderSetup({ batchKey, ...defaults });
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, [batchChosen, batchKey, effectiveFacultyId, facultyNameEn, level, programNameEn]);
 
-	const generate = async (header: ResultHeader) => {
+	// a header typed earlier (before a refresh, say) is picked up where it was left; until
+	// then the batch is named by the acceptance years of the students on the sheet
+	const setup = headerSetup?.batchKey === batchKey ? headerSetup : null;
+	const sheetYears = preview?.acceptanceYears ?? [];
+	const header =
+		setup && preview
+			? editableHeader(headerDraft ?? { ...setup.initial, batch: joinYears(sheetYears) })
+			: null;
+	const headerSuggestions: HeaderSuggestions | null = setup && {
+		...setup.suggestions,
+		batch: distinct([joinYears(sheetYears), ...sheetYears, ...setup.suggestions.batch]),
+	};
+	// a batch already generated takes no new header until it's loaded back for editing
+	const canGenerate = !existing || editingExisting;
+
+	const generate = async () => {
+		if (!header) return;
 		setSubmitting(true);
 		setError(null);
 		const batch: ResultBatch = {
@@ -385,8 +411,9 @@ const ResultList = () => {
 			excludedStudentIds: excluded,
 		};
 		try {
-			const created = await generateResult(batch, "regular", header);
-			setGenerating(null);
+			// only the second semester's (year) result goes to the central board
+			const sent = semester === "2" ? header : { ...header, centralBoardDate: "" };
+			const created = await generateResult(batch, "regular", sent);
 			// it's generated: nothing left to keep for this batch
 			clearDraft(draftOwner);
 			void navigate(created.id);
@@ -655,12 +682,12 @@ const ResultList = () => {
 									<p className="text-body-md text-foreground">{t("results.editingLoaded")}</p>
 									<button
 										type="button"
-										disabled={!preview}
-										onClick={() => void openGenerate()}
+										disabled={!preview || !header || submitting}
+										onClick={() => void generate()}
 										className={submitButtonClass}
 									>
 										<ArrowPathIcon className="me-2 size-5" aria-hidden />
-										{t("results.updateBoard")}
+										{submitting ? t("results.generating") : t("results.updateBoard")}
 									</button>
 									<Link to={existing.id} className={secondaryButtonClass}>
 										<EyeIcon className="me-2 size-5" aria-hidden />
@@ -695,12 +722,12 @@ const ResultList = () => {
 							) : (
 								<button
 									type="button"
-									disabled={!preview}
-									onClick={() => void openGenerate()}
+									disabled={!preview || !header || submitting}
+									onClick={() => void generate()}
 									className={submitButtonClass}
 								>
 									<DocumentPlusIcon className="me-2 size-5" aria-hidden />
-									{t("results.generateBoard")}
+									{submitting ? t("results.generating") : t("results.generateBoard")}
 								</button>
 							)}
 							{preview && (
@@ -713,6 +740,11 @@ const ResultList = () => {
 							)}
 						</div>
 
+						{error && canGenerate && (
+							<p role="alert" className="mb-4 text-body-sm text-error">
+								{t(error)}
+							</p>
+						)}
 						{previewError && (
 							<p role="alert" className="mb-4 text-body-sm text-error">
 								{t(previewError)}
@@ -746,10 +778,26 @@ const ResultList = () => {
 						{preview ? (
 							<>
 								<div className="mb-3 flex flex-wrap items-end justify-between gap-4">
-									<p className="text-body-sm text-primary-hover">{t("results.previewHint")}</p>
+									<div className="flex flex-col gap-1 text-body-sm text-primary-hover">
+										{canGenerate && <p>{t("results.headerHint")}</p>}
+										<p>{t("results.previewHint")}</p>
+									</div>
 									<StudentOrderSelect id="previewOrder" value={order} onChange={setOrder} />
 								</div>
 								<div className="overflow-x-auto rounded-md border border-border-subtle bg-surface p-4">
+									{/* the header is filled in where it prints, above the sheet it heads */}
+									{canGenerate && headerSuggestions && header && (
+										<div className="mb-4">
+											<ResultHeaderForm
+												idPrefix="newHeader"
+												header={header}
+												onChange={setHeaderDraft}
+												suggestions={headerSuggestions}
+												sheet={preview.sheet}
+												disabled={submitting}
+											/>
+										</div>
+									)}
 									<ResultTable sheet={orderSheet(preview.sheet, order)} version="board" editing={tableEditing} />
 								</div>
 							</>
@@ -815,20 +863,6 @@ const ResultList = () => {
 				onCancel={() => setPendingEdit(null)}
 			/>
 
-			{generating && (
-				<GenerateResultDialog
-					open
-					title={editingExisting ? t("results.updateBoard") : t("results.generateBoard")}
-					initial={generating.initial}
-					suggestions={generating.suggestions}
-					semester={Number(semester)}
-					submitting={submitting}
-					error={error}
-					onChange={setHeaderDraft}
-					onSubmit={(header) => void generate(header)}
-					onCancel={() => setGenerating(null)}
-				/>
-			)}
 
 			<ConfirmDialog
 				open={confirmStartOver}

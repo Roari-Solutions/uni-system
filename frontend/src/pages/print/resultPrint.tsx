@@ -36,15 +36,15 @@ const PAGE_WIDTH = (297 - 2 * MARGIN_MM) * PX_PER_MM;
 const PAGE_HEIGHT = (210 - MARGIN_MM - FOOTER_MM) * PX_PER_MM;
 
 /**
- * Scales down any page that doesn't fit: the cover to one whole page, the
- * table to the page's width, so a wide batch (16 curriculums and the year's
- * totals) prints whole instead of being cut off.
+ * Scales down any page that doesn't fit onto one whole sheet, so a wide batch
+ * (16 curriculums and the year's totals) prints whole instead of being cut
+ * off, and every page keeps its header and signatures.
  */
 const fitPages = () => {
-	for (const page of document.querySelectorAll<HTMLElement>("[data-fit]")) {
+	for (const page of document.querySelectorAll<HTMLElement>("[data-fit-page]")) {
 		page.style.zoom = "";
 		const byWidth = PAGE_WIDTH / page.scrollWidth;
-		const byHeight = page.dataset.fit === "page" ? PAGE_HEIGHT / page.scrollHeight : 1;
+		const byHeight = PAGE_HEIGHT / page.scrollHeight;
 		const zoom = Math.min(1, byWidth, byHeight);
 		if (zoom < 1) page.style.zoom = String(zoom);
 	}

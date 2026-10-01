@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { ResultHeader, ResultSheet, ResultVersion } from "../../types/result";
+import { DEFAULT_DEGREE } from "../../utils/resultHeader";
 import { dateText, levelText, sheetTitle, versionText } from "../../utils/resultText";
 import ResultTable from "./resultTable";
 
@@ -62,6 +63,9 @@ const SYMBOLS: [string, string][] = [
 ];
 
 const cell = "border border-foreground px-1.5 py-px";
+
+// each printed page of the table carries this many students, under its own header and above its own signatures
+const STUDENTS_PER_PAGE = 20;
 const band = "bg-background-secondary font-bold";
 
 /** A typed header value, or a dotted line to fill in by hand. */
@@ -116,42 +120,43 @@ type ResultDocumentProps = {
 };
 
 /** The title block every page opens with. */
-const TitleBlock = ({ header, sheet, version }: ResultDocumentProps) => (
-	<header className="mb-2 flex items-start justify-between gap-4">
-		<LogoPlaceholder />
-		<div className="flex flex-col items-center text-center text-[12px] leading-tight">
-			<p className="text-[15px] font-bold">University of Technology</p>
-			<p>
-				College of <Fill value={sheet.college} />
-			</p>
-			<p>
-				B.A. Program <Fill value={header.program} />
-			</p>
-			<p>
-				Batch <Fill value={header.batch} />
-			</p>
-			<p>
-				Level <Fill value={levelText(sheet.academicYear)} />
-			</p>
-			{sheet.department && (
+const TitleBlock = ({ header, sheet, version }: ResultDocumentProps) => {
+	const resultTitle = version === "board" ? (header.resultTitle ?? versionText(version)) : versionText(version);
+	return (
+		<header className="mb-2 flex items-start justify-between gap-4">
+			<LogoPlaceholder />
+			<div className="flex flex-col items-center text-center text-[12px] leading-tight">
+				<p className="text-[15px] font-bold">University of Technology</p>
 				<p>
-					Department <Fill value={sheet.department} />
+					College of <Fill value={sheet.college} />
 				</p>
-			)}
-			{sheet.specialization && (
 				<p>
-					Specialization <Fill value={sheet.specialization} />
+					{/* the degree reads as part of the label, so it isn't bold; blank, it prints as dots */}
+					{(header.degree ?? DEFAULT_DEGREE) || <span aria-hidden>……………</span>} Program in{" "}
+					<Fill value={header.program} />
 				</p>
-			)}
-			<p>
-				Academic Year <Fill value={header.academicYearLabel} />
-			</p>
-			<p className="font-bold">{sheetTitle(sheet.semester, sheet.kind)}</p>
-			<p className="text-[11px] font-semibold uppercase tracking-wide">{versionText(version)}</p>
-		</div>
-		<LogoPlaceholder />
-	</header>
-);
+				<p>
+					Batch <Fill value={header.batch} />
+				</p>
+				<p>
+					Level <Fill value={levelText(sheet.academicYear)} />
+				</p>
+				{sheet.specialization && (
+					<p>
+						Specialization <Fill value={sheet.specialization} />
+					</p>
+				)}
+				<p>
+					Academic Year <Fill value={header.academicYearLabel} />
+				</p>
+				<p className="font-bold">{sheetTitle(sheet.semester, sheet.kind)}</p>
+				{/* the board's line is typed (blank leaves it off); the final copy's is fixed */}
+				{resultTitle && <p className="text-[11px] font-semibold uppercase tracking-wide">{resultTitle}</p>}
+			</div>
+			<LogoPlaceholder />
+		</header>
+	);
+};
 
 /** The exam and board dates; only the second semester's (year) result goes to the central board. */
 const Dates = ({ header, semester }: { header: ResultHeader; semester: number }) => (
@@ -184,12 +189,12 @@ const Signatures = () => (
 );
 
 /**
- * One printed A4 page; every page after the first starts on a new sheet. `fit`
- * tells the print view how to scale it down when it doesn't fit: the cover to
- * one whole page, the table to the page's width (its rows run on over pages).
+ * One printed A4 page; every page after the first starts on a new sheet. The
+ * print view scales a page that doesn't fit down to one whole sheet, so the
+ * header and signatures each page carries stay on it.
  */
-const Page = ({ children, first, fit }: { children: ReactNode; first?: boolean; fit: "page" | "width" }) => (
-	<section data-fit={fit} className={`p-2 ${first ? "" : "break-before-page"}`}>
+const Page = ({ children, first }: { children: ReactNode; first?: boolean }) => (
+	<section data-fit-page className={`p-2 ${first ? "" : "break-before-page"}`}>
 		{children}
 	</section>
 );
@@ -201,6 +206,12 @@ const Page = ({ children, first, fit }: { children: ReactNode; first?: boolean; 
  */
 const ResultDocument = ({ header, sheet, version }: ResultDocumentProps) => {
 	const totalHours = sheet.courses.reduce((acc, c) => acc + c.hours, 0);
+	// the table's pages, 20 students each; a sheet without students still prints one
+	const pages: ResultSheet["students"][] = [];
+	for (let i = 0; i < sheet.students.length; i += STUDENTS_PER_PAGE) {
+		pages.push(sheet.students.slice(i, i + STUDENTS_PER_PAGE));
+	}
+	if (!pages.length) pages.push([]);
 
 	return (
 		// print sizes, not the screen type scale: the cover and the widest sheet must each fit one A4 landscape page
@@ -210,7 +221,7 @@ const ResultDocument = ({ header, sheet, version }: ResultDocumentProps) => {
 			className="bg-surface font-en text-[10px] leading-tight text-foreground [print-color-adjust:exact]"
 		>
 			{version === "board" && (
-				<Page first fit="page">
+				<Page first>
 					<TitleBlock header={header} sheet={sheet} version={version} />
 					<Dates header={header} semester={sheet.semester} />
 
@@ -293,13 +304,16 @@ const ResultDocument = ({ header, sheet, version }: ResultDocumentProps) => {
 				</Page>
 			)}
 
-			<Page first={version === "final"} fit="width">
-				<TitleBlock header={header} sheet={sheet} version={version} />
-				{/* without the cover, the final results carry the dates themselves */}
-				{version === "final" && <Dates header={header} semester={sheet.semester} />}
-				<ResultTable sheet={sheet} version={version} />
-				<Signatures />
-			</Page>
+			{/* every page of the table repeats the header and the signatures */}
+			{pages.map((students, i) => (
+				<Page key={i} first={version === "final" && i === 0}>
+					<TitleBlock header={header} sheet={sheet} version={version} />
+					{/* without the cover, the final results carry the dates themselves */}
+					{version === "final" && <Dates header={header} semester={sheet.semester} />}
+					<ResultTable sheet={{ ...sheet, students }} version={version} firstNumber={i * STUDENTS_PER_PAGE + 1} />
+					<Signatures />
+				</Page>
+			))}
 		</div>
 	);
 };

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import {
@@ -13,7 +13,7 @@ import {
 } from "@heroicons/react/24/outline";
 import ConfirmDialog from "../../../components/confirmDialog";
 import ApproveResultDialog from "../../../components/results/approveResultDialog";
-import GenerateResultDialog from "../../../components/results/generateResultDialog";
+import ResultHeaderForm from "../../../components/results/resultHeaderForm";
 import ResitEntry from "../../../components/results/resitEntry";
 import ResultStatusTag from "../../../components/results/resultStatusTag";
 import ResultTable from "../../../components/results/resultTable";
@@ -39,13 +39,16 @@ import {
 	smallSecondaryButtonClass,
 	submitButtonClass,
 } from "../../../styles/form";
-import { headerDefaults, type HeaderSuggestions } from "../../../utils/resultHeader";
+import { editableHeader, headerDefaults, withoutDates, type HeaderSuggestions } from "../../../utils/resultHeader";
 import { departmentName, placementName } from "../../../utils/specializations";
 import { generateError } from "../../../utils/resultErrors";
 import { orderSheet, type StudentOrder } from "../../../utils/studentOrder";
 
-// the regeneration dialog or the Sup & Sub one; both ask for the header
-type Generating = { kind: ResultKind; header: ResultHeader; suggestions: HeaderSuggestions } | null;
+const NO_SUGGESTIONS: HeaderSuggestions = { degree: [], program: [], batch: [], academicYearLabel: [] };
+
+// header fields in a fixed order, so an edit is told apart from jsonb's key order
+const sameHeader = (a: ResultHeader, b: ResultHeader) =>
+	(Object.keys({ ...a, ...b }) as (keyof ResultHeader)[]).every((k) => (a[k] ?? "") === (b[k] ?? ""));
 
 /**
  * One batch's results for a semester. Pending board results can be exported,
@@ -68,10 +71,15 @@ const ResultDetails = () => {
 	const [order, setOrder] = useState<StudentOrder>("");
 	const [approving, setApproving] = useState(false);
 	const [confirmDiscard, setConfirmDiscard] = useState(false);
-	const [generating, setGenerating] = useState<Generating>(null);
-	const [submitting, setSubmitting] = useState(false);
-	// i18n keys: why the dialog's last attempt failed, and why the last action failed
+	// a pending result's header as edited above its sheet; regenerating saves it
+	const [header, setHeader] = useState<ResultHeader | null>(null);
+	// the Sup & Sub results' header, while it is being filled in
+	const [resitHeader, setResitHeader] = useState<ResultHeader | null>(null);
+	const [suggestions, setSuggestions] = useState<HeaderSuggestions>(NO_SUGGESTIONS);
+	const [submitting, setSubmitting] = useState<ResultKind | null>(null);
+	// i18n keys: why the last generation failed, and why the last action failed
 	const [generateFailed, setGenerateFailed] = useState<string | null>(null);
+	const resitSection = useRef<HTMLElement>(null);
 	const [actionError, setActionError] = useState<string | null>(null);
 
 	const load = useCallback(async () => {
@@ -101,6 +109,7 @@ const ResultDetails = () => {
 			.then(({ row, sibling: other, resits }) => {
 				if (cancelled) return;
 				setResult(row);
+				setHeader(editableHeader(row.header));
 				setSibling(other);
 				setCandidates(resits);
 				// an approved result opens on what gets handed out
@@ -118,6 +127,7 @@ const ResultDetails = () => {
 	const reload = async () => {
 		const { row, sibling: other, resits } = await load();
 		setResult(row);
+		setHeader(editableHeader(row.header));
 		setSibling(other);
 		setCandidates(resits);
 	};
@@ -133,21 +143,39 @@ const ResultDetails = () => {
 		}
 	};
 
-	/** Opens the header form: the result's own header, with the faculty's earlier values to pick from. */
-	const openGenerating = async (kind: ResultKind) => {
+	// the faculty's earlier results, offered in each header line's list
+	const facultyId = result?.facultyId;
+	const facultyNameEn = faculties.find((f) => f.id === facultyId)?.name.en ?? "";
+	const level = result?.academicYear;
+	const programNameEn = result ? (result.sheet.specialization ?? result.sheet.department) : undefined;
+	useEffect(() => {
+		if (!facultyId || !level) return;
+		let cancelled = false;
+		fetchResults({ facultyId })
+			.catch(() => [] as ResultSummary[])
+			.then((previous) => {
+				if (cancelled) return;
+				setSuggestions(
+					headerDefaults({ previous, facultyNameEn, level, specializationNameEn: programNameEn })
+						.suggestions,
+				);
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, [facultyId, facultyNameEn, level, programNameEn]);
+
+	/** Opens the Sup & Sub header in place, starting from the semester results' own. */
+	const openResit = () => {
 		if (!result) return;
 		setGenerateFailed(null);
-		const previous = await fetchResults({ facultyId: result.facultyId }).catch(
-			() => [] as ResultSummary[],
-		);
-		const { suggestions } = headerDefaults({
-			previous,
-			facultyNameEn: faculties.find((f) => f.id === result.facultyId)?.name.en ?? "",
-			level: result.academicYear,
-			semester: result.semester,
-			specializationNameEn: result.sheet.specialization ?? result.sheet.department,
+		// the re-exams sit and go to the board on dates of their own
+		setResitHeader(withoutDates(editableHeader(result.header)));
+		// once it's shown, take the reader to it
+		requestAnimationFrame(() => {
+			resitSection.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+			resitSection.current?.focus({ preventScroll: true });
 		});
-		setGenerating({ kind, header: result.header, suggestions });
 	};
 
 	const discard = async () => {
@@ -161,9 +189,9 @@ const ResultDetails = () => {
 		}
 	};
 
-	const generate = async (header: ResultHeader) => {
-		if (!result || !generating) return;
-		setSubmitting(true);
+	const generate = async (kind: ResultKind, typed: ResultHeader | null) => {
+		if (!result || !typed) return;
+		setSubmitting(kind);
 		setGenerateFailed(null);
 		try {
 			const saved = await generateResult(
@@ -175,19 +203,20 @@ const ResultDetails = () => {
 					departmentId: result.departmentId ?? undefined,
 					semester: result.semester,
 					// a regeneration leaves off who it did; Sup & Sub follows the semester's result
-					excludedStudentIds: generating.kind === result.kind ? result.excludedStudentIds : undefined,
+					excludedStudentIds: kind === result.kind ? result.excludedStudentIds : undefined,
 				},
-				generating.kind,
-				header,
+				kind,
+				// only the second semester's (year) result goes to the central board
+				result.semester === 2 ? typed : { ...typed, centralBoardDate: "" },
 			);
-			setGenerating(null);
+			setResitHeader(null);
 			setActionError(null);
 			if (saved.id === result.id) await reload();
 			else void navigate(`../${saved.id}`, { relative: "path" });
 		} catch (error) {
 			setGenerateFailed(generateError(error));
 		} finally {
-			setSubmitting(false);
+			setSubmitting(null);
 		}
 	};
 
@@ -207,6 +236,8 @@ const ResultDetails = () => {
 	}
 
 	const pending = result.status === "pending";
+	// an edited header is only saved by regenerating; until then the exports print the saved one
+	const headerEdited = pending && header !== null && !sameHeader(header, editableHeader(result.header));
 	const facultyName = faculties.find((f) => f.id === result.facultyId)?.name[lang] ?? "";
 	// the export prints in the order chosen here
 	const printPath = (v: ResultVersion) =>
@@ -276,11 +307,12 @@ const ResultDetails = () => {
 					</div>
 					<button
 						type="button"
-						onClick={() => void openGenerating(result.kind)}
+						disabled={submitting !== null}
+						onClick={() => void generate(result.kind, header)}
 						className={smallSecondaryButtonClass}
 					>
 						<ArrowPathIcon className="size-4" aria-hidden />
-						{t("results.regenerate")}
+						{submitting === result.kind ? t("results.generating") : t("results.regenerate")}
 					</button>
 				</section>
 			)}
@@ -306,16 +338,17 @@ const ResultDetails = () => {
 					<>
 						<button
 							type="button"
-							onClick={() => void openGenerating(result.kind)}
+							disabled={submitting !== null}
+							onClick={() => void generate(result.kind, header)}
 							className={secondaryButtonClass}
 						>
 							<ArrowPathIcon className="me-2 size-5" aria-hidden />
-							{t("results.regenerate")}
+							{submitting === result.kind ? t("results.generating") : t("results.regenerate")}
 						</button>
 						<button
 							type="button"
 							onClick={() => setApproving(true)}
-							disabled={submitting}
+							disabled={submitting !== null}
 							className={submitButtonClass}
 						>
 							<CheckBadgeIcon className="me-2 size-5" aria-hidden />
@@ -327,12 +360,8 @@ const ResultDetails = () => {
 						</button>
 					</>
 				)}
-				{result.kind === "regular" && !pending && !sibling && (
-					<button
-						type="button"
-						onClick={() => void openGenerating("resit")}
-						className={secondaryButtonClass}
-					>
+				{result.kind === "regular" && !pending && !sibling && !resitHeader && (
+					<button type="button" onClick={openResit} className={secondaryButtonClass}>
 						<DocumentPlusIcon className="me-2 size-5" aria-hidden />
 						{t("results.generateResit")}
 					</button>
@@ -346,6 +375,56 @@ const ResultDetails = () => {
 			</div>
 
 			{pending && <p className="mb-6 text-body-sm text-primary-hover">{t("results.pendingHint")}</p>}
+
+			{generateFailed && (
+				<p role="alert" className="mb-6 text-body-sm text-error">
+					{t(generateFailed)}
+				</p>
+			)}
+
+			{resitHeader && (
+				// the Sup & Sub results' header, filled in here before they're generated
+				<section
+					ref={resitSection}
+					tabIndex={-1}
+					aria-labelledby="resitHeaderTitle"
+					className="mb-10 scroll-mt-4 rounded-md border border-border-subtle bg-surface p-6 shadow-md outline-none"
+				>
+					<h2 id="resitHeaderTitle" className="mb-2 text-heading-4 text-accent-deep">
+						{t("results.generateResit")}
+					</h2>
+					<p className="mb-6 text-body-sm text-primary-hover">{t("results.headerHint")}</p>
+					<ResultHeaderForm
+						idPrefix="resitHeader"
+						header={resitHeader}
+						onChange={setResitHeader}
+						suggestions={suggestions}
+						sheet={{ ...result.sheet, kind: "resit" }}
+						disabled={submitting !== null}
+					/>
+					<div className="mt-6 flex flex-wrap justify-end gap-3">
+						<button
+							type="button"
+							onClick={() => {
+								setResitHeader(null);
+								setGenerateFailed(null);
+							}}
+							className={secondaryButtonClass}
+						>
+							{t("common.cancel")}
+						</button>
+						<button
+							type="button"
+							disabled={submitting !== null}
+							onClick={() => void generate("resit", resitHeader)}
+							className={submitButtonClass}
+						>
+							<DocumentPlusIcon className="me-2 size-5" aria-hidden />
+							{submitting === "resit" ? t("results.generating") : t("results.generate")}
+						</button>
+					</div>
+				</section>
+			)}
 
 			<div className="mb-4 flex flex-wrap items-end justify-between gap-4">
 				{!pending && (
@@ -370,7 +449,32 @@ const ResultDetails = () => {
 				<StudentOrderSelect id="resultOrder" value={order} onChange={setOrder} />
 			</div>
 
+			{pending && header && (
+				<div className="mb-3 flex flex-col gap-1 text-body-sm">
+					<p className="text-primary-hover">{t("results.headerHint")}</p>
+					{/* §39 — said in words, not by colour alone */}
+					{headerEdited && (
+						<p role="status" className="font-medium text-accent-deep">
+							{t("results.headerEdited")}
+						</p>
+					)}
+				</div>
+			)}
+
 			<section aria-label={t("results.preview")} className="mb-10 overflow-x-auto rounded-md border border-border-subtle bg-surface p-4 shadow-md">
+				{/* a pending result's header is edited where it prints, above its sheet */}
+				{pending && header && (
+					<div className="mb-4">
+						<ResultHeaderForm
+							idPrefix="resultHeader"
+							header={header}
+							onChange={setHeader}
+							suggestions={suggestions}
+							sheet={result.sheet}
+							disabled={submitting !== null}
+						/>
+					</div>
+				)}
 				<ResultTable sheet={orderSheet(result.sheet, order)} version={pending ? "board" : version} />
 			</section>
 
@@ -411,23 +515,6 @@ const ResultDetails = () => {
 				onCancel={() => setConfirmDiscard(false)}
 			/>
 
-			{generating && (
-				<GenerateResultDialog
-					open
-					title={
-						generating.kind === "resit" && result.kind === "regular"
-							? t("results.generateResit")
-							: t("results.regenerate")
-					}
-					initial={generating.header}
-					suggestions={generating.suggestions}
-					semester={result.semester}
-					submitting={submitting}
-					error={generateFailed}
-					onSubmit={(header) => void generate(header)}
-					onCancel={() => setGenerating(null)}
-				/>
-			)}
 		</div>
 	);
 };

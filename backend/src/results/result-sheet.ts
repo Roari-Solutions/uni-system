@@ -4,12 +4,23 @@ import type { StudentStanding } from 'src/common/student-standing';
 
 /** What staff type when generating a result; printed in the sheet's header. */
 export interface ResultHeader {
-  /** e.g. "Information Technology"; printed after "B.A. Program". */
+  /**
+   * The degree printed before "Program", e.g. "Bachelor". Absent on results
+   * generated before it was asked for; those print the default.
+   */
+  degree?: string;
+  /** e.g. "Information Technology"; printed after "<degree> Program in". */
   program: string;
   /** The batch's label, e.g. "Batch 12". */
   batch: string;
   /** The calendar academic year, e.g. "2025/2026". */
   academicYearLabel: string;
+  /**
+   * The line under the title on the board's copy, e.g. "College Board Results"
+   * or "Sup College Board Results". Blank leaves the line off; absent on
+   * results from before it was asked for, which print the default.
+   */
+  resultTitle?: string;
   examDate: string;
   collegeBoardDate: string;
   centralBoardDate: string;

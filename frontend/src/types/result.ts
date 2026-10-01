@@ -10,8 +10,12 @@ export type ResultVersion = "board" | "final";
 
 // typed when generating; printed in the sheet's header
 export type ResultHeader = {
+	// the degree printed before "Program"; absent on results generated before it was asked for
+	degree?: string;
 	program: string;
 	batch: string;
+	// the board copy's line under the title; blank leaves it off, absent prints the default
+	resultTitle?: string;
 	academicYearLabel: string;
 	examDate: string;
 	collegeBoardDate: string;
@@ -133,6 +137,8 @@ export type ResultPreview = {
 	lockedStudentIds: string[];
 	// the students left off, so they can be put back
 	excluded: { id: string; uniNumber: string; name: string }[];
+	// the acceptance years of the students on the sheet, oldest first; they name the batch
+	acceptanceYears: string[];
 };
 
 // a cell that may take a Sup & Sub re-exam

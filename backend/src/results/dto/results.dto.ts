@@ -30,6 +30,12 @@ const ACCEPTANCE_YEAR = /^\d{4}$/;
 
 /** The header lines staff type; a blank one prints as a dotted line to fill by hand. */
 export class ResultHeaderDto {
+  /** Optional, so a client that doesn't send it still generates; the sheet then prints the default. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  degree?: string;
+
   @IsString()
   @MaxLength(200)
   program!: string;
@@ -42,17 +48,27 @@ export class ResultHeaderDto {
   @MaxLength(200)
   academicYearLabel!: string;
 
+  /** The board copy's line under the title; optional, like the degree. */
+  @IsOptional()
   @IsString()
   @MaxLength(100)
-  examDate!: string;
+  resultTitle?: string;
 
+  /** The dates are optional and typed by hand; left out or blank, they print as dots to write in. */
+  @IsOptional()
   @IsString()
   @MaxLength(100)
-  collegeBoardDate!: string;
+  examDate?: string;
 
+  @IsOptional()
   @IsString()
   @MaxLength(100)
-  centralBoardDate!: string;
+  collegeBoardDate?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  centralBoardDate?: string;
 }
 
 /** Body for POST /gr/results/preview: the batch, the semester, which exams, and who is left off. */
