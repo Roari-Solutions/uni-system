@@ -98,7 +98,8 @@ const ResultHeaderForm = ({ idPrefix, header, onChange, suggestions, sheet, disa
 					</Line>
 					<Line>Batch {text("batch")}</Line>
 					<Line>
-						Level <span className="font-bold">{levelText(sheet.academicYear)}</span>
+						{/* the study year alone, e.g. "Third Year" */}
+						<span className="font-bold">{levelText(sheet.academicYear)}</span>
 					</Line>
 					{sheet.specialization && (
 						<Line>

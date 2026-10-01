@@ -136,7 +136,8 @@ const TitleBlock = ({ header, sheet, version }: ResultDocumentProps) => {
 					Batch <Fill value={header.batch} />
 				</p>
 				<p>
-					Level <Fill value={levelText(sheet.academicYear)} />
+					{/* the study year alone, e.g. "Third Year" */}
+					<Fill value={levelText(sheet.academicYear)} />
 				</p>
 				{sheet.specialization && (
 					<p>
