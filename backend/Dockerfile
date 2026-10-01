@@ -13,7 +13,7 @@ COPY --from=deps /usr/src/app/node_modules ./node_modules
 COPY package.json bun.lock tsconfig.json tsconfig.build.json nest-cli.json drizzle.config.ts schema.ts config.ts ./
 COPY src ./src
 COPY drizzle ./drizzle
-COPY seed_faculties.ts seed_gr_test.ts seed_students.ts ./
+COPY seed_faculties.ts seed_gr_test.ts ./
 RUN bun run build
 
 FROM base AS migrate
@@ -36,7 +36,6 @@ COPY --from=builder /usr/src/app/drizzle.config.ts ./drizzle.config.ts
 COPY --from=builder /usr/src/app/drizzle ./drizzle
 COPY --from=builder /usr/src/app/seed_faculties.ts ./seed_faculties.ts
 COPY --from=builder /usr/src/app/seed_gr_test.ts ./seed_gr_test.ts
-COPY --from=builder /usr/src/app/seed_students.ts ./seed_students.ts
 RUN apk add --no-cache wget
 
 USER bun
