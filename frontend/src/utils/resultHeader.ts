@@ -27,7 +27,10 @@ type HeaderContext = {
 	facultyNameEn: string;
 	level: number;
 	semester: number;
-	/** The specialization's English name, when the result is for one; it names the program. */
+	/**
+	 * The specialization's English name, when the result is for one, or else the
+	 * department's; it names the program.
+	 */
 	specializationNameEn?: string;
 };
 

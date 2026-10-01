@@ -12,6 +12,7 @@ import { and, desc, eq, inArray, isNull, type SQL } from 'drizzle-orm';
 import {
   faculties,
   facultyCurriculums,
+  facultyDepartments,
   specializations,
   grades,
   results,
@@ -21,6 +22,7 @@ import {
 import { DATABASE, type Db } from 'src/database/database.module';
 import { GrCaller } from 'src/gr-gurd/gr-gurd.guard';
 import {
+  assertDepartmentOf,
   assertFaculty,
   assertFacultyExists,
   scopeFacultyId,
@@ -35,7 +37,7 @@ import { letterOf, type LetterGrade } from 'src/grades/letter-grade';
 import { resitKindOf, type ResitView } from 'src/grades/grades.service';
 import { backfillSerialNos } from 'src/curriculums/serial-no';
 import { approvedStudents } from './result-lock';
-import { takesCurriculum } from 'src/common/specialization';
+import { takesCurriculum, type StudentTrack } from 'src/common/specialization';
 import {
   GenerateResultDto,
   ListResultsQueryDto,
@@ -60,6 +62,12 @@ interface Batch {
   acceptanceYear: string | null;
   /** Null for the students without a specialization (the whole batch, where there are none). */
   specializationId: string | null;
+  /**
+   * Without a specialization: the department whose students without one the
+   * result covers; null for the students outside every department. Always null
+   * with a specialization, which names its students on its own.
+   */
+  departmentId: string | null;
   semester: Semester;
 }
 
@@ -75,6 +83,8 @@ export interface ResultSummaryView {
   acceptanceYear: string | null;
   /** Null for the students without a specialization. */
   specializationId: string | null;
+  /** A department's own result (its students without a specialization); null otherwise. */
+  departmentId: string | null;
   semester: number;
   kind: ResultKind;
   status: 'pending' | 'approved';
@@ -192,14 +202,14 @@ export class ResultsService {
 
   /**
    * The curriculums a faculty offers in one year and semester that the batch's
-   * students take (the shared ones, and the majors of their specialization or
-   * of none), in S.No. order.
+   * students take (the shared ones, and the majors of their specialization and
+   * department, or of none), in S.No. order.
    */
   private async coursesOf(
     facultyId: string,
     academicYear: AcademicYear,
     semester: Semester,
-    specializationId: string | null,
+    track: StudentTrack,
   ): Promise<ResultCourse[]> {
     const links = await this.db.query.facultyCurriculums.findMany({
       where: eq(facultyCurriculums.facultyId, facultyId),
@@ -214,6 +224,7 @@ export class ResultsService {
             courseHours: true,
             requirementType: true,
             specializationId: true,
+            departmentId: true,
           },
         },
       },
@@ -223,7 +234,7 @@ export class ResultsService {
         (l) =>
           l.curriculum.academicYear === academicYear &&
           l.curriculum.semester === semester &&
-          takesCurriculum(specializationId, l.curriculum),
+          takesCurriculum(track, l.curriculum),
       )
       .map((l) => ({
         sNo: l.serialNo ?? 0,
@@ -262,7 +273,7 @@ export class ResultsService {
     const specialization = batch.specializationId
       ? await this.db.query.specializations.findFirst({
           where: eq(specializations.id, batch.specializationId),
-          columns: { nameEn: true, facultyId: true },
+          columns: { nameEn: true, facultyId: true, departmentId: true },
         })
       : null;
     if (
@@ -271,6 +282,22 @@ export class ResultsService {
     ) {
       throw new BadRequestException({ code: 'SPECIALIZATION_MISMATCH' });
     }
+    // the students' department: the result's own, or the specialization's
+    const track: StudentTrack = {
+      specializationId: batch.specializationId,
+      departmentId: specialization
+        ? specialization.departmentId
+        : batch.departmentId,
+    };
+    const department = track.departmentId
+      ? await this.db.query.facultyDepartments.findFirst({
+          where: eq(facultyDepartments.id, track.departmentId),
+          columns: { nameEn: true, facultyId: true },
+        })
+      : null;
+    if (track.departmentId && department?.facultyId !== batch.facultyId) {
+      throw new BadRequestException({ code: 'DEPARTMENT_MISMATCH' });
+    }
 
     // curriculums from before S.No.s existed get theirs before they are printed
     await backfillSerialNos(this.db);
@@ -278,16 +305,11 @@ export class ResultsService {
       batch.facultyId,
       batch.academicYear,
       batch.semester,
-      batch.specializationId,
+      track,
     );
     const yearSheet = batch.semester === '2';
     const firstCourses = yearSheet
-      ? await this.coursesOf(
-          batch.facultyId,
-          batch.academicYear,
-          '1',
-          batch.specializationId,
-        )
+      ? await this.coursesOf(batch.facultyId, batch.academicYear, '1', track)
       : [];
 
     const everyone = await this.db.query.students.findMany({
@@ -297,10 +319,16 @@ export class ResultsService {
         batch.acceptanceYear
           ? eq(students.acceptanceYear, batch.acceptanceYear)
           : undefined,
-        // one result per specialization, and one for the students without one
+        // one result per specialization, one per department for its students
+        // without one, and one for the students with neither
         batch.specializationId
           ? eq(students.specializationId, batch.specializationId)
-          : isNull(students.specializationId),
+          : and(
+              isNull(students.specializationId),
+              batch.departmentId
+                ? eq(students.departmentId, batch.departmentId)
+                : isNull(students.departmentId),
+            ),
       ),
       columns: { id: true, uniNumber: true, nameEn: true, standing: true },
     });
@@ -342,6 +370,7 @@ export class ResultsService {
       academicYear: academicYearToNumber(batch.academicYear),
       acceptanceYear: batch.acceptanceYear,
       specialization: specialization?.nameEn ?? null,
+      department: department?.nameEn,
       semester: semesterToNumber(batch.semester),
       kind,
       courses,
@@ -397,6 +426,7 @@ export class ResultsService {
       academicYear: row.academicYear,
       acceptanceYear: row.acceptanceYear,
       specializationId: row.specializationId,
+      departmentId: row.departmentId,
       semester: row.semester,
     };
   }
@@ -408,6 +438,7 @@ export class ResultsService {
       academicYear: academicYearToNumber(row.academicYear),
       acceptanceYear: row.acceptanceYear,
       specializationId: row.specializationId,
+      departmentId: row.departmentId,
       semester: semesterToNumber(row.semester),
       kind: row.kind,
       status: row.status,
@@ -489,6 +520,11 @@ export class ResultsService {
       } else if (query.specializationId) {
         filters.push(eq(results.specializationId, query.specializationId));
       }
+      if (query.departmentId === 'none') {
+        filters.push(isNull(results.departmentId));
+      } else if (query.departmentId) {
+        filters.push(eq(results.departmentId, query.departmentId));
+      }
       if (query.semester) filters.push(eq(results.semester, query.semester));
       if (query.status) filters.push(eq(results.status, query.status));
 
@@ -523,11 +559,25 @@ export class ResultsService {
   ): Promise<Batch> {
     const facultyId = await assertFacultyExists(this.db, dto.facultyId);
     assertFaculty(caller, facultyId);
+    // a specialization's result names its students on its own; a department
+    // sent with it may only repeat the specialization's
+    if (dto.specializationId && dto.departmentId) {
+      const spec = await this.db.query.specializations.findFirst({
+        where: eq(specializations.id, dto.specializationId),
+        columns: { departmentId: true },
+      });
+      if (spec?.departmentId !== dto.departmentId) {
+        throw new BadRequestException({ code: 'DEPARTMENT_MISMATCH' });
+      }
+    } else if (dto.departmentId) {
+      await assertDepartmentOf(this.db, dto.departmentId, facultyId);
+    }
     return {
       facultyId,
       academicYear: dto.academicYear,
       acceptanceYear: dto.acceptanceYear ?? null,
       specializationId: dto.specializationId ?? null,
+      departmentId: dto.specializationId ? null : (dto.departmentId ?? null),
       semester: dto.semester,
     };
   }
@@ -595,6 +645,9 @@ export class ResultsService {
           batch.specializationId
             ? eq(results.specializationId, batch.specializationId)
             : isNull(results.specializationId),
+          batch.departmentId
+            ? eq(results.departmentId, batch.departmentId)
+            : isNull(results.departmentId),
           eq(results.semester, batch.semester),
           eq(results.kind, kind),
         );

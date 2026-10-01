@@ -5,9 +5,10 @@ import { EyeIcon, NoSymbolIcon, PauseCircleIcon, PencilSquareIcon } from "@heroi
 import DataTable, { type Column } from "../../../components/dataTable";
 import FilterSelect from "../../../components/filterSelect";
 import SearchField from "../../../components/searchField";
+import DepartmentFilter from "../../../components/departmentFilter";
 import SpecializationFilter from "../../../components/specializationFilter";
 import StudentOrderSelect from "../../../components/studentOrderSelect";
-import { specializationName } from "../../../utils/specializations";
+import { placementName } from "../../../utils/specializations";
 import { orderStudents, type StudentOrder } from "../../../utils/studentOrder";
 import useFaculties from "../../../hooks/useFaculties";
 import { fetchStudents } from "../../../api/students";
@@ -30,6 +31,7 @@ const SingleEntry = () => {
 	const [level, setLevel] = useState("");
 	const [acceptanceYear, setAcceptanceYear] = useState("");
 	const [specializationId, setSpecializationId] = useState("");
+	const [departmentId, setDepartmentId] = useState("");
 	// students carry no semester, so this one narrows the sheet the student opens into
 	const [semester, setSemester] = useState("");
 	const [order, setOrder] = useState<StudentOrder>("");
@@ -45,6 +47,7 @@ const SingleEntry = () => {
 			level: level ? Number(level) : undefined,
 			acceptanceYear: acceptanceYear || undefined,
 			specializationId: specializationId || undefined,
+			departmentId: departmentId || undefined,
 			q: search.trim() || undefined,
 		})
 			.then((rows) => {
@@ -62,7 +65,7 @@ const SingleEntry = () => {
 		return () => {
 			cancelled = true;
 		};
-	}, [effectiveFacultyId, level, acceptanceYear, specializationId, search]);
+	}, [effectiveFacultyId, level, acceptanceYear, specializationId, departmentId, search]);
 
 	const facultyName = (id: string) => faculties.find((f) => f.id === id)?.name[lang] ?? "";
 	const ordered = orderStudents(students, order, lang, (s) => ({ name: s.name[lang], uniNumber: s.uniNumber }));
@@ -95,7 +98,7 @@ const SingleEntry = () => {
 		{
 			key: "specialization",
 			header: t("specialization.label"),
-			render: (s) => specializationName(faculties, s.specializationId, lang) || "—",
+			render: (s) => placementName(faculties, s.departmentId, s.specializationId, lang) || "—",
 		},
 		{
 			key: "actions",
@@ -140,8 +143,9 @@ const SingleEntry = () => {
 					value={effectiveFacultyId}
 					onChange={(id) => {
 						setFacultyId(id);
-						// a specialization belongs to its faculty
+						// a specialization and department belong to their faculty
 						setSpecializationId("");
+						setDepartmentId("");
 					}}
 					allLabel={t("gradeEntry.allFaculties")}
 					options={faculties.map((f) => ({ value: f.id, label: f.name[lang] }))}
@@ -162,6 +166,12 @@ const SingleEntry = () => {
 					onChange={setAcceptanceYear}
 					allLabel={t("gradeEntry.allAcceptanceYears")}
 					options={ACCEPTANCE_YEARS.map((year) => ({ value: year, label: year }))}
+				/>
+				<DepartmentFilter
+					faculties={faculties}
+					facultyId={effectiveFacultyId}
+					value={departmentId}
+					onChange={setDepartmentId}
 				/>
 				<SpecializationFilter
 					faculties={faculties}

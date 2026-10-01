@@ -80,6 +80,8 @@ export type ResultSheet = {
 	acceptanceYear: string | null;
 	// the specialization's English name; null for the students without one
 	specialization: string | null;
+	// the department's English name (its own result, or the specialization's); absent otherwise
+	department?: string;
 	semester: number;
 	kind: ResultKind;
 	courses: ResultCourse[];
@@ -94,6 +96,8 @@ export type ResultSummary = {
 	acceptanceYear: string | null;
 	// null for the students without a specialization
 	specializationId: string | null;
+	// a department's own result (its students without a specialization); null otherwise
+	departmentId: string | null;
 	semester: number;
 	kind: ResultKind;
 	status: ResultStatus;

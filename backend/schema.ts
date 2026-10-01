@@ -212,9 +212,33 @@ export const news = pgTable('news', {
 // ============================================== ACADEMIC TABLES ==============================================
 
 /**
- * A faculty's specializations (e.g. Business Studies -> Economics). Students
- * may carry one; a major requirement belongs to one. Both names are required:
- * the English one prints on the results sheets.
+ * A faculty's academic departments (e.g. Engineering -> Electrical). Not the
+ * organizational `departments` employees belong to. A department may hold
+ * specializations; students may belong to one; a major may be tied to one, and
+ * is then taken by the department's students whatever their specialization.
+ */
+export const facultyDepartments = pgTable(
+  'faculty_departments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    facultyId: uuid('faculty_id')
+      .notNull()
+      .references(() => faculties.id),
+    nameEn: text('name_en').notNull(),
+    nameAr: text('name_ar').notNull(),
+    ...timestamps(),
+  },
+  (t) => [
+    unique('faculty_department_name_en_unique').on(t.facultyId, t.nameEn),
+    unique('faculty_department_name_ar_unique').on(t.facultyId, t.nameAr),
+  ],
+);
+
+/**
+ * A faculty's specializations (e.g. Business Studies -> Economics), directly
+ * under the faculty or under one of its departments. Students may carry one; a
+ * major requirement may belong to one. Both names are required: the English
+ * one prints on the results sheets.
  */
 export const specializations = pgTable(
   'specializations',
@@ -223,6 +247,8 @@ export const specializations = pgTable(
     facultyId: uuid('faculty_id')
       .notNull()
       .references(() => faculties.id),
+    /** Null for a specialization directly under the faculty. */
+    departmentId: uuid('department_id').references(() => facultyDepartments.id),
     nameEn: text('name_en').notNull(),
     nameAr: text('name_ar').notNull(),
     ...timestamps(),
@@ -251,6 +277,11 @@ export const curriculums = pgTable('curriculums', {
    * majors that predate specializations; those count for the whole faculty.
    */
   specializationId: uuid('specialization_id').references(() => specializations.id),
+  /**
+   * Major requirements only, and only when no specialization is set: the
+   * department whose students (of any of its specializations, or none) take it.
+   */
+  departmentId: uuid('department_id').references(() => facultyDepartments.id),
   ...timestamps(),
 });
 
@@ -302,6 +333,11 @@ export const students = pgTable('students', {
     .references(() => faculties.id),
   /** Optional; it decides which of the faculty's major requirements the student takes. */
   specializationId: uuid('specialization_id').references(() => specializations.id),
+  /**
+   * Optional, like the specialization; a student may join one in any year. When
+   * the specialization sits under a department, this is always that department.
+   */
+  departmentId: uuid('department_id').references(() => facultyDepartments.id),
   ...timestamps(),
 });
 
@@ -379,6 +415,11 @@ export const results = pgTable(
      * (the whole batch, in a faculty that has no specializations).
      */
     specializationId: uuid('specialization_id').references(() => specializations.id),
+    /**
+     * Only on a result for a department's students without a specialization;
+     * null otherwise (a specialization's result names its specialization alone).
+     */
+    departmentId: uuid('department_id').references(() => facultyDepartments.id),
     semester: semesterEnum('semester').notNull(),
     kind: resultKindEnum('kind').notNull(),
     status: resultStatusEnum('status').notNull().default('pending'),
@@ -397,10 +438,11 @@ export const results = pgTable(
       t.academicYear,
       t.acceptanceYear,
       t.specializationId,
+      t.departmentId,
       t.semester,
       t.kind,
     )
-      // an all-acceptance-years or no-specialization result (null) is still one per batch
+      // an all-acceptance-years, no-specialization or no-department result (null) is still one per batch
       .nullsNotDistinct(),
   ],
 );
@@ -575,13 +617,29 @@ export const facultiesRelations = relations(faculties, ({ many, one }) => ({
   students: many(students),
   facultyCurriculums: many(facultyCurriculums),
   specializations: many(specializations),
+  departments: many(facultyDepartments),
 }));
 
-/** Relations for specializations: faculty, students, curriculums. */
+/** Relations for academic departments: faculty, specializations, students, curriculums. */
+export const facultyDepartmentsRelations = relations(facultyDepartments, ({ one, many }) => ({
+  faculty: one(faculties, {
+    fields: [facultyDepartments.facultyId],
+    references: [faculties.id],
+  }),
+  specializations: many(specializations),
+  students: many(students),
+  curriculums: many(curriculums),
+}));
+
+/** Relations for specializations: faculty, department, students, curriculums. */
 export const specializationsRelations = relations(specializations, ({ one, many }) => ({
   faculty: one(faculties, {
     fields: [specializations.facultyId],
     references: [faculties.id],
+  }),
+  department: one(facultyDepartments, {
+    fields: [specializations.departmentId],
+    references: [facultyDepartments.id],
   }),
   students: many(students),
   curriculums: many(curriculums),
@@ -594,6 +652,10 @@ export const curriculumsRelations = relations(curriculums, ({ many, one }) => ({
   specialization: one(specializations, {
     fields: [curriculums.specializationId],
     references: [specializations.id],
+  }),
+  department: one(facultyDepartments, {
+    fields: [curriculums.departmentId],
+    references: [facultyDepartments.id],
   }),
 }));
 
@@ -618,6 +680,10 @@ export const studentsRelations = relations(students, ({ one, many }) => ({
   specialization: one(specializations, {
     fields: [students.specializationId],
     references: [specializations.id],
+  }),
+  department: one(facultyDepartments, {
+    fields: [students.departmentId],
+    references: [facultyDepartments.id],
   }),
   grades: many(grades),
   gpas: many(gpas),

@@ -23,7 +23,7 @@ import {
   type AcademicYear,
 } from 'src/common/academic-year';
 import { STUDENT_STANDINGS, type StudentStanding } from 'src/common/student-standing';
-import { SPECIALIZATION_FILTER } from 'src/common/specialization';
+import { DEPARTMENT_FILTER, SPECIALIZATION_FILTER } from 'src/common/specialization';
 
 /** Admission routes offered to students; mirrors ACCEPTANCE_TYPES in the views. */
 export const ACCEPTANCE_TYPES = [
@@ -81,6 +81,15 @@ export class CreateStudentDto {
   @IsUUID()
   specializationId?: string | null;
 
+  /**
+   * Optional; one of the faculty's departments. Null clears it. Omitted, it is
+   * taken from the specialization when that sits under a department.
+   */
+  @IsOptional()
+  @ValidateIf((_dto: unknown, value: unknown) => value !== null)
+  @IsUUID()
+  departmentId?: string | null;
+
   /** Calendar year of admission, e.g. "2026" — the only calendar year we store. */
   @IsString()
   @Matches(/^\d{4}$/)
@@ -100,7 +109,8 @@ export class UpdateStudentDto extends PartialType(CreateStudentDto) {
   /**
    * The caller has seen the GRADES_ORPHANED warning and accepts that grades in
    * curriculums the student no longer takes (another faculty's, or another
-   * specialization's majors) stop counting. They are kept as history either way.
+   * specialization's or department's majors) stop counting. They are kept as
+   * history either way.
    */
   @IsOptional()
   @IsBoolean()
@@ -131,6 +141,11 @@ export class ListStudentsQueryDto {
   @IsOptional()
   @Matches(SPECIALIZATION_FILTER)
   specializationId?: string;
+
+  /** A department's id, or "none" for the students outside every department. */
+  @IsOptional()
+  @Matches(DEPARTMENT_FILTER)
+  departmentId?: string;
 
   /** Free-text match against either language's name or the university number. */
   @IsOptional()
@@ -172,6 +187,25 @@ export class SetSpecializationDto {
   @ValidateIf((_dto: unknown, value: unknown) => value !== null)
   @IsUUID()
   specializationId!: string | null;
+
+  /** The caller has seen the GRADES_ORPHANED warning; see UpdateStudentDto. */
+  @IsOptional()
+  @IsBoolean()
+  confirmOrphanedGrades?: boolean;
+}
+
+/** Body for POST /gr/students/department: one department for many students. */
+export class SetDepartmentDto {
+  @IsArray()
+  @ArrayNotEmpty()
+  @ArrayMaxSize(BULK_ROW_LIMIT)
+  @IsUUID('all', { each: true })
+  studentIds!: string[];
+
+  /** Null takes them out of every department. */
+  @ValidateIf((_dto: unknown, value: unknown) => value !== null)
+  @IsUUID()
+  departmentId!: string | null;
 
   /** The caller has seen the GRADES_ORPHANED warning; see UpdateStudentDto. */
   @IsOptional()

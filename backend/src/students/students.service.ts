@@ -12,6 +12,7 @@ import { and, eq, inArray, isNull, SQL } from 'drizzle-orm';
 import {
   curriculums,
   facultyCurriculums,
+  facultyDepartments,
   gpas,
   grades,
   specializations,
@@ -22,10 +23,10 @@ import { GrCaller } from 'src/gr-gurd/gr-gurd.guard';
 import {
   assertFaculty,
   assertFacultyExists,
-  assertSpecializationOf,
+  resolveTrack,
   scopeFacultyId,
 } from 'src/gr-scope/gr-scope';
-import { takesCurriculum } from 'src/common/specialization';
+import { takesCurriculum, type StudentTrack } from 'src/common/specialization';
 import { approvedStudents } from 'src/results/result-lock';
 import { academicYearToNumber, SEMESTERS, type AcademicYear } from 'src/common/academic-year';
 import { MISSING_NAME } from 'src/common/dto/localized-name.dto';
@@ -34,6 +35,7 @@ import { assertNotFrozen, type StudentStanding } from 'src/common/student-standi
 import {
   CreateStudentDto,
   ListStudentsQueryDto,
+  SetDepartmentDto,
   SetSpecializationDto,
   UpdateStudentDto,
   type AcceptanceType,
@@ -72,6 +74,8 @@ export interface StudentView {
   facultyId: string;
   /** Null until one is set; it decides which majors the student takes. */
   specializationId: string | null;
+  /** Null until one is set; with the specialization, it decides which majors the student takes. */
+  departmentId: string | null;
   status: StudentStatus | null;
   /** Suspended or dismissed students' grades and results are frozen. */
   standing: StudentStanding;
@@ -149,6 +153,7 @@ export class StudentsService {
       level: academicYearToNumber(row.academicYear),
       facultyId: row.facultyId,
       specializationId: row.specializationId,
+      departmentId: row.departmentId,
       status: row.status,
       standing: row.standing,
       suspensionYears: row.suspensionYears,
@@ -182,6 +187,11 @@ export class StudentsService {
         filters.push(isNull(students.specializationId));
       } else if (query.specializationId) {
         filters.push(eq(students.specializationId, query.specializationId));
+      }
+      if (query.departmentId === 'none') {
+        filters.push(isNull(students.departmentId));
+      } else if (query.departmentId) {
+        filters.push(eq(students.departmentId, query.departmentId));
       }
 
       const rows = await this.db.query.students.findMany({
@@ -239,9 +249,12 @@ export class StudentsService {
     try {
       const facultyId = await assertFacultyExists(this.db, dto.facultyId);
       assertFaculty(caller, facultyId);
-      if (dto.specializationId) {
-        await assertSpecializationOf(this.db, dto.specializationId, facultyId);
-      }
+      const track = await resolveTrack(
+        this.db,
+        facultyId,
+        dto.departmentId,
+        dto.specializationId ?? null,
+      );
 
       const uniNumber = dto.uniNumber.trim();
       const existing = await this.db.query.students.findFirst({
@@ -269,7 +282,7 @@ export class StudentsService {
           acceptanceYear: dto.acceptanceYear.trim(),
           academicYear: dto.level,
           facultyId,
-          specializationId: dto.specializationId ?? null,
+          ...track,
         })
         .returning();
 
@@ -333,16 +346,26 @@ export class StudentsService {
           : facultyChanged
             ? null
             : row.specializationId;
-      if (specializationId) {
-        await assertSpecializationOf(this.db, specializationId, facultyId);
-      }
-      const specializationChanged = specializationId !== row.specializationId;
+      // so does a department; a new specialization brings its own, and clearing
+      // the specialization leaves the student in their department
+      const departmentInput =
+        changes.departmentId !== undefined
+          ? changes.departmentId
+          : facultyChanged
+            ? null
+            : specializationId && specializationId !== row.specializationId
+              ? undefined
+              : row.departmentId;
+      const track = await resolveTrack(this.db, facultyId, departmentInput, specializationId);
+      const trackChanged =
+        track.specializationId !== row.specializationId ||
+        track.departmentId !== row.departmentId;
       const level = changes.level ?? row.academicYear;
-      // approved results lock the year's curriculums, and a specialization decides them
-      if (specializationChanged) await this.assertYearOpen([row.id], level);
+      // approved results lock the year's curriculums, and the student's place decides them
+      if (trackChanged) await this.assertYearOpen([row.id], level);
 
-      if ((facultyChanged || specializationChanged) && !confirmOrphanedGrades) {
-        const orphaned = await this.orphanedGrades(row.id, facultyId, specializationId);
+      if ((facultyChanged || trackChanged) && !confirmOrphanedGrades) {
+        const orphaned = await this.orphanedGrades(row.id, facultyId, track);
         if (orphaned) throw new ConflictException({ code: 'GRADES_ORPHANED', count: orphaned });
       }
 
@@ -375,7 +398,7 @@ export class StudentsService {
             : {}),
           ...(changes.level !== undefined ? { academicYear: changes.level } : {}),
           facultyId,
-          specializationId,
+          ...track,
         })
         .where(eq(students.id, row.id))
         .returning();
@@ -384,7 +407,7 @@ export class StudentsService {
       // it is rebuilt; earlier years keep the GPAs they were given, as history
       if (
         facultyChanged ||
-        specializationChanged ||
+        trackChanged ||
         updated.academicYear !== row.academicYear
       ) {
         for (const semester of SEMESTERS) {
@@ -415,14 +438,14 @@ export class StudentsService {
   }
 
   /**
-   * How many of the student's grades would stop counting in this faculty with
-   * this specialization: curriculums the faculty doesn't offer, and majors of
-   * another specialization. They are kept either way, as history.
+   * How many of the student's grades would stop counting in this faculty at
+   * this place in it: curriculums the faculty doesn't offer, and majors of
+   * another specialization or department. They are kept either way, as history.
    */
   private async orphanedGrades(
     studentId: string,
     facultyId: string,
-    specializationId: string | null,
+    track: StudentTrack,
   ): Promise<number> {
     const offered = new Set(
       (
@@ -437,12 +460,13 @@ export class StudentsService {
         curriculumId: grades.curriculumId,
         requirementType: curriculums.requirementType,
         specializationId: curriculums.specializationId,
+        departmentId: curriculums.departmentId,
       })
       .from(grades)
       .innerJoin(curriculums, eq(curriculums.id, grades.curriculumId))
       .where(eq(grades.studentId, studentId));
     return held.filter(
-      (g) => !offered.has(g.curriculumId) || !takesCurriculum(specializationId, g),
+      (g) => !offered.has(g.curriculumId) || !takesCurriculum(track, g),
     ).length;
   }
 
@@ -459,10 +483,11 @@ export class StudentsService {
 
   /**
    * Sets one specialization (or none) on many students at once, all of the
-   * specialization's faculty. Students it doesn't change are left alone;
-   * dismissed students and those with approved results this year are skipped
-   * and reported. Grades that would stop counting need the caller's
-   * confirmation first (GRADES_ORPHANED with the total).
+   * specialization's faculty. A specialization under a department puts them
+   * in that department; clearing it leaves them in theirs. Students it doesn't
+   * change are left alone; dismissed students and those with approved results
+   * this year are skipped and reported. Grades that would stop counting need
+   * the caller's confirmation first (GRADES_ORPHANED with the total).
    */
   async setSpecialization(
     dto: SetSpecializationDto,
@@ -476,17 +501,27 @@ export class StudentsService {
       if (rows.length !== ids.length) throw new NotFoundException();
       for (const row of rows) assertFaculty(caller, row.facultyId);
 
+      let specDepartment: string | null = null;
       if (dto.specializationId) {
         const spec = await this.db.query.specializations.findFirst({
           where: eq(specializations.id, dto.specializationId),
-          columns: { facultyId: true },
+          columns: { facultyId: true, departmentId: true },
         });
         if (!spec || rows.some((row) => row.facultyId !== spec.facultyId)) {
           throw new BadRequestException({ code: 'SPECIALIZATION_MISMATCH' });
         }
+        specDepartment = spec.departmentId;
       }
+      const trackOf = (row: StudentRow): StudentTrack => ({
+        specializationId: dto.specializationId,
+        departmentId: dto.specializationId ? specDepartment : row.departmentId,
+      });
 
-      const changing = rows.filter((row) => row.specializationId !== dto.specializationId);
+      const changing = rows.filter(
+        (row) =>
+          row.specializationId !== dto.specializationId ||
+          row.departmentId !== trackOf(row).departmentId,
+      );
       const skipped: { id: string; reason: string }[] = [];
       const eligible: StudentRow[] = [];
       for (const row of changing) {
@@ -506,7 +541,7 @@ export class StudentsService {
       if (!dto.confirmOrphanedGrades) {
         let orphaned = 0;
         for (const row of eligible) {
-          orphaned += await this.orphanedGrades(row.id, row.facultyId, dto.specializationId);
+          orphaned += await this.orphanedGrades(row.id, row.facultyId, trackOf(row));
         }
         if (orphaned) throw new ConflictException({ code: 'GRADES_ORPHANED', count: orphaned });
       }
@@ -514,7 +549,11 @@ export class StudentsService {
       if (eligible.length) {
         await this.db
           .update(students)
-          .set({ specializationId: dto.specializationId })
+          .set({
+            specializationId: dto.specializationId,
+            // clearing the specialization leaves everyone in their own department
+            ...(dto.specializationId ? { departmentId: specDepartment } : {}),
+          })
           .where(
             inArray(
               students.id,
@@ -546,6 +585,120 @@ export class StudentsService {
         throw error;
       }
       this.logger.error('Failed to set specializations', error);
+      throw new InternalServerErrorException('Students operation failed', { cause: error });
+    }
+  }
+
+  /**
+   * Sets one department (or none) on many students at once, all of the
+   * department's faculty. A student whose specialization sits elsewhere (under
+   * another department, or directly under the faculty) is skipped: moving them
+   * means changing the specialization first. Otherwise the same rules as
+   * setSpecialization: unchanged students are left alone, dismissed students
+   * and those with approved results this year are skipped and reported, and
+   * grades that would stop counting need confirmation (GRADES_ORPHANED).
+   */
+  async setDepartment(
+    dto: SetDepartmentDto,
+    caller: GrCaller,
+  ): Promise<{ updated: number; unchanged: number; skipped: { id: string; reason: string }[] }> {
+    try {
+      const ids = [...new Set(dto.studentIds)];
+      const rows = await this.db.query.students.findMany({
+        where: inArray(students.id, ids),
+      });
+      if (rows.length !== ids.length) throw new NotFoundException();
+      for (const row of rows) assertFaculty(caller, row.facultyId);
+
+      if (dto.departmentId) {
+        const department = await this.db.query.facultyDepartments.findFirst({
+          where: eq(facultyDepartments.id, dto.departmentId),
+          columns: { facultyId: true },
+        });
+        if (!department || rows.some((row) => row.facultyId !== department.facultyId)) {
+          throw new BadRequestException({ code: 'DEPARTMENT_MISMATCH' });
+        }
+      }
+
+      // each specialization's department, for the students that carry one
+      const specIds = [
+        ...new Set(rows.map((row) => row.specializationId).filter((id): id is string => !!id)),
+      ];
+      const specDepartment = new Map(
+        (specIds.length
+          ? await this.db.query.specializations.findMany({
+              where: inArray(specializations.id, specIds),
+              columns: { id: true, departmentId: true },
+            })
+          : []
+        ).map((spec) => [spec.id, spec.departmentId]),
+      );
+
+      const changing = rows.filter((row) => row.departmentId !== dto.departmentId);
+      const skipped: { id: string; reason: string }[] = [];
+      const eligible: StudentRow[] = [];
+      for (const row of changing) {
+        if (row.specializationId && specDepartment.get(row.specializationId) !== dto.departmentId) {
+          skipped.push({ id: row.id, reason: 'specializationElsewhere' });
+          continue;
+        }
+        if (row.standing === 'dismissed') {
+          skipped.push({ id: row.id, reason: 'dismissed' });
+          continue;
+        }
+        try {
+          await this.assertYearOpen([row.id], row.academicYear);
+          eligible.push(row);
+        } catch (error) {
+          if (!(error instanceof ConflictException)) throw error;
+          skipped.push({ id: row.id, reason: 'resultsApproved' });
+        }
+      }
+
+      if (!dto.confirmOrphanedGrades) {
+        let orphaned = 0;
+        for (const row of eligible) {
+          orphaned += await this.orphanedGrades(row.id, row.facultyId, {
+            departmentId: dto.departmentId,
+            specializationId: row.specializationId,
+          });
+        }
+        if (orphaned) throw new ConflictException({ code: 'GRADES_ORPHANED', count: orphaned });
+      }
+
+      if (eligible.length) {
+        await this.db
+          .update(students)
+          .set({ departmentId: dto.departmentId })
+          .where(
+            inArray(
+              students.id,
+              eligible.map((row) => row.id),
+            ),
+          );
+        for (const row of eligible) {
+          for (const semester of SEMESTERS) {
+            await this.gradesService.refreshStudentsSemester([row.id], row.academicYear, semester);
+          }
+        }
+      }
+
+      this.logger.log(`Set department on ${eligible.length} students (${skipped.length} skipped)`);
+      return {
+        updated: eligible.length,
+        unchanged: rows.length - changing.length,
+        skipped,
+      };
+    } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof ConflictException ||
+        error instanceof NotFoundException ||
+        error instanceof UnauthorizedException
+      ) {
+        throw error;
+      }
+      this.logger.error('Failed to set departments', error);
       throw new InternalServerErrorException('Students operation failed', { cause: error });
     }
   }
@@ -585,6 +738,8 @@ export class StudentsService {
         reports.filter((row) => row.problems.length).map((row) => row.rowNumber),
       );
       const ready = dto.rows.filter((row) => !blocked.has(row.rowNumber));
+      // a specialization under a department puts the student in it
+      const specDepartment = await this.specializationDepartments(ready);
 
       if (ready.length) {
         await this.db.insert(students).values(
@@ -602,6 +757,9 @@ export class StudentsService {
             academicYear: row.level,
             facultyId: row.facultyId,
             specializationId: row.specializationId ?? null,
+            departmentId: row.specializationId
+              ? (specDepartment.get(row.specializationId)?.departmentId ?? null)
+              : (row.departmentId ?? null),
           })),
         );
       }
@@ -656,18 +814,19 @@ export class StudentsService {
         .filter((value): value is string => !!value),
     );
 
-    // which faculty each named specialization belongs to, for the rows that name one
-    const specIds = [
-      ...new Set(rows.map((row) => row.specializationId).filter((id): id is string => !!id)),
+    // which faculty (and department) each named specialization and department belongs to
+    const specOf = await this.specializationDepartments(rows);
+    const deptIds = [
+      ...new Set(rows.map((row) => row.departmentId).filter((id): id is string => !!id)),
     ];
-    const specFaculty = new Map(
-      (specIds.length
-        ? await this.db.query.specializations.findMany({
-            where: inArray(specializations.id, specIds),
+    const deptFaculty = new Map(
+      (deptIds.length
+        ? await this.db.query.facultyDepartments.findMany({
+            where: inArray(facultyDepartments.id, deptIds),
             columns: { id: true, facultyId: true },
           })
         : []
-      ).map((spec) => [spec.id, spec.facultyId]),
+      ).map((dept) => [dept.id, dept.facultyId]),
     );
 
     const seenUni = new Set<string>();
@@ -679,8 +838,16 @@ export class StudentsService {
       const problems: string[] = [];
 
       if (scope && row.facultyId !== scope) problems.push('bulkImport.problems.faculty');
-      if (row.specializationId && specFaculty.get(row.specializationId) !== row.facultyId) {
+      const spec = row.specializationId ? specOf.get(row.specializationId) : undefined;
+      if (row.specializationId && spec?.facultyId !== row.facultyId) {
         problems.push('bulkImport.problems.specializationMismatch');
+      }
+      if (
+        row.departmentId &&
+        (deptFaculty.get(row.departmentId) !== row.facultyId ||
+          (spec && spec.departmentId !== row.departmentId))
+      ) {
+        problems.push('bulkImport.problems.departmentMismatch');
       }
 
       if (takenUni.has(uniNumber)) problems.push('bulkImport.problems.uniNumberTaken');
@@ -698,6 +865,21 @@ export class StudentsService {
 
       return { rowNumber: row.rowNumber, uniNumber, problems };
     });
+  }
+
+  /** The faculty and department of each specialization these rows name. */
+  private async specializationDepartments(
+    rows: { specializationId?: string | null }[],
+  ): Promise<Map<string, { facultyId: string; departmentId: string | null }>> {
+    const specIds = [
+      ...new Set(rows.map((row) => row.specializationId).filter((id): id is string => !!id)),
+    ];
+    if (!specIds.length) return new Map();
+    const specs = await this.db.query.specializations.findMany({
+      where: inArray(specializations.id, specIds),
+      columns: { id: true, facultyId: true, departmentId: true },
+    });
+    return new Map(specs.map((spec) => [spec.id, spec]));
   }
 
   /** Deletes the student with this id, plus their grades and GPAs. */

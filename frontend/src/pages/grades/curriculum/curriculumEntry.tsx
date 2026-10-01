@@ -5,9 +5,10 @@ import { z } from "zod";
 import ConfirmDialog from "../../../components/confirmDialog";
 import FacultyField from "../../../components/facultyField";
 import FormField from "../../../components/formField";
+import DepartmentField from "../../../components/departmentField";
 import SpecializationField from "../../../components/specializationField";
 import useFaculties from "../../../hooks/useFaculties";
-import { specializationName } from "../../../utils/specializations";
+import { placementName, specializationDepartmentId } from "../../../utils/specializations";
 import {
 	createCurriculum,
 	fetchCurriculum,
@@ -56,6 +57,8 @@ const curriculumSchema = z.object({
 		),
 	// majors only; whether it's required depends on the curriculum's past (see specializationRequired)
 	specializationId: z.string(),
+	// majors only, when no specialization is named: all the department's students take it
+	departmentId: z.string(),
 }).superRefine((value, ctx) => {
 	// every requirement but a university one names the faculty that offers it
 	if (value.requirementType !== "university" && !value.facultyId) {
@@ -80,6 +83,7 @@ const EMPTY_FORM: CurriculumForm = {
 	requirementType: "",
 	courseHours: "",
 	specializationId: "",
+	departmentId: "",
 };
 
 type CurriculumEntryProps = {
@@ -121,8 +125,9 @@ const CurriculumEntry = ({
 	const [stored, setStored] = useState<{
 		requirementType: string;
 		specializationId: string | null;
+		departmentId: string | null;
 	} | null>(null);
-	// a save waiting on its review: the specialization changes
+	// a save waiting on its review: the specialization or department changes
 	const [pendingReview, setPendingReview] = useState<CurriculumPayload | null>(null);
 	const [errors, setErrors] = useState<FormErrors>({});
 	const [submitting, setSubmitting] = useState(false);
@@ -158,10 +163,12 @@ const CurriculumEntry = ({
 					requirementType: c.requirementType ?? "",
 					courseHours: String(c.courseHours),
 					specializationId: c.specializationId ?? "",
+					departmentId: c.departmentId ?? "",
 				});
 				setStored({
 					requirementType: c.requirementType ?? "",
 					specializationId: c.specializationId,
+					departmentId: c.departmentId,
 				});
 				// the existing code stays unless the user clears it for a suggestion
 				setAbbreviationEdited(true);
@@ -222,18 +229,42 @@ const CurriculumEntry = ({
 	};
 
 	// stable identity: FacultyField reports the locked faculty from an effect
-	// a specialization belongs to its faculty, so another faculty starts without one
+	// a specialization and department belong to their faculty, so another faculty starts without them
 	const setFacultyId = useCallback((facultyId: string) => {
 		setForm((prev) =>
-			prev.facultyId === facultyId ? prev : { ...prev, facultyId, specializationId: "" },
+			prev.facultyId === facultyId
+				? prev
+				: { ...prev, facultyId, specializationId: "", departmentId: "" },
 		);
 	}, []);
 
+	// a specialization names its own department; without one, the department chosen stands alone
+	const departmentValue = form.specializationId
+		? (specializationDepartmentId(faculties, form.specializationId) ?? "")
+		: form.departmentId;
+	const setDepartmentId = (departmentId: string) => {
+		setForm((prev) => ({
+			...prev,
+			departmentId,
+			// the specializations offered follow the department, so one from elsewhere is dropped
+			specializationId:
+				prev.specializationId &&
+				(specializationDepartmentId(faculties, prev.specializationId) ?? "") === departmentId
+					? prev.specializationId
+					: "",
+		}));
+	};
+	const hasDepartments = !!faculties.find((f) => f.id === form.facultyId)?.departments.length;
+
 	const isMajor = form.requirementType === "major";
-	// a new major, a curriculum becoming one, or a major that already has one must name one;
-	// a major from before specializations may wait
+	// a new major, a curriculum becoming one, or a major that already has one must name who takes
+	// it (a specialization or a department); a major from before specializations may wait
 	const specializationRequired =
-		isMajor && (!stored || stored.requirementType !== "major" || stored.specializationId !== null);
+		isMajor &&
+		(!stored ||
+			stored.requirementType !== "major" ||
+			stored.specializationId !== null ||
+			stored.departmentId !== null);
 
 	const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
@@ -243,13 +274,16 @@ const CurriculumEntry = ({
 			setErrors(z.flattenError(result.error).fieldErrors);
 			return;
 		}
-		if (specializationRequired && !result.data.specializationId) {
-			setErrors({ specializationId: ["specialization.errors.required"] });
+		if (specializationRequired && !result.data.specializationId && !departmentValue) {
+			setErrors({
+				specializationId: [hasDepartments ? "department.errors.audienceRequired" : "specialization.errors.required"],
+			});
 			return;
 		}
 
 		setErrors({});
 		const specializationId = isMajor ? result.data.specializationId || null : null;
+		const departmentId = isMajor ? departmentValue || null : null;
 		const payload: CurriculumPayload = {
 			// English is optional; omitting it makes the API store "-"
 			name: { ar: result.data.nameAr, en: result.data.nameEn || undefined },
@@ -259,11 +293,19 @@ const CurriculumEntry = ({
 			semester: result.data.semester,
 			requirementType: result.data.requirementType,
 			courseHours: result.data.courseHours,
-			// a major sends its specialization; an older major left without one keeps it that way
-			...(isMajor && specializationId ? { specializationId } : {}),
+			// a major sends who takes it: a specialization (with its department) or a department
+			// alone; an older major left without either keeps it that way
+			...(isMajor && (specializationId || departmentId) ? { specializationId, departmentId } : {}),
 		};
-		// a new or changed specialization is reviewed before it's saved
-		if (isMajor && specializationId && specializationId !== (stored?.specializationId ?? null)) {
+		// a new or changed specialization or department is reviewed before it's saved
+		const storedDepartment = stored?.specializationId
+			? specializationDepartmentId(faculties, stored.specializationId)
+			: (stored?.departmentId ?? null);
+		if (
+			isMajor &&
+			(specializationId || departmentId) &&
+			(specializationId !== (stored?.specializationId ?? null) || departmentId !== storedDepartment)
+		) {
 			setPendingReview(payload);
 			return;
 		}
@@ -364,8 +406,9 @@ const CurriculumEntry = ({
 								requirementType: e.target.value,
 								// a university requirement carries no faculty of its own
 								facultyId: e.target.value === "university" ? "" : prev.facultyId,
-								// only a major belongs to a specialization
+								// only a major belongs to a specialization or department
 								specializationId: e.target.value === "major" ? prev.specializationId : "",
+								departmentId: e.target.value === "major" ? prev.departmentId : "",
 							}))
 						}
 						aria-invalid={!!errors.requirementType}
@@ -424,17 +467,30 @@ const CurriculumEntry = ({
 				/>
 
 				{isMajor && (
+					<DepartmentField
+						faculties={faculties}
+						facultyId={form.facultyId}
+						value={departmentValue}
+						onChange={setDepartmentId}
+					/>
+				)}
+
+				{isMajor && (
 					<SpecializationField
 						faculties={faculties}
 						facultyId={form.facultyId}
+						departmentId={departmentValue}
 						value={form.specializationId}
 						onChange={(value) => setField("specializationId", value)}
-						allowNone={false}
+						// with departments, a department alone may take the major
+						allowNone={hasDepartments}
 						error={errors.specializationId?.[0]}
 						hint={
-							specializationRequired
-								? t("specialization.majorHint")
-								: t("specialization.legacyMajorHint")
+							!specializationRequired
+								? t("specialization.legacyMajorHint")
+								: hasDepartments
+									? t("department.majorHint")
+									: t("specialization.majorHint")
 						}
 					/>
 				)}
@@ -537,14 +593,18 @@ const CurriculumEntry = ({
 			<ConfirmDialog
 				open={pendingReview !== null}
 				tone="primary"
-				title={t("specialization.reviewSaveTitle")}
-				message={t("specialization.reviewSaveMessage", {
-					from: stored?.specializationId
-						? specializationName(faculties, stored.specializationId, lang)
-						: t("specialization.none"),
-					to: pendingReview?.specializationId
-						? specializationName(faculties, pendingReview.specializationId, lang)
-						: t("specialization.none"),
+				title={t(hasDepartments ? "department.reviewSaveTitle" : "specialization.reviewSaveTitle")}
+				message={t(hasDepartments ? "department.majorReviewMessage" : "specialization.reviewSaveMessage", {
+					from:
+						placementName(faculties, stored?.departmentId ?? null, stored?.specializationId ?? null, lang) ||
+						t(hasDepartments ? "department.wholeFaculty" : "specialization.none"),
+					to:
+						placementName(
+							faculties,
+							pendingReview?.departmentId ?? null,
+							pendingReview?.specializationId ?? null,
+							lang,
+						) || t(hasDepartments ? "department.wholeFaculty" : "specialization.none"),
 				})}
 				confirmLabel={t("specialization.save")}
 				cancelLabel={t("common.cancel")}

@@ -17,7 +17,7 @@ import {
   type AcademicYear,
   type Semester,
 } from 'src/common/academic-year';
-import { SPECIALIZATION_FILTER } from 'src/common/specialization';
+import { DEPARTMENT_FILTER, SPECIALIZATION_FILTER } from 'src/common/specialization';
 
 export const RESULT_KINDS = ['regular', 'resit'] as const;
 export type ResultKind = (typeof RESULT_KINDS)[number];
@@ -76,6 +76,15 @@ export class PreviewResultDto {
   @IsUUID()
   specializationId?: string;
 
+  /**
+   * Without a specialization: the department whose students without one the
+   * result is for; omitted for the students outside every department. With a
+   * specialization, it may only repeat the specialization's department.
+   */
+  @IsOptional()
+  @IsUUID()
+  departmentId?: string;
+
   @NormaliseSemester()
   @IsIn(SEMESTERS)
   semester!: Semester;
@@ -122,6 +131,11 @@ export class ListResultsQueryDto {
   @IsOptional()
   @Matches(SPECIALIZATION_FILTER)
   specializationId?: string;
+
+  /** A department's own results, or "none" for those not for a department. */
+  @IsOptional()
+  @Matches(DEPARTMENT_FILTER)
+  departmentId?: string;
 
   @IsOptional()
   @IsIn(RESULT_STATUSES)

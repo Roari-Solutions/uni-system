@@ -7,25 +7,32 @@ import DataTable, { type Column } from "../../../components/dataTable";
 import DeleteButton from "../../../components/deleteButton";
 import FilterSelect from "../../../components/filterSelect";
 import SearchField from "../../../components/searchField";
+import DepartmentFilter from "../../../components/departmentFilter";
 import SetSpecializationDialog, {
+	type PlacementKind,
 	type SpecializationTarget,
 } from "../../../components/setSpecializationDialog";
 import SpecializationFilter from "../../../components/specializationFilter";
 import StudentOrderSelect from "../../../components/studentOrderSelect";
 import useFaculties from "../../../hooks/useFaculties";
-import { deleteStudent, fetchStudents, setStudentsSpecialization } from "../../../api/students";
+import {
+	deleteStudent,
+	fetchStudents,
+	setStudentsDepartment,
+	setStudentsSpecialization,
+} from "../../../api/students";
 import type { Student } from "../../../types/student";
-import { WITHOUT_SPECIALIZATION } from "../../../types/faculty";
+import { WITHOUT_DEPARTMENT, WITHOUT_SPECIALIZATION } from "../../../types/faculty";
 import { smallSecondaryButtonClass } from "../../../styles/form";
 import { ACCEPTANCE_YEARS, STUDY_LEVELS } from "../../../utils/academicYears";
-import { specializationName } from "../../../utils/specializations";
+import { departmentName, specializationName } from "../../../utils/specializations";
 import { orderStudents, type StudentOrder } from "../../../utils/studentOrder";
 
 // columns that can't be hidden
 const ALWAYS_VISIBLE = ["select", "name", "actions"];
 
-// the students whose specialization is being set, and the faculty offering it
-type Setting = { facultyId: string; targets: SpecializationTarget[] };
+// the students whose specialization or department is being set, and the faculty offering it
+type Setting = { kind: PlacementKind; facultyId: string; targets: SpecializationTarget[] };
 
 const StudentList = () => {
 	const { t, i18n } = useTranslation();
@@ -39,6 +46,7 @@ const StudentList = () => {
 	const [facultyId, setFacultyId] = useState("");
 	const [acceptanceYear, setAcceptanceYear] = useState("");
 	const [specializationId, setSpecializationId] = useState("");
+	const [departmentId, setDepartmentId] = useState("");
 	const [search, setSearch] = useState("");
 	const [order, setOrder] = useState<StudentOrder>("");
 	// ticked students, for setting one specialization on all of them
@@ -61,6 +69,7 @@ const StudentList = () => {
 			level: level ? Number(level) : undefined,
 			acceptanceYear: acceptanceYear || undefined,
 			specializationId: specializationId || undefined,
+			departmentId: departmentId || undefined,
 			q: search.trim() || undefined,
 		})
 			.then((rows) => {
@@ -80,12 +89,13 @@ const StudentList = () => {
 		return () => {
 			cancelled = true;
 		};
-	}, [effectiveFacultyId, level, acceptanceYear, specializationId, search, reloadKey]);
+	}, [effectiveFacultyId, level, acceptanceYear, specializationId, departmentId, search, reloadKey]);
 
-	// a filter's specialization belongs to its faculty, so a new faculty drops it
+	// a filter's specialization and department belong to its faculty, so a new faculty drops them
 	const changeFaculty = (id: string) => {
 		setFacultyId(id);
 		setSpecializationId("");
+		setDepartmentId("");
 		setSelected([]);
 	};
 
@@ -111,33 +121,38 @@ const StudentList = () => {
 	const facultyName = (id: string) => faculties.find((f) => f.id === id)?.name[lang] ?? "";
 	const hasSpecializations = (id: string) =>
 		(faculties.find((f) => f.id === id)?.specializations.length ?? 0) > 0;
-	// ticking many needs one faculty in view: a specialization belongs to one
-	const selectable = !!effectiveFacultyId && hasSpecializations(effectiveFacultyId);
+	const hasDepartments = (id: string) => (faculties.find((f) => f.id === id)?.departments.length ?? 0) > 0;
+	// ticking many needs one faculty in view: a specialization or department belongs to one
+	const selectable =
+		!!effectiveFacultyId && (hasSpecializations(effectiveFacultyId) || hasDepartments(effectiveFacultyId));
 	const selectableRows = students.filter((s) => s.standing !== "dismissed");
 	const allSelected = selectableRows.length > 0 && selectableRows.every((s) => selected.includes(s.id));
 	const ordered = orderStudents(students, order, lang, (s) => ({ name: s.name[lang], uniNumber: s.uniNumber }));
 	const missing = students.filter((s) => !s.specializationId && hasSpecializations(s.facultyId)).length;
+	const missingDepartment = students.filter((s) => !s.departmentId && hasDepartments(s.facultyId)).length;
 
 	const toggleSelected = (id: string) =>
 		setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
-	const targetOf = (s: Student): SpecializationTarget => ({
-		id: s.id,
-		name: s.name[lang],
-		specializationId: s.specializationId,
-	});
+	const targetOf =
+		(kind: PlacementKind) =>
+		(s: Student): SpecializationTarget => ({
+			id: s.id,
+			name: s.name[lang],
+			current: kind === "department" ? s.departmentId : s.specializationId,
+		});
 
 	const saveSpecialization = async (value: string | null, confirmOrphans: boolean) => {
 		if (!setting) return;
-		const report = await setStudentsSpecialization(
-			setting.targets.map((target) => target.id),
-			value,
-			confirmOrphans,
-		);
+		const ids = setting.targets.map((target) => target.id);
+		const report =
+			setting.kind === "department"
+				? await setStudentsDepartment(ids, value, confirmOrphans)
+				: await setStudentsSpecialization(ids, value, confirmOrphans);
 		setNotice(
 			report.skipped.length
-				? t("specialization.savedWithSkips", { updated: report.updated, skipped: report.skipped.length })
-				: t("specialization.saved", { count: report.updated }),
+				? t(`${setting.kind}.savedWithSkips`, { updated: report.updated, skipped: report.skipped.length })
+				: t(`${setting.kind}.saved`, { count: report.updated }),
 		);
 		setSelected([]);
 		setReloadKey((k) => k + 1);
@@ -210,11 +225,35 @@ const StudentList = () => {
 				hasSpecializations(s.facultyId) && s.standing !== "dismissed" ? (
 					<button
 						type="button"
-						onClick={() => setSetting({ facultyId: s.facultyId, targets: [targetOf(s)] })}
+						onClick={() =>
+							setSetting({ kind: "specialization", facultyId: s.facultyId, targets: [targetOf("specialization")(s)] })
+						}
 						aria-label={t("specialization.setFor", { name: s.name[lang] })}
 						className={`whitespace-nowrap ${smallSecondaryButtonClass}`}
 					>
 						{t("specialization.set")}
+					</button>
+				) : (
+					"—"
+				),
+		},
+		{
+			key: "department",
+			header: t("department.label"),
+			render: (s) =>
+				s.departmentId ? (
+					departmentName(faculties, s.departmentId, lang)
+				) : // a student with a specialization follows its department, so only those without one get the action
+				hasDepartments(s.facultyId) && !s.specializationId && s.standing !== "dismissed" ? (
+					<button
+						type="button"
+						onClick={() =>
+							setSetting({ kind: "department", facultyId: s.facultyId, targets: [targetOf("department")(s)] })
+						}
+						aria-label={t("department.setFor", { name: s.name[lang] })}
+						className={`whitespace-nowrap ${smallSecondaryButtonClass}`}
+					>
+						{t("department.set")}
 					</button>
 				) : (
 					"—"
@@ -274,6 +313,12 @@ const StudentList = () => {
 					allLabel={t("studentList.filters.allAcceptanceYears")}
 					options={ACCEPTANCE_YEARS.map((year) => ({ value: year, label: year }))}
 				/>
+				<DepartmentFilter
+					faculties={faculties}
+					facultyId={effectiveFacultyId}
+					value={departmentId}
+					onChange={setDepartmentId}
+				/>
 				<SpecializationFilter
 					faculties={faculties}
 					facultyId={effectiveFacultyId}
@@ -319,21 +364,57 @@ const StudentList = () => {
 				</div>
 			)}
 
+			{/* the same, for departments */}
+			{missingDepartment > 0 && departmentId !== WITHOUT_DEPARTMENT && (
+				<div className="mb-6 flex flex-wrap items-center gap-3 rounded-sm border-s-3 border-primary bg-accent-soft/30 p-4">
+					<p className="text-body-md text-foreground">
+						{t("department.missingStudents", { count: missingDepartment })}
+					</p>
+					{effectiveFacultyId && (
+						<button
+							type="button"
+							onClick={() => setDepartmentId(WITHOUT_DEPARTMENT)}
+							className={smallSecondaryButtonClass}
+						>
+							{t("specialization.showMissing")}
+						</button>
+					)}
+				</div>
+			)}
+
 			{selectable && selected.length > 0 && (
 				<div className="mb-4 flex flex-wrap items-center gap-3">
 					<p className="text-body-md text-foreground">{t("specialization.selected", { count: selected.length })}</p>
-					<button
-						type="button"
-						onClick={() =>
-							setSetting({
-								facultyId: effectiveFacultyId,
-								targets: students.filter((s) => selected.includes(s.id)).map(targetOf),
-							})
-						}
-						className={smallSecondaryButtonClass}
-					>
-						{t("specialization.setSelected")}
-					</button>
+					{hasDepartments(effectiveFacultyId) && (
+						<button
+							type="button"
+							onClick={() =>
+								setSetting({
+									kind: "department",
+									facultyId: effectiveFacultyId,
+									targets: students.filter((s) => selected.includes(s.id)).map(targetOf("department")),
+								})
+							}
+							className={smallSecondaryButtonClass}
+						>
+							{t("department.setSelected")}
+						</button>
+					)}
+					{hasSpecializations(effectiveFacultyId) && (
+						<button
+							type="button"
+							onClick={() =>
+								setSetting({
+									kind: "specialization",
+									facultyId: effectiveFacultyId,
+									targets: students.filter((s) => selected.includes(s.id)).map(targetOf("specialization")),
+								})
+							}
+							className={smallSecondaryButtonClass}
+						>
+							{t("specialization.setSelected")}
+						</button>
+					)}
 					<button type="button" onClick={() => setSelected([])} className={smallSecondaryButtonClass}>
 						{t("specialization.clearSelection")}
 					</button>
@@ -361,10 +442,11 @@ const StudentList = () => {
 			{setting && (
 				<SetSpecializationDialog
 					open
+					kind={setting.kind}
 					title={
 						setting.targets.length === 1
-							? t("specialization.setFor", { name: setting.targets[0].name })
-							: t("specialization.setSelected")
+							? t(`${setting.kind}.setFor`, { name: setting.targets[0].name })
+							: t(`${setting.kind}.setSelected`)
 					}
 					faculties={faculties}
 					facultyId={setting.facultyId}

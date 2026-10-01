@@ -7,6 +7,8 @@ export type StudentFilters = {
 	acceptanceYear?: string;
 	// a specialization's id, or "none" for the students without one
 	specializationId?: string;
+	// a department's id, or "none" for the students outside every department
+	departmentId?: string;
 	q?: string;
 };
 
@@ -24,6 +26,8 @@ export type StudentPayload = {
 	level: number;
 	// optional; null clears it
 	specializationId?: string | null;
+	// optional; null clears it. Omitted, it follows the specialization's department
+	departmentId?: string | null;
 };
 
 export const fetchStudents = async (filters: StudentFilters = {}): Promise<Student[]> => {
@@ -63,11 +67,12 @@ export const reinstateStudent = async (id: string): Promise<Student> => {
 	return data;
 };
 
-/** What a bulk specialization change did: students it changed, left as they were, or skipped. */
+/** What a bulk specialization or department change did: students it changed, left as they were, or skipped. */
 export type SetSpecializationReport = {
 	updated: number;
 	unchanged: number;
-	skipped: { id: string; reason: "dismissed" | "resultsApproved" }[];
+	// specializationElsewhere: department changes only, for a student whose specialization sits elsewhere
+	skipped: { id: string; reason: "dismissed" | "resultsApproved" | "specializationElsewhere" }[];
 };
 
 /**
@@ -82,6 +87,24 @@ export const setStudentsSpecialization = async (
 	const { data } = await api.post<SetSpecializationReport>("/gr/students/specialization", {
 		studentIds,
 		specializationId,
+		...(confirmOrphanedGrades ? { confirmOrphanedGrades } : {}),
+	});
+	return data;
+};
+
+/**
+ * Sets one department (or none) on many students. Students whose specialization
+ * sits elsewhere are skipped. Fails with 409 GRADES_ORPHANED when grades would
+ * stop counting; resend with the flag to go ahead.
+ */
+export const setStudentsDepartment = async (
+	studentIds: string[],
+	departmentId: string | null,
+	confirmOrphanedGrades = false,
+): Promise<SetSpecializationReport> => {
+	const { data } = await api.post<SetSpecializationReport>("/gr/students/department", {
+		studentIds,
+		departmentId,
 		...(confirmOrphanedGrades ? { confirmOrphanedGrades } : {}),
 	});
 	return data;

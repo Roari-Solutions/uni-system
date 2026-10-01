@@ -80,6 +80,12 @@ export interface ResultSheet {
   acceptanceYear: string | null;
   /** The specialization's English name; null for students without one. */
   specialization: string | null;
+  /**
+   * The department's English name: the department's own result, or the one
+   * the specialization sits under. Absent otherwise, so sheets from before
+   * departments still compare equal.
+   */
+  department?: string;
   semester: number;
   kind: 'regular' | 'resit';
   courses: ResultCourse[];

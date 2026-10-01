@@ -43,6 +43,8 @@ export type Student = {
 	facultyId: string;
 	// null until set; it decides which of the faculty's majors the student takes
 	specializationId: string | null;
+	// null until one is set; a specialization under a department always brings it
+	departmentId: string | null;
 	status: StudentStatus;
 	standing: StudentStanding;
 	// suspended students only

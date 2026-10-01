@@ -22,4 +22,6 @@ export type Curriculum = {
 	serialNo: number | null;
 	// majors only: the specialization whose students take it; null on other types and older majors
 	specializationId: string | null;
+	// majors not tied to a specialization: the department whose students take it
+	departmentId: string | null;
 };

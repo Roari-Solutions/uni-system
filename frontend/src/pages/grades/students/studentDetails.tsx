@@ -27,9 +27,9 @@ import EditGradeDialog, { type GradeEdit } from "../../../components/editGradeDi
 import ConfirmDialog from "../../../components/confirmDialog";
 import { PenaltyTags } from "../../../components/penaltyTags";
 import ResitNote from "../../../components/resitNote";
-import SetSpecializationDialog from "../../../components/setSpecializationDialog";
-import { setStudentsSpecialization } from "../../../api/students";
-import { specializationName } from "../../../utils/specializations";
+import SetSpecializationDialog, { type PlacementKind } from "../../../components/setSpecializationDialog";
+import { setStudentsDepartment, setStudentsSpecialization } from "../../../api/students";
+import { departmentName, specializationName } from "../../../utils/specializations";
 import { conflictCode } from "../../../utils/apiError";
 import useAuth from "../../../auth/useAuth";
 import { smallSecondaryButtonClass } from "../../../styles/form";
@@ -64,7 +64,8 @@ const StudentDetails = () => {
 	const [pending, setPending] = useState<{ row: StudentYearGrade; edit: GradeEdit } | null>(null);
 	const [saving, setSaving] = useState(false);
 	const [confirmReinstate, setConfirmReinstate] = useState(false);
-	const [settingSpecialization, setSettingSpecialization] = useState(false);
+	// the specialization or department being set from the profile
+	const [setting, setSetting] = useState<PlacementKind | null>(null);
 	// an i18n key saying why the last change was refused
 	const [actionError, setActionError] = useState<string | null>(null);
 
@@ -97,6 +98,7 @@ const StudentDetails = () => {
 	const facultyName = (id: string) => faculties.find((f) => f.id === id)?.name[lang] ?? "";
 	const facultySpecializations =
 		faculties.find((f) => f.id === student?.facultyId)?.specializations ?? [];
+	const facultyDepartments = faculties.find((f) => f.id === student?.facultyId)?.departments ?? [];
 
 	const semesterGpa = (semester: number) =>
 		gpas?.semesters.find((s) => s.semester === semester) ?? null;
@@ -365,6 +367,24 @@ const StudentDetails = () => {
 								<Detail label={t("studentDetails.fields.nationalId")}>{student.nationalId || "—"}</Detail>
 							)}
 							<Detail label={t("studentDetails.fields.faculty")}>{facultyName(student.facultyId)}</Detail>
+							{facultyDepartments.length > 0 && (
+								<Detail label={t("department.label")}>
+									{student.departmentId ? (
+										departmentName(faculties, student.departmentId, lang)
+									) : // a specialization brings its own department; once set, it changes from "edit details"
+									!student.specializationId && student.standing !== "dismissed" ? (
+										<button
+											type="button"
+											onClick={() => setSetting("department")}
+											className={smallSecondaryButtonClass}
+										>
+											{t("department.set")}
+										</button>
+									) : (
+										"—"
+									)}
+								</Detail>
+							)}
 							<Detail label={t("specialization.label")}>
 								{student.specializationId ? (
 									specializationName(faculties, student.specializationId, lang)
@@ -372,7 +392,7 @@ const StudentDetails = () => {
 								facultySpecializations.length > 0 && student.standing !== "dismissed" ? (
 									<button
 										type="button"
-										onClick={() => setSettingSpecialization(true)}
+										onClick={() => setSetting("specialization")}
 										className={smallSecondaryButtonClass}
 									>
 										{t("specialization.set")}
@@ -532,22 +552,28 @@ const StudentDetails = () => {
 				onCancel={() => setResolving(null)}
 			/>
 
-			{student && settingSpecialization && (
+			{student && setting && (
 				<SetSpecializationDialog
 					open
-					title={t("specialization.setFor", { name: student.name[lang] })}
+					kind={setting}
+					title={t(`${setting}.setFor`, { name: student.name[lang] })}
 					faculties={faculties}
 					facultyId={student.facultyId}
 					targets={[
-						{ id: student.id, name: student.name[lang], specializationId: student.specializationId },
+						{
+							id: student.id,
+							name: student.name[lang],
+							current: setting === "department" ? student.departmentId : student.specializationId,
+						},
 					]}
 					allowNone
 					onSave={async (value, confirmOrphans) => {
-						await setStudentsSpecialization([student.id], value, confirmOrphans);
-						// the year's curriculums (and GPAs) follow the specialization
+						if (setting === "department") await setStudentsDepartment([student.id], value, confirmOrphans);
+						else await setStudentsSpecialization([student.id], value, confirmOrphans);
+						// the year's curriculums (and GPAs) follow the specialization and department
 						await reload();
 					}}
-					onClose={() => setSettingSpecialization(false)}
+					onClose={() => setSetting(null)}
 				/>
 			)}
 		</div>

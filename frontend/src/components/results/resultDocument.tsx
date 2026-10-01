@@ -133,6 +133,11 @@ const TitleBlock = ({ header, sheet, version }: ResultDocumentProps) => (
 			<p>
 				Level <Fill value={levelText(sheet.academicYear)} />
 			</p>
+			{sheet.department && (
+				<p>
+					Department <Fill value={sheet.department} />
+				</p>
+			)}
 			{sheet.specialization && (
 				<p>
 					Specialization <Fill value={sheet.specialization} />

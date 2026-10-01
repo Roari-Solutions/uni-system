@@ -14,10 +14,11 @@ import ConfirmDialog from "../../../components/confirmDialog";
 import DeleteButton from "../../../components/deleteButton";
 import FilterSelect from "../../../components/filterSelect";
 import SearchField from "../../../components/searchField";
+import DepartmentFilter from "../../../components/departmentFilter";
 import SpecializationFilter from "../../../components/specializationFilter";
 import StudentOrderSelect from "../../../components/studentOrderSelect";
 import useFaculties from "../../../hooks/useFaculties";
-import { WITHOUT_SPECIALIZATION } from "../../../types/faculty";
+import { WITHOUT_DEPARTMENT, WITHOUT_SPECIALIZATION } from "../../../types/faculty";
 import {
 	createGrade,
 	deleteGrade,
@@ -104,6 +105,7 @@ const GradeSheet = () => {
 	const [markFilter, setMarkFilter] = useState<MarkFilter>("");
 	const [acceptanceYear, setAcceptanceYear] = useState("");
 	const [specializationId, setSpecializationId] = useState("");
+	const [departmentId, setDepartmentId] = useState("");
 	const [order, setOrder] = useState<StudentOrder>("");
 	const { faculties } = useFaculties();
 	const [pendingEdit, setPendingEdit] = useState<PendingEdit | null>(null);
@@ -145,6 +147,8 @@ const GradeSheet = () => {
 			return false;
 		}
 		if (acceptanceYear && s.acceptanceYear !== acceptanceYear) return false;
+		if (departmentId === WITHOUT_DEPARTMENT && s.departmentId) return false;
+		if (departmentId && departmentId !== WITHOUT_DEPARTMENT && s.departmentId !== departmentId) return false;
 		if (specializationId === WITHOUT_SPECIALIZATION && s.specializationId) return false;
 		if (specializationId && specializationId !== WITHOUT_SPECIALIZATION && s.specializationId !== specializationId) {
 			return false;
@@ -579,6 +583,12 @@ const GradeSheet = () => {
 					onChange={setAcceptanceYear}
 					allLabel={t("gradeEntry.allAcceptanceYears")}
 					options={ACCEPTANCE_YEARS.map((year) => ({ value: year, label: year }))}
+				/>
+				<DepartmentFilter
+					faculties={faculties}
+					facultyId={sheet?.curriculum.facultyId ?? ""}
+					value={departmentId}
+					onChange={setDepartmentId}
 				/>
 				<SpecializationFilter
 					faculties={faculties}

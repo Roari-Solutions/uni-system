@@ -14,6 +14,9 @@ export type ResultDraft = {
 	semester: string;
 	// the specialization the result is for; "" for the students without one
 	specializationId: string;
+	// the department picked beside it: its specializations are offered, and without one the
+	// result is for the department's students without a specialization; "" for none
+	departmentId: string;
 	excluded: string[];
 	// null until the header form is edited
 	header: ResultHeader | null;
@@ -28,6 +31,7 @@ export const EMPTY_DRAFT: ResultDraft = {
 	acceptanceYear: "",
 	semester: "",
 	specializationId: "",
+	departmentId: "",
 	excluded: [],
 	header: null,
 	loadedResultId: null,
@@ -53,6 +57,7 @@ export const loadDraft = (userId: string): ResultDraft => {
 			acceptanceYear: typeof saved.acceptanceYear === "string" ? saved.acceptanceYear : "",
 			semester: typeof saved.semester === "string" ? saved.semester : "",
 			specializationId: typeof saved.specializationId === "string" ? saved.specializationId : "",
+			departmentId: typeof saved.departmentId === "string" ? saved.departmentId : "",
 			excluded: isStrings(saved.excluded) ? saved.excluded : [],
 			header: saved.header && typeof saved.header === "object" ? saved.header : null,
 			loadedResultId: typeof saved.loadedResultId === "string" ? saved.loadedResultId : null,

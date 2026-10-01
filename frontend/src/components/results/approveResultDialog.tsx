@@ -69,6 +69,7 @@ const ApproveResultDialog = ({ open, result, onApproved, onCancel }: ApproveResu
 		academicYear: result.academicYear,
 		acceptanceYear: result.acceptanceYear ?? undefined,
 		specializationId: result.specializationId ?? undefined,
+		departmentId: result.departmentId ?? undefined,
 		semester: result.semester,
 		excludedStudentIds: result.excludedStudentIds,
 	};
@@ -83,6 +84,7 @@ const ApproveResultDialog = ({ open, result, onApproved, onCancel }: ApproveResu
 				academicYear: result.academicYear,
 				acceptanceYear: result.acceptanceYear ?? undefined,
 				specializationId: result.specializationId ?? undefined,
+				departmentId: result.departmentId ?? undefined,
 				semester: result.semester,
 				excludedStudentIds: result.excludedStudentIds,
 			},

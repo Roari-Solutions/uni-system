@@ -6,38 +6,45 @@ import { inputClass, secondaryButtonClass, submitButtonClass } from "../styles/f
 import type { Faculty } from "../types/faculty";
 import { conflictCode } from "../utils/apiError";
 import { orphanedGradeCount } from "../utils/orphanedGrades";
-import { specializationName } from "../utils/specializations";
+import { departmentChoices, departmentName, specializationChoices, specializationName } from "../utils/specializations";
 
-/** One student or curriculum whose specialization is being set. */
+/** One student or curriculum whose specialization or department is being set. */
 export type SpecializationTarget = {
 	id: string;
 	name: string;
-	// what it holds now
-	specializationId: string | null;
+	// what it holds now: its specialization, or its department when setting departments
+	current: string | null;
 };
+
+/** What the dialog sets; it also names the i18n keys it uses. */
+export type PlacementKind = "specialization" | "department";
 
 type Step = "choose" | "review" | "orphans";
 
 type SetSpecializationDialogProps = {
 	open: boolean;
+	/** Defaults to a specialization. */
+	kind?: PlacementKind;
 	title: string;
 	faculties: Faculty[];
-	/** The faculty whose specializations are offered; every target belongs to it. */
+	/** The faculty whose specializations (or departments) are offered; every target belongs to it. */
 	facultyId: string;
 	targets: SpecializationTarget[];
-	/** Offers "no specialization" (students only). */
+	/** Offers "none" (students only). */
 	allowNone: boolean;
 	/** Writes it; `confirmOrphans` is set once the user accepted that grades stop counting. */
-	onSave: (specializationId: string | null, confirmOrphans: boolean) => Promise<void>;
+	onSave: (value: string | null, confirmOrphans: boolean) => Promise<void>;
 	onClose: () => void;
 };
 
 /**
- * Sets a specialization in three steps: pick it, review exactly who changes
- * (from what, to what), then, if grades would stop counting, confirm that too.
+ * Sets a specialization or department in three steps: pick it, review exactly
+ * who changes (from what, to what), then, if grades would stop counting,
+ * confirm that too.
  */
 const SetSpecializationDialog = ({
 	open,
+	kind = "specialization",
 	title,
 	faculties,
 	facultyId,
@@ -60,7 +67,7 @@ const SetSpecializationDialog = ({
 	if (open !== wasOpen) {
 		setWasOpen(open);
 		if (open) {
-			setValue(targets.length === 1 ? (targets[0].specializationId ?? "") : "");
+			setValue(targets.length === 1 ? (targets[0].current ?? "") : "");
 			setStep("choose");
 			setError(null);
 		}
@@ -73,11 +80,18 @@ const SetSpecializationDialog = ({
 		if (!open && dialog.open) dialog.close();
 	}, [open]);
 
-	const specs = faculties.find((f) => f.id === facultyId)?.specializations ?? [];
+	const choices =
+		kind === "department"
+			? departmentChoices(faculties, facultyId, lang)
+			: specializationChoices(faculties, facultyId, lang);
 	const chosen = value || null;
-	const changing = targets.filter((target) => target.specializationId !== chosen);
+	const changing = targets.filter((target) => target.current !== chosen);
 	const nameOf = (id: string | null) =>
-		id ? specializationName(faculties, id, lang) : t("specialization.none");
+		id
+			? kind === "department"
+				? departmentName(faculties, id, lang)
+				: specializationName(faculties, id, lang)
+			: t(`${kind}.none`);
 
 	const save = async (confirmOrphans: boolean) => {
 		setSaving(true);
@@ -92,7 +106,7 @@ const SetSpecializationDialog = ({
 				setStep("orphans");
 			} else {
 				setError(
-					conflictCode(err) === "RESULTS_APPROVED" ? "specialization.errors.locked" : "common.saveFailed",
+					conflictCode(err) === "RESULTS_APPROVED" ? `${kind}.errors.locked` : "common.saveFailed",
 				);
 			}
 		} finally {
@@ -114,7 +128,7 @@ const SetSpecializationDialog = ({
 				</h2>
 
 				{step === "choose" && (
-					<FormField id="setSpecializationValue" label={t("specialization.label")}>
+					<FormField id="setSpecializationValue" label={t(`${kind}.label`)}>
 						<select
 							id="setSpecializationValue"
 							value={value}
@@ -122,11 +136,11 @@ const SetSpecializationDialog = ({
 							className={inputClass(false)}
 						>
 							<option value="" disabled={!allowNone}>
-								{allowNone ? t("specialization.none") : t("specialization.choose")}
+								{allowNone ? t(`${kind}.none`) : t(`${kind}.choose`)}
 							</option>
-							{specs.map((spec) => (
-								<option key={spec.id} value={spec.id}>
-									{spec.name[lang]}
+							{choices.map((choice) => (
+								<option key={choice.value} value={choice.value}>
+									{choice.label}
 								</option>
 							))}
 						</select>
@@ -136,7 +150,7 @@ const SetSpecializationDialog = ({
 				{step === "review" && (
 					<section aria-labelledby="reviewTitle" className="flex flex-col gap-3">
 						<h3 id="reviewTitle" className="text-body-md font-semibold text-accent-deep">
-							{t("specialization.reviewTitle", { count: changing.length })}
+							{t(`${kind}.reviewTitle`, { count: changing.length })}
 						</h3>
 						{/* §39 — each change is spelled out, not just counted */}
 						<ul className="flex max-h-72 flex-col divide-y divide-border-subtle overflow-y-auto rounded-sm border border-border-subtle">
@@ -144,8 +158,8 @@ const SetSpecializationDialog = ({
 								<li key={target.id} className="flex flex-wrap items-center justify-between gap-2 p-3 text-body-sm">
 									<span className="font-semibold">{target.name}</span>
 									<span className="inline-flex items-center gap-2">
-										<span className="text-primary-hover">{nameOf(target.specializationId)}</span>
-										<ArrowLeftIcon className="size-4 ltr:rotate-180" aria-label={t("specialization.becomes")} />
+										<span className="text-primary-hover">{nameOf(target.current)}</span>
+										<ArrowLeftIcon className="size-4 ltr:rotate-180" aria-label={t(`${kind}.becomes`)} />
 										<span className="font-semibold text-accent-deep">{nameOf(chosen)}</span>
 									</span>
 								</li>
@@ -153,14 +167,14 @@ const SetSpecializationDialog = ({
 						</ul>
 						{changing.length < targets.length && (
 							<p className="text-body-sm text-primary-hover">
-								{t("specialization.unchanged", { count: targets.length - changing.length })}
+								{t(`${kind}.unchanged`, { count: targets.length - changing.length })}
 							</p>
 						)}
 					</section>
 				)}
 
 				{step === "orphans" && (
-					<p className="text-body-md">{t("specialization.orphansMessage", { count: orphans })}</p>
+					<p className="text-body-md">{t(`${kind}.orphansMessage`, { count: orphans })}</p>
 				)}
 
 				{error && (
@@ -175,7 +189,7 @@ const SetSpecializationDialog = ({
 						onClick={step === "choose" ? onClose : () => setStep("choose")}
 						className={secondaryButtonClass}
 					>
-						{step === "choose" ? t("common.cancel") : t("specialization.back")}
+						{step === "choose" ? t("common.cancel") : t(`${kind}.back`)}
 					</button>
 					{step === "choose" && (
 						<button
@@ -184,12 +198,12 @@ const SetSpecializationDialog = ({
 							onClick={() => setStep("review")}
 							className={submitButtonClass}
 						>
-							{t("specialization.reviewAction")}
+							{t(`${kind}.reviewAction`)}
 						</button>
 					)}
 					{step === "review" && (
 						<button type="button" disabled={saving} onClick={() => void save(false)} className={submitButtonClass}>
-							{saving ? t("common.saving") : t("specialization.save")}
+							{saving ? t("common.saving") : t(`${kind}.save`)}
 						</button>
 					)}
 					{step === "orphans" && (

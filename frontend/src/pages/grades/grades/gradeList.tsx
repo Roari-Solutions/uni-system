@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import DataTable, { type Column } from "../../../components/dataTable";
 import FilterSelect from "../../../components/filterSelect";
+import DepartmentFilter from "../../../components/departmentFilter";
 import SpecializationFilter from "../../../components/specializationFilter";
-import { WITHOUT_SPECIALIZATION } from "../../../types/faculty";
+import { WITHOUT_DEPARTMENT, WITHOUT_SPECIALIZATION } from "../../../types/faculty";
 import useFaculties from "../../../hooks/useFaculties";
 import { fetchGrades, resolveCheating, updateGrade } from "../../../api/grades";
 import { SeatingStatusTag } from "../../../components/seatingStatusSelect";
@@ -41,6 +42,7 @@ const GradeList = () => {
 	const [seatingStatus, setSeatingStatus] = useState("");
 	// the students' specialization; the grades carry only the student's id, so it narrows here
 	const [specializationId, setSpecializationId] = useState("");
+	const [departmentId, setDepartmentId] = useState("");
 	// the cheating row being decided, if any
 	const [resolving, setResolving] = useState<Grade | null>(null);
 	const [saving, setSaving] = useState(false);
@@ -85,6 +87,10 @@ const GradeList = () => {
 
 	const student = (g: Grade) => students.find((s) => s.id === g.studentId);
 	const shown = grades.filter((g) => {
+		const dept = student(g)?.departmentId ?? null;
+		if (departmentId && (departmentId === WITHOUT_DEPARTMENT ? dept !== null : dept !== departmentId)) {
+			return false;
+		}
 		if (!specializationId) return true;
 		const spec = student(g)?.specializationId ?? null;
 		return specializationId === WITHOUT_SPECIALIZATION ? spec === null : spec === specializationId;
@@ -94,8 +100,9 @@ const GradeList = () => {
 
 	const changeFaculty = (id: string) => {
 		setFacultyId(id);
-		// a specialization belongs to its faculty
+		// a specialization and department belong to their faculty
 		setSpecializationId("");
+		setDepartmentId("");
 		// drop a curriculum selection the new faculty doesn't offer; every faculty
 		// offers a university requirement, so that selection always stays
 		const selected = curriculums.find((c) => c.id === curriculumId);
@@ -238,6 +245,12 @@ const GradeList = () => {
 					allLabel={t("gradeList.filters.allLetters")}
 					// an <option> can't take its own direction; the mark keeps "A+" from reading "+A" in Arabic
 					options={LETTER_GRADES.map((l) => ({ value: l, label: `${l}\u200E` }))}
+				/>
+				<DepartmentFilter
+					faculties={faculties}
+					facultyId={effectiveFacultyId}
+					value={departmentId}
+					onChange={setDepartmentId}
 				/>
 				<SpecializationFilter
 					faculties={faculties}

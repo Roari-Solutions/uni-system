@@ -7,18 +7,20 @@ import DataTable, { type Column } from "../../../components/dataTable";
 import DeleteButton from "../../../components/deleteButton";
 import FilterSelect from "../../../components/filterSelect";
 import SearchField from "../../../components/searchField";
-import SetSpecializationDialog from "../../../components/setSpecializationDialog";
+import DepartmentFilter from "../../../components/departmentFilter";
+import SetSpecializationDialog, { type PlacementKind } from "../../../components/setSpecializationDialog";
 import SpecializationFilter from "../../../components/specializationFilter";
 import useAuth from "../../../auth/useAuth";
 import useFaculties from "../../../hooks/useFaculties";
 import {
 	deleteCurriculum,
 	fetchCurriculums,
+	setCurriculumDepartment,
 	setCurriculumSpecialization,
 } from "../../../api/curriculums";
 import { WITHOUT_SPECIALIZATION } from "../../../types/faculty";
 import { smallSecondaryButtonClass, submitButtonClass } from "../../../styles/form";
-import { specializationName } from "../../../utils/specializations";
+import { departmentName, specializationDepartmentId, specializationName } from "../../../utils/specializations";
 import type { Curriculum } from "../../../types/curriculum";
 import { SEMESTERS, STUDY_LEVELS } from "../../../utils/academicYears";
 import { REQUIREMENT_TYPES, type RequirementType } from "../../../types/requirementType";
@@ -51,9 +53,10 @@ const CurriculumList = ({ facultyId: fixedFacultyId, onAdd, onEdit, reloadKey = 
 	const [requirementType, setRequirementType] = useState<RequirementType | "">("");
 	const [search, setSearch] = useState("");
 	const [specializationId, setSpecializationId] = useState("");
+	const [departmentId, setDepartmentId] = useState("");
 	const [pendingDelete, setPendingDelete] = useState<Curriculum | null>(null);
-	// the major whose specialization is being set
-	const [settingFor, setSettingFor] = useState<Curriculum | null>(null);
+	// the major whose specialization or department is being set
+	const [settingFor, setSettingFor] = useState<{ curriculum: Curriculum; kind: PlacementKind } | null>(null);
 	const [ownReload, setOwnReload] = useState(0);
 
 	// a faculty's tab fixes it; otherwise a locked caller only ever sees their own
@@ -68,6 +71,7 @@ const CurriculumList = ({ facultyId: fixedFacultyId, onAdd, onEdit, reloadKey = 
 			semester: semester ? Number(semester) : undefined,
 			requirementType: requirementType || undefined,
 			specializationId: specializationId || undefined,
+			departmentId: departmentId || undefined,
 			q: search.trim() || undefined,
 		})
 			.then((rows) => {
@@ -91,6 +95,7 @@ const CurriculumList = ({ facultyId: fixedFacultyId, onAdd, onEdit, reloadKey = 
 		semester,
 		requirementType,
 		specializationId,
+		departmentId,
 		search,
 		reloadKey,
 		ownReload,
@@ -98,10 +103,18 @@ const CurriculumList = ({ facultyId: fixedFacultyId, onAdd, onEdit, reloadKey = 
 
 	const hasSpecializations = (id: string) =>
 		(faculties.find((f) => f.id === id)?.specializations.length ?? 0) > 0;
-	// majors still waiting for a specialization, in what's listed
+	const hasDepartments = (id: string) => (faculties.find((f) => f.id === id)?.departments.length ?? 0) > 0;
+	// majors still waiting for a specialization or department, in what's listed
 	const missing = curriculums.filter(
-		(c) => c.requirementType === "major" && !c.specializationId && hasSpecializations(c.facultyId),
+		(c) =>
+			c.requirementType === "major" &&
+			!c.specializationId &&
+			!c.departmentId &&
+			(hasSpecializations(c.facultyId) || hasDepartments(c.facultyId)),
 	).length;
+	const showDepartments = effectiveFacultyId
+		? hasDepartments(effectiveFacultyId)
+		: faculties.some((f) => f.departments.length > 0);
 
 	const facultyName = (id: string) => faculties.find((f) => f.id === id)?.name[lang] ?? "";
 
@@ -135,6 +148,20 @@ const CurriculumList = ({ facultyId: fixedFacultyId, onAdd, onEdit, reloadKey = 
 			// curriculums from before requirement types have none recorded
 			render: (c) => (c.requirementType ? t(`requirementTypes.${c.requirementType}`) : t("curriculumList.notSet")),
 		},
+		...(showDepartments
+			? [
+					{
+						key: "department",
+						header: t("department.label"),
+						render: (c: Curriculum) => {
+							// only a major belongs to a department; the rest are shared by the faculty
+							if (c.requirementType !== "major") return t("specialization.shared");
+							const id = c.departmentId ?? specializationDepartmentId(faculties, c.specializationId);
+							return id ? departmentName(faculties, id, lang) : "—";
+						},
+					},
+				]
+			: []),
 		{
 			key: "specialization",
 			header: t("specialization.label"),
@@ -142,16 +169,27 @@ const CurriculumList = ({ facultyId: fixedFacultyId, onAdd, onEdit, reloadKey = 
 				// only a major belongs to a specialization; the rest are shared by the faculty
 				if (c.requirementType !== "major") return t("specialization.shared");
 				if (c.specializationId) return specializationName(faculties, c.specializationId, lang);
+				// a department's major is taken by all its students, whatever their specialization
+				if (c.departmentId) return t("department.wholeDepartment");
 				// once it's set, the edit form is where it changes
-				return hasSpecializations(c.facultyId) ? (
-					<button
-						type="button"
-						onClick={() => setSettingFor(c)}
-						aria-label={t("specialization.setFor", { name: c.name[lang] })}
-						className={`whitespace-nowrap ${smallSecondaryButtonClass}`}
-					>
-						{t("specialization.set")}
-					</button>
+				const actions: PlacementKind[] = [
+					...(hasDepartments(c.facultyId) ? (["department"] as const) : []),
+					...(hasSpecializations(c.facultyId) ? (["specialization"] as const) : []),
+				];
+				return actions.length ? (
+					<div className="flex flex-wrap gap-2">
+						{actions.map((kind) => (
+							<button
+								key={kind}
+								type="button"
+								onClick={() => setSettingFor({ curriculum: c, kind })}
+								aria-label={t(`${kind}.setFor`, { name: c.name[lang] })}
+								className={`whitespace-nowrap ${smallSecondaryButtonClass}`}
+							>
+								{t(`${kind}.set`)}
+							</button>
+						))}
+					</div>
 				) : (
 					"—"
 				);
@@ -232,6 +270,7 @@ const CurriculumList = ({ facultyId: fixedFacultyId, onAdd, onEdit, reloadKey = 
 							setFacultyId(id);
 							// a specialization belongs to its faculty
 							setSpecializationId("");
+							setDepartmentId("");
 						}}
 						allLabel={t("curriculumList.allFaculties")}
 						options={faculties.map((f) => ({ value: f.id, label: f.name[lang] }))}
@@ -261,6 +300,13 @@ const CurriculumList = ({ facultyId: fixedFacultyId, onAdd, onEdit, reloadKey = 
 					onChange={(v) => setRequirementType(v as RequirementType | "")}
 					allLabel={t("curriculumList.allRequirementTypes")}
 					options={REQUIREMENT_TYPES.map((r) => ({ value: r, label: t(`requirementTypes.${r}`) }))}
+				/>
+				<DepartmentFilter
+					id={embedded ? "facultyCurriculumDepartment" : undefined}
+					faculties={faculties}
+					facultyId={effectiveFacultyId}
+					value={departmentId}
+					onChange={setDepartmentId}
 				/>
 				<SpecializationFilter
 					id={embedded ? "facultyCurriculumSpecialization" : undefined}
@@ -314,20 +360,28 @@ const CurriculumList = ({ facultyId: fixedFacultyId, onAdd, onEdit, reloadKey = 
 			{settingFor && (
 				<SetSpecializationDialog
 					open
-					title={t("specialization.setFor", { name: settingFor.name[lang] })}
+					kind={settingFor.kind}
+					title={t(`${settingFor.kind}.setFor`, { name: settingFor.curriculum.name[lang] })}
 					faculties={faculties}
-					facultyId={settingFor.facultyId}
+					facultyId={settingFor.curriculum.facultyId}
 					targets={[
 						{
-							id: settingFor.id,
-							name: settingFor.name[lang],
-							specializationId: settingFor.specializationId,
+							id: settingFor.curriculum.id,
+							name: settingFor.curriculum.name[lang],
+							current:
+								settingFor.kind === "department"
+									? settingFor.curriculum.departmentId
+									: settingFor.curriculum.specializationId,
 						},
 					]}
 					allowNone={false}
 					onSave={async (value, confirmOrphans) => {
 						if (!value) return;
-						await setCurriculumSpecialization(settingFor.id, value, confirmOrphans);
+						if (settingFor.kind === "department") {
+							await setCurriculumDepartment(settingFor.curriculum.id, value, confirmOrphans);
+						} else {
+							await setCurriculumSpecialization(settingFor.curriculum.id, value, confirmOrphans);
+						}
 						setOwnReload((k) => k + 1);
 					}}
 					onClose={() => setSettingFor(null)}
