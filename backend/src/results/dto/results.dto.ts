@@ -76,6 +76,11 @@ export class ResultHeaderDto {
   @IsObject()
   remarks?: Record<string, string>;
 
+  /** Words added after students' names on this result, by student id; checked when saved. */
+  @IsOptional()
+  @IsObject()
+  nameAdditions?: Record<string, string>;
+
   /** The dates are optional and typed by hand; left out or blank, they print as dots to write in. */
   @IsOptional()
   @IsString()

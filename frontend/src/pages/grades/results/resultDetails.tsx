@@ -43,7 +43,6 @@ import { editableHeader, headerDefaults, withoutDates, type HeaderSuggestions } 
 import { departmentName, placementName } from "../../../utils/specializations";
 import { generateError } from "../../../utils/resultErrors";
 import { orderSheet, type StudentOrder } from "../../../utils/studentOrder";
-import type { RemarkChoices } from "../../../utils/remarks";
 
 const NO_SUGGESTIONS: HeaderSuggestions = {
 	degree: [],
@@ -57,12 +56,21 @@ const NO_SUGGESTIONS: HeaderSuggestions = {
 
 // header fields in a fixed order, so an edit is told apart from jsonb's key order
 const sameHeader = (a: ResultHeader, b: ResultHeader) =>
-	(Object.keys({ ...a, ...b }) as (keyof ResultHeader)[]).every((k) =>
-		k === "remarks" ? sameRemarks(a.remarks ?? {}, b.remarks ?? {}) : (a[k] ?? "") === (b[k] ?? ""),
-	);
+	(Object.keys({ ...a, ...b }) as (keyof ResultHeader)[]).every((k) => {
+		if (k === "remarks") return sameEntries(a.remarks ?? {}, b.remarks ?? {}, (v) => v);
+		if (k === "nameAdditions") return sameEntries(a.nameAdditions ?? {}, b.nameAdditions ?? {}, (v) => v?.trim() ?? "");
+		return (a[k] ?? "") === (b[k] ?? "");
+	});
 
-const sameRemarks = (a: RemarkChoices, b: RemarkChoices) =>
-	Object.keys({ ...a, ...b }).every((id) => a[id] === b[id]);
+/**
+ * Whether every student has the same entry. A remark left blank is not the
+ * automatic one, so remarks compare as they are; an empty name addition is none.
+ */
+const sameEntries = (
+	a: Record<string, string>,
+	b: Record<string, string>,
+	value: (entry: string | undefined) => string | undefined,
+) => Object.keys({ ...a, ...b }).every((id) => value(a[id]) === value(b[id]));
 
 /**
  * One batch's results for a semester. Pending board results can be exported,
@@ -475,6 +483,7 @@ const ResultDetails = () => {
 				<div className="mb-3 flex flex-col gap-1 text-body-sm">
 					<p className="text-primary-hover">{t("results.headerHint")}</p>
 					<p className="text-primary-hover">{t("results.remarksHint")}</p>
+					<p className="text-primary-hover">{t("results.nameAdditionHint")}</p>
 					{/* §39 — said in words, not by colour alone */}
 					{headerEdited && (
 						<p role="status" className="font-medium text-accent-deep">
@@ -499,7 +508,7 @@ const ResultDetails = () => {
 					</div>
 				)}
 				<ResultTable
-					sheet={orderSheet(result.sheet, order)}
+					sheet={orderSheet(result.sheet, order, result.studentAcceptanceYears)}
 					version={pending ? "board" : version}
 					// a pending result's remarks are edited with its header; an approved one prints what it saved
 					remarks={pending && header ? header.remarks : result.header.remarks}
@@ -513,6 +522,17 @@ const ResultDetails = () => {
 										setHeader({ ...header, remarks });
 									},
 									label: (s) => t("results.remarkFor", { name: s.name }),
+								}
+							: undefined
+					}
+					nameAdditions={pending && header ? header.nameAdditions : result.header.nameAdditions}
+					nameEditing={
+						pending && header
+							? {
+									onChange: (student, addition) =>
+										setHeader({ ...header, nameAdditions: { ...header.nameAdditions, [student.id]: addition } }),
+									label: (s) => t("results.nameAdditionFor", { name: s.name }),
+									placeholder: t("results.nameAdditionPlaceholder"),
 								}
 							: undefined
 					}

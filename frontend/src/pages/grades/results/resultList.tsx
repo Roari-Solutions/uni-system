@@ -15,7 +15,11 @@ import EditGradeDialog, { type GradeEdit } from "../../../components/editGradeDi
 import FilterSelect from "../../../components/filterSelect";
 import ResultHeaderForm, { ResultSignaturesForm } from "../../../components/results/resultHeaderForm";
 import ResultStatusTag from "../../../components/results/resultStatusTag";
-import ResultTable, { type RemarkEditing, type ResultTableEditing } from "../../../components/results/resultTable";
+import ResultTable, {
+	type NameEditing,
+	type RemarkEditing,
+	type ResultTableEditing,
+} from "../../../components/results/resultTable";
 import StudentOrderSelect from "../../../components/studentOrderSelect";
 import useFaculties from "../../../hooks/useFaculties";
 import { createGrade, updateGrade } from "../../../api/grades";
@@ -490,6 +494,17 @@ const ResultList = () => {
 				}
 			: undefined;
 
+	// and words added after a name, printed on this result only
+	const nameEditing: NameEditing | undefined =
+		canGenerate && header
+			? {
+					onChange: (student, addition) =>
+						setHeaderDraft({ ...header, nameAdditions: { ...header.nameAdditions, [student.id]: addition } }),
+					label: (s) => t("results.nameAdditionFor", { name: s.name }),
+					placeholder: t("results.nameAdditionPlaceholder"),
+				}
+			: undefined;
+
 	const editingGrade = editing ? gradeOf(editing.student.id, editing.course.curriculumId) : null;
 	const cellName = (target: CellEdit) =>
 		`${target.student.name} · ${target.course.code ?? target.course.sNo}`;
@@ -793,6 +808,7 @@ const ResultList = () => {
 									<div className="flex flex-col gap-1 text-body-sm text-primary-hover">
 										{canGenerate && <p>{t("results.headerHint")}</p>}
 										{canGenerate && <p>{t("results.remarksHint")}</p>}
+										{canGenerate && <p>{t("results.nameAdditionHint")}</p>}
 										<p>{t("results.previewHint")}</p>
 									</div>
 									<StudentOrderSelect id="previewOrder" value={order} onChange={setOrder} />
@@ -812,11 +828,13 @@ const ResultList = () => {
 										</div>
 									)}
 									<ResultTable
-										sheet={orderSheet(preview.sheet, order)}
+										sheet={orderSheet(preview.sheet, order, preview.studentAcceptanceYears)}
 										version="board"
 										editing={tableEditing}
 										remarks={header?.remarks}
 										remarkEditing={remarkEditing}
+										nameAdditions={header?.nameAdditions}
+										nameEditing={nameEditing}
 									/>
 									{/* and who signs, where they sign: below the sheet */}
 									{canGenerate && headerSuggestions && header && (

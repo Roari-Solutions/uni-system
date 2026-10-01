@@ -22,6 +22,10 @@ export const sheetTitle = (semester: number, kind: ResultKind) => {
 	return `(${term}${kind === "resit" ? " Sup & Sub" : ""} Examinations Result)`;
 };
 
+/** A student's name as the sheet prints it: with anything added to it on this result. */
+export const printedName = (name: string, addition: string | undefined) =>
+	addition?.trim() ? `${name} ${addition.trim()}` : name;
+
 /** Who signs every page, each with the header field that may name them. */
 export const SIGNATORIES = [
 	{ field: "examinationOfficer", role: "Examination Officer's" },

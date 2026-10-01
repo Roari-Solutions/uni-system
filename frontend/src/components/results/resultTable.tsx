@@ -8,7 +8,7 @@ import type {
 } from "../../types/result";
 import { autoRemark, remarkOf, remarkText, type RemarkChoices } from "../../utils/remarks";
 import RemarkPicker from "./remarkPicker";
-import { cellText, totalsText } from "../../utils/resultText";
+import { cellText, printedName, totalsText } from "../../utils/resultText";
 
 /**
  * Makes the preview editable. The sheet itself stays English; these labels are
@@ -32,6 +32,13 @@ export type RemarkEditing = {
 	label: (student: ResultStudent) => string;
 };
 
+/** While a result can still change: words added after each student's name. */
+export type NameEditing = {
+	onChange: (student: ResultStudent, addition: string) => void;
+	label: (student: ResultStudent) => string;
+	placeholder: string;
+};
+
 type ResultTableProps = {
 	sheet: ResultSheet;
 	version: ResultVersion;
@@ -39,6 +46,9 @@ type ResultTableProps = {
 	/** Each student's chosen remark; undefined on results from before remarks, which print none. */
 	remarks?: RemarkChoices;
 	remarkEditing?: RemarkEditing;
+	/** Words added after each student's name on this result, by student id. */
+	nameAdditions?: Record<string, string>;
+	nameEditing?: NameEditing;
 	/** The S.No. of the first row; a printed page after the first carries on from the last. */
 	firstNumber?: number;
 };
@@ -57,7 +67,16 @@ const failedCell = "bg-accent-soft font-bold";
  * semester sheet, and an empty Remarks column. Always English and LTR: it is
  * the exported document, whatever language the dashboard is in.
  */
-const ResultTable = ({ sheet, version, editing, remarks, remarkEditing, firstNumber = 1 }: ResultTableProps) => {
+const ResultTable = ({
+	sheet,
+	version,
+	editing,
+	remarks,
+	remarkEditing,
+	nameAdditions,
+	nameEditing,
+	firstNumber = 1,
+}: ResultTableProps) => {
 	const yearSheet = sheet.semester === 2;
 	// a second-semester sheet ends with the CGPA; one generated before the CGPA was
 	// printed keeps the year's CH, GP and GPA it was approved with
@@ -143,7 +162,29 @@ const ResultTable = ({ sheet, version, editing, remarks, remarkEditing, firstNum
 						<tr key={student.id} className="break-inside-avoid">
 							<td className={cell}>{firstNumber + index}</td>
 							<td className={`${cell} text-start font-semibold`}>{student.uniNumber}</td>
-							<td className={`${cell} text-start font-semibold`}>{student.name}</td>
+							<td className={`${cell} text-start font-semibold`}>
+								{nameEditing ? (
+									// the name stays as it is; what's typed beside it prints after it
+									<span className="flex flex-wrap items-center gap-1">
+										<span>{student.name}</span>
+										<input
+											type="text"
+											dir="ltr"
+											lang="en"
+											maxLength={100}
+											autoComplete="off"
+											aria-label={nameEditing.label(student)}
+											title={nameEditing.label(student)}
+											placeholder={nameEditing.placeholder}
+											value={nameAdditions?.[student.id] ?? ""}
+											onChange={(e) => nameEditing.onChange(student, e.target.value)}
+											className="h-6 min-w-14 max-w-full rounded-xs border border-dashed border-border bg-transparent px-1 text-[10px] font-semibold text-accent-deep outline-none transition-colors duration-150 ease-out field-sizing-content placeholder:font-normal placeholder:text-primary-hover hover:border-border-accent focus:border-solid focus:border-primary focus:ring-2 focus:ring-primary/25"
+										/>
+									</span>
+								) : (
+									printedName(student.name, nameAdditions?.[student.id])
+								)}
+							</td>
 							{student.cells.map((c, i) => {
 								const { text, failed } = cellText(c, version, sheet.kind);
 								const course = sheet.courses[i];

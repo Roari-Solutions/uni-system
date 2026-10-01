@@ -304,6 +304,7 @@ const ResultDocument = ({ header, sheet, version }: ResultDocumentProps) => {
 						sheet={{ ...sheet, students }}
 						version={version}
 						remarks={header.remarks}
+						nameAdditions={header.nameAdditions}
 						firstNumber={i * STUDENTS_PER_PAGE + 1}
 					/>
 					<Signatures header={header} />

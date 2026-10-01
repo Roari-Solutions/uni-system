@@ -34,8 +34,21 @@ export const orderStudents = <T>(
 	});
 };
 
-/** The sheet with its students in the chosen order; the sheet's names are English. */
-export const orderSheet = (sheet: ResultSheet, order: StudentOrder): ResultSheet => ({
-	...sheet,
-	students: orderStudents(sheet.students, order, "en", (s) => s),
-});
+/**
+ * The sheet with its students in the chosen order; the sheet's names are
+ * English. A sheet covering more than one acceptance year lists each year's
+ * students together, the earliest year first, each group in the chosen order
+ * (2023's by number or name, then 2024's). A student whose year isn't known
+ * comes last.
+ */
+export const orderSheet = (
+	sheet: ResultSheet,
+	order: StudentOrder,
+	acceptanceYears?: Record<string, string>,
+): ResultSheet => {
+	const ordered = orderStudents(sheet.students, order, "en", (s) => s);
+	if (!acceptanceYears) return { ...sheet, students: ordered };
+	// the sort is stable, so each year's group keeps the chosen order
+	const yearOf = (id: string) => acceptanceYears[id] ?? "\uffff";
+	return { ...sheet, students: ordered.sort((a, b) => yearOf(a.id).localeCompare(yearOf(b.id))) };
+};

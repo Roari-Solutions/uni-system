@@ -106,6 +106,11 @@ export interface ResultView extends ResultSummaryView {
   sheet: ResultSheet;
   /** Pending only: the grades have changed since the sheet was generated. */
   stale: boolean;
+  /**
+   * Each student's acceptance year, by id, read from their record (not frozen
+   * into the sheet): the views list the years' groups in ascending order.
+   */
+  studentAcceptanceYears: Record<string, string>;
 }
 
 /** The grade row behind one cell, so the preview can edit it in place. */
@@ -127,6 +132,8 @@ export interface ResultPreviewView {
   excluded: { id: string; uniNumber: string; name: string }[];
   /** The acceptance years of the students on the sheet, oldest first; they name the batch. */
   acceptanceYears: string[];
+  /** Each student's acceptance year, by id, so the views group the students by year. */
+  studentAcceptanceYears: Record<string, string>;
 }
 
 /** A cell that may take a Sup & Sub re-exam, with what it holds now. */
@@ -143,6 +150,30 @@ export interface ResitCandidateView {
   letter: LetterGrade | null;
   kind: ResitView['kind'];
   resit: ResitView | null;
+}
+
+/** The longest addition to a name, like the header's other typed lines. */
+const NAME_ADDITION_MAX = 100;
+
+/**
+ * Words added after students' names, trimmed and kept only for students on
+ * the sheet; an empty one is dropped. Anything but text, or too long, is a bad request.
+ */
+function nameAdditionsFor(
+  sent: Record<string, string> | undefined,
+  sheet: ResultSheet,
+): Record<string, string> | undefined {
+  if (sent === undefined) return undefined;
+  const onSheet = new Set(sheet.students.map((s) => s.id));
+  const kept: Record<string, string> = {};
+  for (const [studentId, addition] of Object.entries(sent)) {
+    if (typeof addition !== 'string' || addition.length > NAME_ADDITION_MAX) {
+      throw new BadRequestException({ code: 'INVALID_NAME_ADDITION' });
+    }
+    const trimmed = addition.trim();
+    if (trimmed && onSheet.has(studentId)) kept[studentId] = trimmed;
+  }
+  return kept;
 }
 
 /**
@@ -593,6 +624,19 @@ export class ResultsService {
     }
   }
 
+  /** The acceptance year of each student on a sheet, by id, as their records hold it. */
+  private async acceptanceYearsOf(
+    sheet: ResultSheet,
+  ): Promise<Record<string, string>> {
+    const ids = sheet.students.map((s) => s.id);
+    if (!ids.length) return {};
+    const rows = await this.db.query.students.findMany({
+      where: inArray(students.id, ids),
+      columns: { id: true, acceptanceYear: true },
+    });
+    return Object.fromEntries(rows.map((r) => [r.id, r.acceptanceYear]));
+  }
+
   /** One result with its sheet; a pending one says whether the grades moved since. */
   async getResult(id: string, caller: GrCaller): Promise<ResultView> {
     try {
@@ -601,6 +645,7 @@ export class ResultsService {
         ...this.summaryOf(row),
         sheet: row.sheet,
         stale: await this.isStale(row),
+        studentAcceptanceYears: await this.acceptanceYearsOf(row.sheet),
       };
     } catch (error) {
       this.fail(`Failed to read result: ${id}`, error);
@@ -659,12 +704,7 @@ export class ResultsService {
         batch.academicYear,
         batch.semester,
       );
-      const years = studentIds.length
-        ? await this.db
-            .selectDistinct({ year: students.acceptanceYear })
-            .from(students)
-            .where(inArray(students.id, studentIds))
-        : [];
+      const studentAcceptanceYears = await this.acceptanceYearsOf(sheet);
       return {
         sheet,
         grades: Object.fromEntries(
@@ -680,7 +720,10 @@ export class ResultsService {
         ),
         lockedStudentIds: [...locked],
         excluded,
-        acceptanceYears: years.map((y) => y.year).sort(),
+        acceptanceYears: [
+          ...new Set(Object.values(studentAcceptanceYears)),
+        ].sort(),
+        studentAcceptanceYears,
       };
     } catch (error) {
       this.fail('Failed to preview result', error);
@@ -737,6 +780,7 @@ export class ResultsService {
 
       const sheet = await this.buildSheet(batch, dto.kind, excluded);
       const remarks = remarksFor(dto.header.remarks, sheet);
+      const nameAdditions = nameAdditionsFor(dto.header.nameAdditions, sheet);
       const header: ResultHeader = {
         // left out when not sent, so the sheet prints the default
         ...(dto.header.degree !== undefined
@@ -748,6 +792,7 @@ export class ResultsService {
           : {}),
         // the remarks chosen on the sheet, when sent; older results have none
         ...(remarks ? { remarks } : {}),
+        ...(nameAdditions ? { nameAdditions } : {}),
         // the signers' names, when sent; older results have none
         ...Object.fromEntries(
           (['examinationOfficer', 'collegeRegistrar', 'dean'] as const)
@@ -796,7 +841,12 @@ export class ResultsService {
         `${existing ? 'Regenerated' : 'Generated'} ${dto.kind} result ${saved.id} ` +
           `(${sheet.students.length} students)`,
       );
-      return { ...this.summaryOf(saved), sheet: saved.sheet, stale: false };
+      return {
+        ...this.summaryOf(saved),
+        sheet: saved.sheet,
+        stale: false,
+        studentAcceptanceYears: await this.acceptanceYearsOf(saved.sheet),
+      };
     } catch (error) {
       this.fail('Failed to generate result', error);
     }
@@ -827,6 +877,7 @@ export class ResultsService {
         ...this.summaryOf(approved),
         sheet: approved.sheet,
         stale: false,
+        studentAcceptanceYears: await this.acceptanceYearsOf(approved.sheet),
       };
     } catch (error) {
       this.fail(`Failed to approve result: ${id}`, error);

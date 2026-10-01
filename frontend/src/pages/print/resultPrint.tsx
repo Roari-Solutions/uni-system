@@ -145,7 +145,7 @@ const ResultPrint = () => {
 					header={
 						result.status === "approved" ? result.header : { ...result.header, remarks: result.header.remarks ?? {} }
 					}
-					sheet={orderSheet(result.sheet, order)}
+					sheet={orderSheet(result.sheet, order, result.studentAcceptanceYears)}
 					version={version}
 				/>
 			</div>

@@ -24,6 +24,8 @@ export type ResultHeader = {
 	// each student's remark chosen on the sheet, by student id ("" leaves it blank); the others get
 	// the automatic one. Absent on results from before remarks, which keep a blank column.
 	remarks?: RemarkChoices;
+	// words added after a student's name on this result only (e.g. "(Readmitted)"), by student id
+	nameAdditions?: Record<string, string>;
 	academicYearLabel: string;
 	examDate: string;
 	collegeBoardDate: string;
@@ -129,6 +131,8 @@ export type Result = ResultSummary & {
 	sheet: ResultSheet;
 	// pending only: the grades changed since the sheet was generated
 	stale: boolean;
+	// each student's acceptance year, by id: the sheet lists the years' groups in ascending order
+	studentAcceptanceYears?: Record<string, string>;
 };
 
 // the grade row behind one cell of a preview, so it can be edited in place
@@ -150,6 +154,8 @@ export type ResultPreview = {
 	excluded: { id: string; uniNumber: string; name: string }[];
 	// the acceptance years of the students on the sheet, oldest first; they name the batch
 	acceptanceYears: string[];
+	// each student's acceptance year, by id, as on a generated result
+	studentAcceptanceYears?: Record<string, string>;
 };
 
 // a cell that may take a Sup & Sub re-exam

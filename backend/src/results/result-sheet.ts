@@ -53,6 +53,8 @@ export interface ResultHeader {
    * the automatic remark. Absent on results from before remarks.
    */
   remarks?: Record<string, RemarkCode | ''>;
+  /** Words printed after a student's name on this result only, by student id. */
+  nameAdditions?: Record<string, string>;
   examDate: string;
   collegeBoardDate: string;
   centralBoardDate: string;

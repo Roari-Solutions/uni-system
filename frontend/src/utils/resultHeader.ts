@@ -32,6 +32,7 @@ export const editableHeader = (header: ResultHeader): ResultHeader => ({
 	dean: header.dean ?? "",
 	// a result from before remarks gets them once it is edited and regenerated
 	remarks: header.remarks ?? {},
+	nameAdditions: header.nameAdditions ?? {},
 	examDate: dateText(header.examDate),
 	collegeBoardDate: dateText(header.collegeBoardDate),
 	centralBoardDate: dateText(header.centralBoardDate),
@@ -78,7 +79,7 @@ export const headerDefaults = ({
 }: HeaderContext): { initial: ResultHeader; suggestions: HeaderSuggestions } => {
 	const now = new Date();
 	const sameLevel = previous.filter((r) => r.academicYear === level);
-	const pick = (rows: ResultSummary[], field: Exclude<keyof ResultHeader, "remarks">) =>
+	const pick = (rows: ResultSummary[], field: Exclude<keyof ResultHeader, "remarks" | "nameAdditions">) =>
 		rows.map((r) => r.header[field] ?? "").find((v) => v.trim()) ?? "";
 
 	const year = now.getFullYear();
@@ -94,6 +95,7 @@ export const headerDefaults = ({
 			collegeRegistrar: "",
 			dean: "",
 			remarks: {},
+			nameAdditions: {},
 			academicYearLabel: academicYear,
 			examDate: "",
 			collegeBoardDate: "",
