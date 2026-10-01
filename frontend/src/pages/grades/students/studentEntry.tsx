@@ -6,10 +6,11 @@ import axios from "axios";
 import ConfirmDialog from "../../../components/confirmDialog";
 import FacultyField from "../../../components/facultyField";
 import FormField from "../../../components/formField";
+import DepartmentField from "../../../components/departmentField";
 import SpecializationField from "../../../components/specializationField";
 import useFaculties from "../../../hooks/useFaculties";
 import { conflictCode } from "../../../utils/apiError";
-import { specializationName } from "../../../utils/specializations";
+import { placementName, specializationDepartmentId } from "../../../utils/specializations";
 import {
 	createStudent,
 	fetchStudent,
@@ -42,6 +43,8 @@ const studentSchema = z.object({
 	facultyId: z.string().min(1, REQUIRED),
 	// optional: "" is no specialization
 	specializationId: z.string(),
+	// optional: "" is no department
+	departmentId: z.string(),
 });
 
 type StudentForm = z.input<typeof studentSchema>;
@@ -59,6 +62,7 @@ const EMPTY_FORM: StudentForm = {
 	level: "",
 	facultyId: "",
 	specializationId: "",
+	departmentId: "",
 };
 
 /** Adds a student, or edits one when the route carries its id. */
@@ -69,9 +73,10 @@ const StudentEntry = () => {
 	const { studentId } = useParams();
 	const editing = studentId !== undefined;
 	const { faculties } = useFaculties();
-	// the specialization as stored, so a change to it is reviewed before saving
+	// the specialization and department as stored, so a change to them is reviewed before saving
 	const [storedSpecialization, setStoredSpecialization] = useState<string | null>(null);
-	// a save waiting on its review: the specialization changes
+	const [storedDepartment, setStoredDepartment] = useState<string | null>(null);
+	// a save waiting on its review: the specialization or department changes
 	const [pendingReview, setPendingReview] = useState<StudentPayload | null>(null);
 
 	const [form, setForm] = useState<StudentForm>(EMPTY_FORM);
@@ -108,8 +113,10 @@ const StudentEntry = () => {
 					level: String(s.level),
 					facultyId: s.facultyId,
 					specializationId: s.specializationId ?? "",
+					departmentId: s.departmentId ?? "",
 				});
 				setStoredSpecialization(s.specializationId);
+				setStoredDepartment(s.departmentId);
 				setLoadState("ready");
 			})
 			.catch(() => {
@@ -125,12 +132,28 @@ const StudentEntry = () => {
 	};
 
 	// stable identity: FacultyField reports the locked faculty from an effect
-	// a specialization belongs to its faculty, so another faculty starts without one
+	// a specialization and department belong to their faculty, so another faculty starts without them
 	const setFacultyId = useCallback((facultyId: string) => {
 		setForm((prev) =>
-			prev.facultyId === facultyId ? prev : { ...prev, facultyId, specializationId: "" },
+			prev.facultyId === facultyId
+				? prev
+				: { ...prev, facultyId, specializationId: "", departmentId: "" },
 		);
 	}, []);
+
+	// the specializations offered follow the department, so one from elsewhere is dropped
+	const setDepartmentId = (departmentId: string) => {
+		setForm((prev) => ({
+			...prev,
+			departmentId,
+			specializationId:
+				prev.specializationId &&
+				(specializationDepartmentId(faculties, prev.specializationId) ?? "") === departmentId
+					? prev.specializationId
+					: "",
+		}));
+	};
+	const hasDepartments = !!faculties.find((f) => f.id === form.facultyId)?.departments.length;
 
 	const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
@@ -145,6 +168,7 @@ const StudentEntry = () => {
 		// on an edit a blank document number clears the stored one; omitting it would keep it
 		const documentNumber = result.data.documentNumber || (editing ? "" : undefined);
 		const specializationId = result.data.specializationId || null;
+		const departmentId = result.data.departmentId || null;
 		const payload: StudentPayload = {
 			// English is optional; omitting it makes the API store "-"
 			name: { ar: result.data.nameAr, en: result.data.nameEn || undefined },
@@ -159,9 +183,10 @@ const StudentEntry = () => {
 			level: result.data.level,
 			// on an edit null clears it; a new student simply goes without
 			...(editing || specializationId ? { specializationId } : {}),
+			...(editing || departmentId ? { departmentId } : {}),
 		};
-		// a new or changed specialization is reviewed before it's saved
-		if (specializationId !== storedSpecialization) {
+		// a new or changed specialization or department is reviewed before it's saved
+		if (specializationId !== storedSpecialization || departmentId !== storedDepartment) {
 			setPendingReview(payload);
 			return;
 		}
@@ -180,8 +205,13 @@ const StudentEntry = () => {
 				return;
 			}
 			await createStudent(payload);
-			// the next student is likely from the same faculty and specialization
-			setForm({ ...EMPTY_FORM, facultyId: form.facultyId, specializationId: form.specializationId });
+			// the next student is likely from the same faculty, department and specialization
+			setForm({
+				...EMPTY_FORM,
+				facultyId: form.facultyId,
+				specializationId: form.specializationId,
+				departmentId: form.departmentId,
+			});
 			setSaved(true);
 		} catch (error) {
 			const count = orphanedGradeCount(error);
@@ -310,9 +340,18 @@ const StudentEntry = () => {
 							error={errors.facultyId?.[0]}
 						/>
 
+						<DepartmentField
+							faculties={faculties}
+							facultyId={form.facultyId}
+							value={form.departmentId}
+							onChange={setDepartmentId}
+							hint={t("department.studentHint")}
+						/>
+
 						<SpecializationField
 							faculties={faculties}
 							facultyId={form.facultyId}
+							departmentId={form.departmentId}
 							value={form.specializationId}
 							onChange={(value) => setField("specializationId", value)}
 							allowNone
@@ -421,14 +460,18 @@ const StudentEntry = () => {
 			<ConfirmDialog
 				open={pendingReview !== null}
 				tone="primary"
-				title={t("specialization.reviewSaveTitle")}
-				message={t("specialization.reviewSaveMessage", {
-					from: storedSpecialization
-						? specializationName(faculties, storedSpecialization, lang)
-						: t("specialization.none"),
-					to: pendingReview?.specializationId
-						? specializationName(faculties, pendingReview.specializationId, lang)
-						: t("specialization.none"),
+				title={t(hasDepartments ? "department.reviewSaveTitle" : "specialization.reviewSaveTitle")}
+				message={t(hasDepartments ? "department.reviewSaveMessage" : "specialization.reviewSaveMessage", {
+					from:
+						placementName(faculties, storedDepartment, storedSpecialization, lang) ||
+						t(hasDepartments ? "department.noPlacement" : "specialization.none"),
+					to:
+						placementName(
+							faculties,
+							pendingReview?.departmentId ?? null,
+							pendingReview?.specializationId ?? null,
+							lang,
+						) || t(hasDepartments ? "department.noPlacement" : "specialization.none"),
 				})}
 				confirmLabel={t("specialization.save")}
 				cancelLabel={t("common.cancel")}

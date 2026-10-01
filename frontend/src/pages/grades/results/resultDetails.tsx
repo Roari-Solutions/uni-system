@@ -40,7 +40,7 @@ import {
 	submitButtonClass,
 } from "../../../styles/form";
 import { headerDefaults, type HeaderSuggestions } from "../../../utils/resultHeader";
-import { specializationName } from "../../../utils/specializations";
+import { departmentName, placementName } from "../../../utils/specializations";
 import { generateError } from "../../../utils/resultErrors";
 import { orderSheet, type StudentOrder } from "../../../utils/studentOrder";
 
@@ -89,7 +89,8 @@ const ResultDetails = () => {
 			(r) =>
 				r.kind !== row.kind &&
 				r.acceptanceYear === row.acceptanceYear &&
-				r.specializationId === row.specializationId,
+				r.specializationId === row.specializationId &&
+				r.departmentId === row.departmentId,
 		);
 		return { row, sibling: other ?? null, resits };
 	}, [resultId]);
@@ -144,7 +145,7 @@ const ResultDetails = () => {
 			facultyNameEn: faculties.find((f) => f.id === result.facultyId)?.name.en ?? "",
 			level: result.academicYear,
 			semester: result.semester,
-			specializationNameEn: result.sheet.specialization ?? undefined,
+			specializationNameEn: result.sheet.specialization ?? result.sheet.department,
 		});
 		setGenerating({ kind, header: result.header, suggestions });
 	};
@@ -171,6 +172,7 @@ const ResultDetails = () => {
 					academicYear: result.academicYear,
 					acceptanceYear: result.acceptanceYear ?? undefined,
 					specializationId: result.specializationId ?? undefined,
+					departmentId: result.departmentId ?? undefined,
 					semester: result.semester,
 					// a regeneration leaves off who it did; Sup & Sub follows the semester's result
 					excludedStudentIds: generating.kind === result.kind ? result.excludedStudentIds : undefined,
@@ -244,7 +246,13 @@ const ResultDetails = () => {
 				{result.specializationId && (
 					<>
 						<span aria-hidden>·</span>
-						<span>{specializationName(faculties, result.specializationId, lang)}</span>
+						<span>{placementName(faculties, null, result.specializationId, lang)}</span>
+					</>
+				)}
+				{result.departmentId && (
+					<>
+						<span aria-hidden>·</span>
+						<span>{t("department.resultFor", { name: departmentName(faculties, result.departmentId, lang) })}</span>
 					</>
 				)}
 				<span aria-hidden>·</span>

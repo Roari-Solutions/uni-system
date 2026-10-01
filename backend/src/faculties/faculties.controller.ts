@@ -14,26 +14,31 @@ import {
 import { AuthGuard } from 'src/auth/auth.guard';
 import { GrGurdGuard, type GrRequest } from 'src/gr-gurd/gr-gurd.guard';
 import { FacultiesService } from './faculties.service';
-import { SpecializationDto, UpdateFacultyDto } from './dto/faculties.dto';
+import {
+  DepartmentDto,
+  SpecializationDto,
+  UpdateFacultyDto,
+  UpdateSpecializationDto,
+} from './dto/faculties.dto';
 
-/** Faculties and their specializations (auth + faculty-scope guarded). */
+/** Faculties, their departments and their specializations (auth + faculty-scope guarded). */
 @Controller('gr/faculties')
 @UseGuards(AuthGuard, GrGurdGuard)
 export class FacultiesController {
   constructor(@Inject() private readonly facultiesService: FacultiesService) {}
 
-  /** GET /gr/faculties — options for every faculty and specialization select in the views. */
+  /** GET /gr/faculties — options for every faculty, department and specialization select in the views. */
   @Get()
   async GetAllFaculties(@Req() req: GrRequest) {
     return await this.facultiesService.listFaculties(req.grCaller);
   }
 
-  /** PATCH /gr/faculties/specializations/:id — renames a specialization. */
+  /** PATCH /gr/faculties/specializations/:id — renames a specialization or moves it to another department. */
   @Patch('specializations/:id')
   async UpdateSpecialization(
     @Req() req: GrRequest,
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: SpecializationDto,
+    @Body() dto: UpdateSpecializationDto,
   ) {
     return await this.facultiesService.updateSpecialization(
       id,
@@ -51,7 +56,26 @@ export class FacultiesController {
     return await this.facultiesService.deleteSpecialization(id, req.grCaller);
   }
 
-  /** GET /gr/faculties/:id — the faculty tab: details, specializations and what lacks one. */
+  /** PATCH /gr/faculties/departments/:id — renames a department. */
+  @Patch('departments/:id')
+  async UpdateDepartment(
+    @Req() req: GrRequest,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: DepartmentDto,
+  ) {
+    return await this.facultiesService.updateDepartment(id, dto, req.grCaller);
+  }
+
+  /** DELETE /gr/faculties/departments/:id — only while nothing uses it. */
+  @Delete('departments/:id')
+  async DeleteDepartment(
+    @Req() req: GrRequest,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return await this.facultiesService.deleteDepartment(id, req.grCaller);
+  }
+
+  /** GET /gr/faculties/:id — the faculty tab: details, departments, specializations and what lacks one. */
   @Get(':id')
   async GetFaculty(
     @Req() req: GrRequest,
@@ -82,5 +106,15 @@ export class FacultiesController {
       dto,
       req.grCaller,
     );
+  }
+
+  /** POST /gr/faculties/:id/departments — adds a department to the faculty. */
+  @Post(':id/departments')
+  async CreateDepartment(
+    @Req() req: GrRequest,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: DepartmentDto,
+  ) {
+    return await this.facultiesService.createDepartment(id, dto, req.grCaller);
   }
 }

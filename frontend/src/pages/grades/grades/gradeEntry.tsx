@@ -4,8 +4,9 @@ import { useTranslation } from "react-i18next";
 import { PencilSquareIcon } from "@heroicons/react/24/outline";
 import DataTable, { type Column } from "../../../components/dataTable";
 import FilterSelect from "../../../components/filterSelect";
+import DepartmentFilter from "../../../components/departmentFilter";
 import SpecializationFilter from "../../../components/specializationFilter";
-import { specializationName } from "../../../utils/specializations";
+import { placementName } from "../../../utils/specializations";
 import useFaculties from "../../../hooks/useFaculties";
 import { fetchCurriculums } from "../../../api/curriculums";
 import type { Curriculum } from "../../../types/curriculum";
@@ -25,6 +26,7 @@ const GradeEntry = () => {
 	const [academicYear, setAcademicYear] = useState("");
 	const [semester, setSemester] = useState("");
 	const [specializationId, setSpecializationId] = useState("");
+	const [departmentId, setDepartmentId] = useState("");
 
 	// a locked caller only ever sees their own faculty
 	const effectiveFacultyId = locked ? (lockedFacultyId ?? "") : facultyId;
@@ -37,6 +39,7 @@ const GradeEntry = () => {
 			academicYear: academicYear ? Number(academicYear) : undefined,
 			semester: semester ? Number(semester) : undefined,
 			specializationId: specializationId || undefined,
+			departmentId: departmentId || undefined,
 		})
 			.then((rows) => {
 				if (cancelled) return;
@@ -53,7 +56,7 @@ const GradeEntry = () => {
 		return () => {
 			cancelled = true;
 		};
-	}, [effectiveFacultyId, academicYear, semester, specializationId]);
+	}, [effectiveFacultyId, academicYear, semester, specializationId, departmentId]);
 
 	const facultyName = (id: string) => faculties.find((f) => f.id === id)?.name[lang] ?? "";
 
@@ -66,11 +69,11 @@ const GradeEntry = () => {
 		{
 			key: "specialization",
 			header: t("specialization.label"),
-			// only a major belongs to one; the rest are shared by the faculty
+			// only a major belongs to one (or to a department); the rest are shared by the faculty
 			render: (c) =>
 				c.requirementType !== "major"
 					? t("specialization.shared")
-					: specializationName(faculties, c.specializationId, lang) || "—",
+					: placementName(faculties, c.departmentId, c.specializationId, lang) || "—",
 		},
 		{
 			key: "actions",
@@ -102,8 +105,9 @@ const GradeEntry = () => {
 					value={effectiveFacultyId}
 					onChange={(id) => {
 						setFacultyId(id);
-						// a specialization belongs to its faculty
+						// a specialization and department belong to their faculty
 						setSpecializationId("");
+						setDepartmentId("");
 					}}
 					allLabel={t("gradeEntry.allFaculties")}
 					options={faculties.map((f) => ({ value: f.id, label: f.name[lang] }))}
@@ -124,6 +128,12 @@ const GradeEntry = () => {
 					onChange={setSemester}
 					allLabel={t("gradeEntry.allSemesters")}
 					options={SEMESTERS.map((s) => ({ value: String(s), label: t(`semesters.${s}`) }))}
+				/>
+				<DepartmentFilter
+					faculties={faculties}
+					facultyId={effectiveFacultyId}
+					value={departmentId}
+					onChange={setDepartmentId}
 				/>
 				<SpecializationFilter
 					faculties={faculties}

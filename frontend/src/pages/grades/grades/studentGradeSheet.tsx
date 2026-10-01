@@ -30,7 +30,7 @@ import { gradeSchema, markToSend, takesNoMark, voidsMark } from "../../../utils/
 import { conflictCode } from "../../../utils/apiError";
 import ResitNote from "../../../components/resitNote";
 import { adjacentRowId, focusField, focusRow } from "../../../utils/rowNav";
-import { specializationName } from "../../../utils/specializations";
+import { placementName } from "../../../utils/specializations";
 
 // what the row's fields hold, typed or loaded
 type Draft = { grade: string; seatingStatus: SeatingStatus };
@@ -417,9 +417,9 @@ const StudentGradeSheet = () => {
 					{" · "}
 					{t(`student.levels.${student.level}`)}
 					{" · "}
-					{student.specializationId && (
+					{(student.specializationId || student.departmentId) && (
 						<>
-							{specializationName(faculties, student.specializationId, lang)}
+							{placementName(faculties, student.departmentId, student.specializationId, lang)}
 							{" · "}
 						</>
 					)}

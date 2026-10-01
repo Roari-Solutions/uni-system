@@ -26,6 +26,14 @@ const FacultyIndex = () => {
 			render: (f) => <span dir="ltr">{f.abbreviation ?? "—"}</span>,
 		},
 		{
+			key: "departments",
+			header: t("faculty.columns.departments"),
+			render: (f) =>
+				f.departments.length
+					? f.departments.map((d) => d.name[lang]).join("، ")
+					: t("faculty.noDepartments"),
+		},
+		{
 			key: "specializations",
 			header: t("faculty.columns.specializations"),
 			render: (f) =>

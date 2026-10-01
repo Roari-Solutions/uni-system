@@ -528,7 +528,8 @@
       "faculty": "This row is outside your faculty",
       "acceptanceTypeUnknown": "This acceptance type matches none on record",
       "specializationUnknown": "This specialization matches none of the faculty's",
-      "specializationMismatch": "This specialization belongs to another faculty"
+      "specializationMismatch": "This specialization belongs to another faculty",
+      "departmentMismatch": "The department doesn't match the faculty or the specialization."
     }
   },
   "orphanedGrades": {
@@ -748,7 +749,8 @@
     "editFor": "Edit {{name}}",
     "deleteHint": "A specialization can be deleted only while no student or curriculum uses it.",
     "deleteTitle": "Delete specialization",
-    "deleteMessage": "Delete \"{{name}}\"? This can't be undone."
+    "deleteMessage": "Delete \"{{name}}\"? This can't be undone.",
+    "departmentHasNone": "This department has no specializations."
   },
   "faculty": {
     "title": "Faculties",
@@ -757,7 +759,8 @@
       "abbreviation": "Code",
       "specializations": "Specializations",
       "students": "Students",
-      "curriculums": "Curriculums"
+      "curriculums": "Curriculums",
+      "departments": "Departments"
     },
     "noSpecializations": "No specializations",
     "openFor": "Open {{name}}",
@@ -767,6 +770,7 @@
     "specializationCount": "Specializations: {{count}}",
     "tabs": {
       "details": "Details",
+      "departments": "Departments",
       "specializations": "Specializations",
       "curriculums": "Curriculums"
     },
@@ -785,6 +789,63 @@
     },
     "missingTitle": "Still without a specialization",
     "goToStudents": "Go to students",
-    "goToCurriculums": "Go to curriculums"
+    "goToCurriculums": "Go to curriculums",
+    "departmentCount": "Departments: {{count}}",
+    "noDepartments": "No departments",
+    "missingDepartmentTitle": "Still outside a department",
+    "goToSpecializations": "Go to specializations"
+  },
+  "department": {
+    "label": "Department",
+    "all": "All departments",
+    "without": "Outside every department",
+    "none": "No department",
+    "choose": "Choose a department",
+    "studentHint": "Optional. A student may join a department in any year; its major requirements count from then on. A specialization under a department puts the student in it.",
+    "majorHint": "Choose who takes this major: a department alone (all its students, whatever their specialization) or one specialization (only its students).",
+    "directlyUnderFaculty": "Directly under the faculty",
+    "wholeDepartment": "Whole department",
+    "wholeFaculty": "Whole faculty",
+    "noPlacement": "No department or specialization",
+    "placementLabel": "Department / specialization",
+    "resultFor": "{{name}}: students without a specialization",
+    "withoutResult": "Students outside every department and specialization",
+    "withoutSpecializationResult": "The department's students without a specialization",
+    "set": "Set department",
+    "setFor": "Set the department of {{name}}",
+    "setSelected": "Set department for the selected",
+    "saved": "Department saved for {{count}}.",
+    "savedWithSkips": "Saved for {{updated}}; {{skipped}} skipped (their specialization belongs elsewhere, they are dismissed, or their results are approved).",
+    "missingStudents": "Students outside every department: {{count}}.",
+    "directSpecializations": "Specializations directly under the faculty: {{count}}. If one belongs to a department, move it there; its students move with it.",
+    "reviewTitle": "Changes to save: {{count}}",
+    "becomes": "becomes",
+    "unchanged": "Already set, left as is: {{count}}",
+    "orphansMessage": "Grades in the majors of the department they leave (grades affected: {{count}}) are kept as history, but they will no longer count toward the GPA. Save anyway?",
+    "back": "Back",
+    "reviewAction": "Review",
+    "save": "Save department",
+    "reviewSaveTitle": "Review the department and specialization",
+    "reviewSaveMessage": "The student's department and specialization change from \"{{from}}\" to \"{{to}}\". They decide which major requirements count. Save?",
+    "majorReviewMessage": "Who takes this major changes from \"{{from}}\" to \"{{to}}\". Save?",
+    "moveHint": "The specialization's students move to the new department with it.",
+    "moveOrphans": "Moving this specialization moves its students too. Grades in the majors of the department they leave (grades affected: {{count}}) are kept as history, but they will no longer count toward the GPA. Move anyway?",
+    "errors": {
+      "locked": "This semester's results are approved, so the department can no longer change.",
+      "moveLocked": "Some of this specialization's students have approved results the move would change, so it can't move now.",
+      "audienceRequired": "Choose the department or the specialization that takes this major.",
+      "namesRequired": "Both names are required.",
+      "nameTaken": "This faculty already has a department with that name.",
+      "inUse": "Specializations, students, curriculums or results still use this department."
+    },
+    "nameAr": "Name (Arabic)",
+    "nameEn": "Name (English)",
+    "nameEnHint": "Printed on the results, which are in English.",
+    "add": "Add department",
+    "edit": "Edit department",
+    "editFor": "Edit {{name}}",
+    "deleteHint": "A department can be deleted only while no specialization, student or curriculum uses it.",
+    "deleteTitle": "Delete department",
+    "deleteMessage": "Delete \"{{name}}\"? This can't be undone."
   }
 }

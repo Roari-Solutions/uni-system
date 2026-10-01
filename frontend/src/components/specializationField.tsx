@@ -11,6 +11,12 @@ type SpecializationFieldProps = {
 	onChange: (value: string) => void;
 	/** Offers "no specialization" (students); a major must name one. */
 	allowNone: boolean;
+	/**
+	 * Where the faculty has departments: the department chosen beside it, whose
+	 * specializations are offered ("" for those directly under the faculty).
+	 * Omitted, every specialization of the faculty is offered.
+	 */
+	departmentId?: string;
 	/** An i18n key. */
 	error?: string;
 	/** Shown under the field, e.g. why it's asked for. */
@@ -25,12 +31,18 @@ const SpecializationField = ({
 	value,
 	onChange,
 	allowNone,
+	departmentId,
 	error,
 	hint,
 }: SpecializationFieldProps) => {
 	const { t, i18n } = useTranslation();
 	const lang = i18n.language === "ar" ? "ar" : "en";
-	const specs = faculties.find((f) => f.id === facultyId)?.specializations ?? [];
+	const faculty = faculties.find((f) => f.id === facultyId);
+	const specs = (faculty?.specializations ?? []).filter(
+		(spec) =>
+			departmentId === undefined || !faculty?.departments.length || spec.departmentId === (departmentId || null),
+	);
+	const empty = departmentId && faculty?.departments.length ? "specialization.departmentHasNone" : "specialization.facultyHasNone";
 
 	return (
 		<FormField id={id} label={t("specialization.label")} error={error}>
@@ -55,9 +67,7 @@ const SpecializationField = ({
 					</option>
 				))}
 			</select>
-			{facultyId && !specs.length && (
-				<p className="text-body-sm text-primary-hover">{t("specialization.facultyHasNone")}</p>
-			)}
+			{facultyId && !specs.length && <p className="text-body-sm text-primary-hover">{t(empty)}</p>}
 			{hint && <p className="text-body-sm text-primary-hover">{hint}</p>}
 		</FormField>
 	);

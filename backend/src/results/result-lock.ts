@@ -90,6 +90,7 @@ export async function resitsClosed(
       facultyId: results.facultyId,
       acceptanceYear: results.acceptanceYear,
       specializationId: results.specializationId,
+      departmentId: results.departmentId,
     })
     .from(resultStudents)
     .innerJoin(results, eq(results.id, resultStudents.resultId))
@@ -113,6 +114,9 @@ export async function resitsClosed(
         batch.specializationId
           ? eq(results.specializationId, batch.specializationId)
           : isNull(results.specializationId),
+        batch.departmentId
+          ? eq(results.departmentId, batch.departmentId)
+          : isNull(results.departmentId),
         eq(results.semester, semester),
         eq(results.kind, 'resit'),
         eq(results.status, 'approved'),
