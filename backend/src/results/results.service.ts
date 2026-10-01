@@ -50,6 +50,8 @@ import {
   totalsOf,
   yearTotalsOf,
   cumulativeGpaOf,
+  REMARK_CODES,
+  type RemarkCode,
   type CellState,
   type ResultCell,
   type ResultCourse,
@@ -141,6 +143,27 @@ export interface ResitCandidateView {
   letter: LetterGrade | null;
   kind: ResitView['kind'];
   resit: ResitView | null;
+}
+
+/**
+ * The remarks staff chose, kept only for students on the sheet. A value that
+ * isn't on the status key (or blank) is a bad request.
+ */
+function remarksFor(
+  sent: Record<string, string> | undefined,
+  sheet: ResultSheet,
+): Record<string, RemarkCode | ''> | undefined {
+  if (sent === undefined) return undefined;
+  const allowed = new Set<string>(['', ...REMARK_CODES]);
+  const onSheet = new Set(sheet.students.map((s) => s.id));
+  const kept: Record<string, RemarkCode | ''> = {};
+  for (const [studentId, code] of Object.entries(sent)) {
+    if (typeof code !== 'string' || !allowed.has(code)) {
+      throw new BadRequestException({ code: 'INVALID_REMARK' });
+    }
+    if (onSheet.has(studentId)) kept[studentId] = code as RemarkCode | '';
+  }
+  return kept;
 }
 
 /** How one stored grade row prints. No row, or one with no mark, is incomplete. */
@@ -713,6 +736,7 @@ export class ResultsService {
       }
 
       const sheet = await this.buildSheet(batch, dto.kind, excluded);
+      const remarks = remarksFor(dto.header.remarks, sheet);
       const header: ResultHeader = {
         // left out when not sent, so the sheet prints the default
         ...(dto.header.degree !== undefined
@@ -722,6 +746,8 @@ export class ResultsService {
         ...(dto.header.resultTitle !== undefined
           ? { resultTitle: dto.header.resultTitle.trim() }
           : {}),
+        // the remarks chosen on the sheet, when sent; older results have none
+        ...(remarks ? { remarks } : {}),
         // the signers' names, when sent; older results have none
         ...Object.fromEntries(
           (['examinationOfficer', 'collegeRegistrar', 'dean'] as const)

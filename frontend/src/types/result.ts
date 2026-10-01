@@ -1,3 +1,4 @@
+import type { RemarkChoices } from "../utils/remarks";
 import type { LetterGrade, Resit, SeatingStatus } from "./grade";
 import type { StudentStanding } from "./student";
 
@@ -20,6 +21,9 @@ export type ResultHeader = {
 	examinationOfficer?: string;
 	collegeRegistrar?: string;
 	dean?: string;
+	// each student's remark chosen on the sheet, by student id ("" leaves it blank); the others get
+	// the automatic one. Absent on results from before remarks, which keep a blank column.
+	remarks?: RemarkChoices;
 	academicYearLabel: string;
 	examDate: string;
 	collegeBoardDate: string;

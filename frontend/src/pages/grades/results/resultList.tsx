@@ -15,7 +15,7 @@ import EditGradeDialog, { type GradeEdit } from "../../../components/editGradeDi
 import FilterSelect from "../../../components/filterSelect";
 import ResultHeaderForm, { ResultSignaturesForm } from "../../../components/results/resultHeaderForm";
 import ResultStatusTag from "../../../components/results/resultStatusTag";
-import ResultTable, { type ResultTableEditing } from "../../../components/results/resultTable";
+import ResultTable, { type RemarkEditing, type ResultTableEditing } from "../../../components/results/resultTable";
 import StudentOrderSelect from "../../../components/studentOrderSelect";
 import useFaculties from "../../../hooks/useFaculties";
 import { createGrade, updateGrade } from "../../../api/grades";
@@ -476,6 +476,20 @@ const ResultList = () => {
 		removeHeader: t("results.removeColumn"),
 	};
 
+	// remarks are picked on the sheet until it is generated; they go with the header
+	const remarkEditing: RemarkEditing | undefined =
+		canGenerate && header
+			? {
+					onChange: (student, choice) => {
+						const remarks = { ...header.remarks };
+						if (choice === undefined) delete remarks[student.id];
+						else remarks[student.id] = choice;
+						setHeaderDraft({ ...header, remarks });
+					},
+					label: (s) => t("results.remarkFor", { name: s.name }),
+				}
+			: undefined;
+
 	const editingGrade = editing ? gradeOf(editing.student.id, editing.course.curriculumId) : null;
 	const cellName = (target: CellEdit) =>
 		`${target.student.name} · ${target.course.code ?? target.course.sNo}`;
@@ -778,6 +792,7 @@ const ResultList = () => {
 								<div className="mb-3 flex flex-wrap items-end justify-between gap-4">
 									<div className="flex flex-col gap-1 text-body-sm text-primary-hover">
 										{canGenerate && <p>{t("results.headerHint")}</p>}
+										{canGenerate && <p>{t("results.remarksHint")}</p>}
 										<p>{t("results.previewHint")}</p>
 									</div>
 									<StudentOrderSelect id="previewOrder" value={order} onChange={setOrder} />
@@ -796,7 +811,13 @@ const ResultList = () => {
 											/>
 										</div>
 									)}
-									<ResultTable sheet={orderSheet(preview.sheet, order)} version="board" editing={tableEditing} />
+									<ResultTable
+										sheet={orderSheet(preview.sheet, order)}
+										version="board"
+										editing={tableEditing}
+										remarks={header?.remarks}
+										remarkEditing={remarkEditing}
+									/>
 									{/* and who signs, where they sign: below the sheet */}
 									{canGenerate && headerSuggestions && header && (
 										<div className="mt-4">

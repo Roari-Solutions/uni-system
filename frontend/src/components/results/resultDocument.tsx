@@ -2,29 +2,10 @@ import type { ReactNode } from "react";
 import type { ResultHeader, ResultSheet, ResultVersion } from "../../types/result";
 import { DEFAULT_DEGREE } from "../../utils/resultHeader";
 import { dateText, levelText, sheetTitle, SIGNATORIES, versionText } from "../../utils/resultText";
+import { REMARKS } from "../../utils/remarks";
 import ResultTable from "./resultTable";
 
 // the printed keys, as on the university's sheet
-const ACADEMIC_STATUS: [string, string][] = [
-	["Crg", "Ceased Registration"],
-	["Cro", "Carry Over"],
-	["Dsc", "Discontinued"],
-	["Dsm", "Dismissed"],
-	["Frz", "Freeze"],
-	["Pas", "Pass"],
-	["Prm", "Promoted"],
-	["Rad", "Readmitted"],
-	["Rdo", "Redo"],
-	["Rej", "Rejected"],
-	["Rpt", "Repeated"],
-	["Rrg", "Re-registration"],
-	["Rst", "Resit"],
-	["Rtk", "Retake"],
-	["Sub", "Substitute"],
-	["Sup", "Supplementary"],
-	["Sus", "Suspension"],
-];
-
 const ACADEMIC_HISTORY: [string, string][] = [
 	["Ci", "Ceased Registration"],
 	["Ei", "Resit"],
@@ -77,7 +58,15 @@ const Fill = ({ value }: { value: string }) =>
 const Logo = () => <img src="/university-logo.jpg" alt="" className="size-36 shrink-0 object-contain" />;
 
 /** Two-column key tables split a list into symbol/meaning pairs side by side. */
-const PairedKey = ({ title, head, rows }: { title: string; head: [string, string]; rows: [string, string][] }) => {
+const PairedKey = ({
+	title,
+	head,
+	rows,
+}: {
+	title: string;
+	head: [string, string];
+	rows: readonly (readonly [string, string])[];
+}) => {
 	const half = Math.ceil(rows.length / 2);
 	const left = rows.slice(0, half);
 	const right = rows.slice(half);
@@ -288,7 +277,7 @@ const ResultDocument = ({ header, sheet, version }: ResultDocumentProps) => {
 						</div>
 
 						<div className="flex flex-col gap-3">
-							<PairedKey title="Academic Status Key" head={["Symbol", "Academic status"]} rows={ACADEMIC_STATUS} />
+							<PairedKey title="Academic Status Key" head={["Symbol", "Academic status"]} rows={REMARKS} />
 							<div>
 								<PairedKey
 									title="Academic History Key"
@@ -311,7 +300,12 @@ const ResultDocument = ({ header, sheet, version }: ResultDocumentProps) => {
 					<TitleBlock header={header} sheet={sheet} version={version} />
 					{/* without the cover, the final results carry the dates themselves */}
 					{version === "final" && <Dates header={header} />}
-					<ResultTable sheet={{ ...sheet, students }} version={version} firstNumber={i * STUDENTS_PER_PAGE + 1} />
+					<ResultTable
+						sheet={{ ...sheet, students }}
+						version={version}
+						remarks={header.remarks}
+						firstNumber={i * STUDENTS_PER_PAGE + 1}
+					/>
 					<Signatures header={header} />
 				</Page>
 			))}

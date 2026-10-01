@@ -2,6 +2,28 @@ import type { LetterGrade } from 'src/grades/letter-grade';
 import { pointsOf } from 'src/grades/letter-grade';
 import type { StudentStanding } from 'src/common/student-standing';
 
+/** The academic status key: what the Remarks column may hold. Mirrors REMARKS in the views. */
+export const REMARK_CODES = [
+  'Crg',
+  'Cro',
+  'Dsc',
+  'Dsm',
+  'Frz',
+  'Pas',
+  'Prm',
+  'Rad',
+  'Rdo',
+  'Rej',
+  'Rpt',
+  'Rrg',
+  'Rst',
+  'Rtk',
+  'Sub',
+  'Sup',
+  'Sus',
+] as const;
+export type RemarkCode = (typeof REMARK_CODES)[number];
+
 /** What staff type when generating a result; printed in the sheet's header. */
 export interface ResultHeader {
   /**
@@ -25,6 +47,12 @@ export interface ResultHeader {
   examinationOfficer?: string;
   collegeRegistrar?: string;
   dean?: string;
+  /**
+   * Each student's remark chosen on the sheet, by student id: a code from the
+   * academic status key, or "" for a blank cell. Students without one print
+   * the automatic remark. Absent on results from before remarks.
+   */
+  remarks?: Record<string, RemarkCode | ''>;
   examDate: string;
   collegeBoardDate: string;
   centralBoardDate: string;

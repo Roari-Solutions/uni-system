@@ -139,7 +139,15 @@ const ResultPrint = () => {
 			</div>
 			{/* laid out at the printable width, so what fits here fits the page */}
 			<div className="mx-auto w-[281mm] py-4 print:py-0">
-				<ResultDocument header={result.header} sheet={orderSheet(result.sheet, order)} version={version} />
+				<ResultDocument
+					// an approved result from before remarks keeps the blank column it was approved with;
+					// a pending one prints the automatic remarks the page shows
+					header={
+						result.status === "approved" ? result.header : { ...result.header, remarks: result.header.remarks ?? {} }
+					}
+					sheet={orderSheet(result.sheet, order)}
+					version={version}
+				/>
 			</div>
 		</main>
 	);

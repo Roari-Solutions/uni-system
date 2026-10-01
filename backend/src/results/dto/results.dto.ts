@@ -2,6 +2,7 @@ import { Type } from 'class-transformer';
 import {
   IsArray,
   IsIn,
+  IsObject,
   IsOptional,
   IsString,
   IsUUID,
@@ -69,6 +70,11 @@ export class ResultHeaderDto {
   @IsString()
   @MaxLength(100)
   dean?: string;
+
+  /** Remarks chosen on the sheet, by student id; each is checked against the status key when saved. */
+  @IsOptional()
+  @IsObject()
+  remarks?: Record<string, string>;
 
   /** The dates are optional and typed by hand; left out or blank, they print as dots to write in. */
   @IsOptional()

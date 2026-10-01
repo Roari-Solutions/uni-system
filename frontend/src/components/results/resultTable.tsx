@@ -6,6 +6,8 @@ import type {
 	ResultStudent,
 	ResultVersion,
 } from "../../types/result";
+import { autoRemark, remarkOf, remarkText, type RemarkChoices } from "../../utils/remarks";
+import RemarkPicker from "./remarkPicker";
 import { cellText, totalsText } from "../../utils/resultText";
 
 /**
@@ -23,10 +25,20 @@ export type ResultTableEditing = {
 	removeHeader: string;
 };
 
+/** While a result can still change: each student's remark picked from the status key. */
+export type RemarkEditing = {
+	/** A code, "" for a blank cell, or undefined to go back to the automatic remark. */
+	onChange: (student: ResultStudent, choice: RemarkChoices[string] | undefined) => void;
+	label: (student: ResultStudent) => string;
+};
+
 type ResultTableProps = {
 	sheet: ResultSheet;
 	version: ResultVersion;
 	editing?: ResultTableEditing;
+	/** Each student's chosen remark; undefined on results from before remarks, which print none. */
+	remarks?: RemarkChoices;
+	remarkEditing?: RemarkEditing;
 	/** The S.No. of the first row; a printed page after the first carries on from the last. */
 	firstNumber?: number;
 };
@@ -45,7 +57,7 @@ const failedCell = "bg-accent-soft font-bold";
  * semester sheet, and an empty Remarks column. Always English and LTR: it is
  * the exported document, whatever language the dashboard is in.
  */
-const ResultTable = ({ sheet, version, editing, firstNumber = 1 }: ResultTableProps) => {
+const ResultTable = ({ sheet, version, editing, remarks, remarkEditing, firstNumber = 1 }: ResultTableProps) => {
 	const yearSheet = sheet.semester === 2;
 	// a second-semester sheet ends with the CGPA; one generated before the CGPA was
 	// printed keeps the year's CH, GP and GPA it was approved with
@@ -126,6 +138,7 @@ const ResultTable = ({ sheet, version, editing, firstNumber = 1 }: ResultTablePr
 				{sheet.students.map((student, index) => {
 					const semester = totalsText(student.semester);
 					const year = student.year ? totalsText(student.year) : null;
+					const remark = remarkOf(student, sheet, remarks);
 					return (
 						<tr key={student.id} className="break-inside-avoid">
 							<td className={cell}>{firstNumber + index}</td>
@@ -170,8 +183,20 @@ const ResultTable = ({ sheet, version, editing, firstNumber = 1 }: ResultTablePr
 									</>
 								)
 							)}
-							{/* left blank for the board to write in */}
-							<td className={cell} />
+							{remarkEditing ? (
+								<td className={`${cell} p-0`}>
+									<RemarkPicker
+										label={remarkEditing.label(student)}
+										text={remark.text}
+										automaticText={remarkText(student, autoRemark(student, sheet), true)}
+										choice={remarks?.[student.id]}
+										onChange={(choice) => remarkEditing.onChange(student, choice)}
+									/>
+								</td>
+							) : (
+								// the remark, or blank for the board to write in
+								<td className={`${cell} whitespace-nowrap font-semibold`}>{remark.text}</td>
+							)}
 							{editing && (
 								<td className={`${cell} p-0`}>
 									<button
