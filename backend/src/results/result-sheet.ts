@@ -85,6 +85,12 @@ export interface ResultStudent {
   semester: ResultTotals;
   /** Second-semester sheets only: the whole academic year. */
   year: ResultTotals | null;
+  /**
+   * Second-semester sheets only: the cumulative GPA, the plain average of every
+   * semester GPA the student has to date, this year's two included. Null when
+   * none has one yet; absent on sheets from before it was printed.
+   */
+  cgpa?: number | null;
 }
 
 /** The frozen sheet: everything the board and final versions print. */
@@ -167,6 +173,16 @@ export function yearTotalsOf(semesters: ResultTotals[]): ResultTotals {
       ? round(gpas.reduce((acc, g) => acc + g, 0) / gpas.length, 2)
       : null,
   };
+}
+
+/** The cumulative GPA: the plain average of the semester GPAs that exist, like the annual GPA. */
+export function cumulativeGpaOf(
+  semesterGpas: (number | null)[],
+): number | null {
+  const counted = semesterGpas.filter((g): g is number => g !== null);
+  return counted.length
+    ? round(counted.reduce((acc, g) => acc + g, 0) / counted.length, 2)
+    : null;
 }
 
 /** JSON with object keys sorted, so two sheets compare equal whatever order jsonb kept them in. */

@@ -53,6 +53,7 @@ const SYMBOLS: [string, string][] = [
 	["CH", "Credit Hours"],
 	["GP", "Grade Point"],
 	["GPA", "Grade Point Average"],
+	["CGPA", "Cumulative Grade Point Average"],
 	["@", "Cheating"],
 	["*", "Grade after Supplementary"],
 	["**", "Grade after Substitute"],

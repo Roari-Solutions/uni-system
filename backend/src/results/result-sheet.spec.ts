@@ -1,6 +1,7 @@
 import { capLetter, SUPPLEMENTARY_CAP } from 'src/grades/letter-grade';
 import {
   canonicalJson,
+  cumulativeGpaOf,
   totalsOf,
   yearTotalsOf,
   type ResultCell,
@@ -99,6 +100,18 @@ describe('yearTotalsOf', () => {
         { ch: 10, gp: 25, gpa: 2.5 },
       ]),
     ).toEqual({ ch: 10, gp: 25, gpa: 2.5 });
+  });
+});
+
+describe('cumulativeGpaOf', () => {
+  it('averages every semester GPA to date', () => {
+    // two earlier years and this one: six semesters
+    expect(cumulativeGpaOf([3, 3.5, 2.5, 3, 2.61, 2.85])).toBe(2.91);
+  });
+
+  it('skips semesters without a GPA, and is null when none has one', () => {
+    expect(cumulativeGpaOf([3, null, 2])).toBe(2.5);
+    expect(cumulativeGpaOf([null, null])).toBeNull();
   });
 });
 

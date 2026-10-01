@@ -47,7 +47,10 @@ const failedCell = "bg-accent-soft font-bold";
  */
 const ResultTable = ({ sheet, version, editing, firstNumber = 1 }: ResultTableProps) => {
 	const yearSheet = sheet.semester === 2;
-	const totalColumns = yearSheet ? ["CH", "GP", "GPA", "CH", "GP", "GPA"] : ["CH", "GP", "GPA"];
+	// a second-semester sheet ends with the CGPA; one generated before the CGPA was
+	// printed keeps the year's CH, GP and GPA it was approved with
+	const withCgpa = yearSheet && sheet.students.every((s) => s.cgpa !== undefined);
+	const totalColumns = yearSheet && !withCgpa ? ["CH", "GP", "GPA", "CH", "GP", "GPA"] : ["CH", "GP", "GPA"];
 
 	return (
 		<table
@@ -76,9 +79,15 @@ const ResultTable = ({ sheet, version, editing, firstNumber = 1 }: ResultTablePr
 							<th scope="colgroup" colSpan={3} className={cell}>
 								Semester
 							</th>
-							<th scope="colgroup" colSpan={3} className={cell}>
-								Year
-							</th>
+							{withCgpa ? (
+								<th scope="col" rowSpan={2} className={cell}>
+									CGPA
+								</th>
+							) : (
+								<th scope="colgroup" colSpan={3} className={cell}>
+									Year
+								</th>
+							)}
 						</>
 					) : (
 						totalColumns.map((label) => (
@@ -150,12 +159,16 @@ const ResultTable = ({ sheet, version, editing, firstNumber = 1 }: ResultTablePr
 							<td className={cell}>{semester.ch}</td>
 							<td className={cell}>{semester.gp}</td>
 							<td className={cell}>{semester.gpa}</td>
-							{year && (
-								<>
-									<td className={cell}>{year.ch}</td>
-									<td className={cell}>{year.gp}</td>
-									<td className={cell}>{year.gpa}</td>
-								</>
+							{withCgpa ? (
+								<td className={`${cell} font-bold`}>{student.cgpa == null ? "—" : student.cgpa.toFixed(2)}</td>
+							) : (
+								year && (
+									<>
+										<td className={cell}>{year.ch}</td>
+										<td className={cell}>{year.gp}</td>
+										<td className={cell}>{year.gpa}</td>
+									</>
+								)
 							)}
 							{/* left blank for the board to write in */}
 							<td className={cell} />

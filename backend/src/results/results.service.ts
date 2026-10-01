@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { and, desc, eq, inArray, isNull, type SQL } from 'drizzle-orm';
 import {
+  gpas,
   faculties,
   facultyCurriculums,
   facultyDepartments,
@@ -48,6 +49,7 @@ import {
   canonicalJson,
   totalsOf,
   yearTotalsOf,
+  cumulativeGpaOf,
   type CellState,
   type ResultCell,
   type ResultCourse,
@@ -367,6 +369,27 @@ export class ResultsService {
     const listed = withResit ? cohort.filter((s) => resat.has(s.id)) : cohort;
     if (!listed.length) throw new BadRequestException({ code: 'NO_RESITS' });
 
+    // the CGPA counts every earlier year's stored semester GPAs (they follow resits);
+    // this year's two come from the sheet itself, as the year's totals do
+    const level = academicYearToNumber(batch.academicYear);
+    const earlierGpas = new Map<string, number[]>();
+    if (yearSheet) {
+      const stored = await this.db.query.gpas.findMany({
+        where: inArray(
+          gpas.studentId,
+          listed.map((s) => s.id),
+        ),
+        columns: { studentId: true, academicYear: true, gpa: true },
+      });
+      for (const row of stored) {
+        if (academicYearToNumber(row.academicYear) >= level) continue;
+        earlierGpas.set(row.studentId, [
+          ...(earlierGpas.get(row.studentId) ?? []),
+          Number(row.gpa),
+        ]);
+      }
+    }
+
     const sheet: ResultSheet = {
       college: faculty.nameEn,
       academicYear: academicYearToNumber(batch.academicYear),
@@ -394,6 +417,7 @@ export class ResultsService {
               true,
             ),
           );
+          const first = totalsOf(firstCells, firstCourses, true);
           return {
             id: s.id,
             uniNumber: s.uniNumber,
@@ -401,12 +425,18 @@ export class ResultsService {
             standing: s.standing,
             cells,
             semester,
-            year: yearSheet
-              ? yearTotalsOf([
-                  totalsOf(firstCells, firstCourses, true),
-                  semester,
-                ])
-              : null,
+            // kept for the record; the sheet prints the CGPA in its place
+            year: yearSheet ? yearTotalsOf([first, semester]) : null,
+            // left off first-semester sheets, so theirs stay exactly as they were
+            ...(yearSheet
+              ? {
+                  cgpa: cumulativeGpaOf([
+                    ...(earlierGpas.get(s.id) ?? []),
+                    first.gpa,
+                    semester.gpa,
+                  ]),
+                }
+              : {}),
           };
         }),
     };
