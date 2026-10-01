@@ -692,15 +692,17 @@ export class ResultsService {
         ...(dto.header.resultTitle !== undefined
           ? { resultTitle: dto.header.resultTitle.trim() }
           : {}),
+        // the signers' names, when sent; older results have none
+        ...Object.fromEntries(
+          (['examinationOfficer', 'collegeRegistrar', 'dean'] as const)
+            .filter((field) => dto.header[field] !== undefined)
+            .map((field) => [field, (dto.header[field] ?? '').trim()]),
+        ),
         batch: dto.header.batch.trim(),
         academicYearLabel: dto.header.academicYearLabel.trim(),
         examDate: (dto.header.examDate ?? '').trim(),
         collegeBoardDate: (dto.header.collegeBoardDate ?? '').trim(),
-        // only the second semester's (year) result goes to the central board
-        centralBoardDate:
-          batch.semester === '2'
-            ? (dto.header.centralBoardDate ?? '').trim()
-            : '',
+        centralBoardDate: (dto.header.centralBoardDate ?? '').trim(),
       };
 
       const saved = await this.db.transaction(async (tx) => {

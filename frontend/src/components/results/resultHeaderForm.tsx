@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { ResultHeader, ResultSheet } from "../../types/result";
 import type { DATE_FIELDS, HeaderSuggestions } from "../../utils/resultHeader";
 import InfoTip from "../infoTip";
-import { levelText, sheetTitle } from "../../utils/resultText";
+import { levelText, sheetTitle, SIGNATORIES } from "../../utils/resultText";
 
 // typed in English (they print in English), each with its earlier values to pick from
 type TextField = keyof HeaderSuggestions;
@@ -20,15 +20,8 @@ const Line = ({ children }: { children: ReactNode }) => (
 	<div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1">{children}</div>
 );
 
-/** The logo's place on the sheet; on a phone there's no room beside the lines. */
-const LogoPlaceholder = () => (
-	<div
-		aria-hidden
-		className="hidden size-16 shrink-0 items-center justify-center rounded-xs border border-dashed border-foreground text-caption sm:flex"
-	>
-		[LOGO]
-	</div>
-);
+/** The university's emblem where the sheet prints it; on a phone there's no room beside the lines. */
+const Logo = () => <img src="/university-logo.jpg" alt="" className="hidden size-36 shrink-0 object-contain sm:block" />;
 
 type ResultHeaderFormProps = {
 	/** Keeps the ids of two forms on one page apart. */
@@ -94,7 +87,7 @@ const ResultHeaderForm = ({ idPrefix, header, onChange, suggestions, sheet, disa
 	return (
 		<div dir="ltr" lang="en" className="font-en text-body-md text-foreground">
 			<div className="flex items-start justify-between gap-4">
-				<LogoPlaceholder />
+				<Logo />
 				<div className="flex min-w-0 flex-1 flex-col items-center gap-1.5 text-center">
 					<p className="text-heading-5 font-bold">University of Technology</p>
 					<Line>
@@ -120,15 +113,64 @@ const ResultHeaderForm = ({ idPrefix, header, onChange, suggestions, sheet, disa
 						<InfoTip text={t("results.resultTitleTip")} />
 					</Line>
 				</div>
-				<LogoPlaceholder />
+				<Logo />
 			</div>
 
-			{/* only the second semester's (year) result goes to the central board */}
 			<div className="mt-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-dotted border-foreground pb-3">
 				<Line>Date of Exam {free("examDate")}</Line>
 				<Line>Date of College Board {free("collegeBoardDate")}</Line>
-				{sheet.semester === 2 && <Line>Date of Central Board {free("centralBoardDate")}</Line>}
+				<Line>Date of Central Board {free("centralBoardDate")}</Line>
 			</div>
+		</div>
+	);
+};
+
+type ResultSignaturesFormProps = {
+	idPrefix: string;
+	header: ResultHeader;
+	onChange: (header: ResultHeader) => void;
+	suggestions: HeaderSuggestions;
+	disabled?: boolean;
+};
+
+/**
+ * The signatures at the foot of every printed page, with each signer's name
+ * typed where it prints. Optional: a blank name prints a dotted line to sign.
+ */
+export const ResultSignaturesForm = ({ idPrefix, header, onChange, suggestions, disabled }: ResultSignaturesFormProps) => {
+	const { t } = useTranslation();
+
+	return (
+		<div
+			dir="ltr"
+			lang="en"
+			className="flex flex-wrap justify-between gap-x-6 gap-y-4 border-t border-dotted border-foreground pt-4 font-en text-body-md text-foreground"
+		>
+			{SIGNATORIES.map(({ field, role }) => (
+				<div key={field} className="flex flex-col items-start gap-2">
+					<label htmlFor={`${idPrefix}-${field}`} className="font-bold">
+						{role}
+					</label>
+					<input
+						id={`${idPrefix}-${field}`}
+						type="text"
+						// the dashboard's language says whose name goes here
+						title={t(`results.header.${field}`)}
+						maxLength={100}
+						list={`${idPrefix}-${field}-options`}
+						autoComplete="off"
+						disabled={disabled}
+						value={header[field] ?? ""}
+						onChange={(e) => onChange({ ...header, [field]: e.target.value })}
+						className={fieldClass}
+					/>
+					<datalist id={`${idPrefix}-${field}-options`}>
+						{suggestions[field].map((value) => (
+							<option key={value} value={value} />
+						))}
+					</datalist>
+				</div>
+			))}
 		</div>
 	);
 };

@@ -13,7 +13,7 @@ import ConfirmDialog from "../../../components/confirmDialog";
 import DataTable, { type Column } from "../../../components/dataTable";
 import EditGradeDialog, { type GradeEdit } from "../../../components/editGradeDialog";
 import FilterSelect from "../../../components/filterSelect";
-import ResultHeaderForm from "../../../components/results/resultHeaderForm";
+import ResultHeaderForm, { ResultSignaturesForm } from "../../../components/results/resultHeaderForm";
 import ResultStatusTag from "../../../components/results/resultStatusTag";
 import ResultTable, { type ResultTableEditing } from "../../../components/results/resultTable";
 import StudentOrderSelect from "../../../components/studentOrderSelect";
@@ -411,9 +411,7 @@ const ResultList = () => {
 			excludedStudentIds: excluded,
 		};
 		try {
-			// only the second semester's (year) result goes to the central board
-			const sent = semester === "2" ? header : { ...header, centralBoardDate: "" };
-			const created = await generateResult(batch, "regular", sent);
+			const created = await generateResult(batch, "regular", header);
 			// it's generated: nothing left to keep for this batch
 			clearDraft(draftOwner);
 			void navigate(created.id);
@@ -799,6 +797,18 @@ const ResultList = () => {
 										</div>
 									)}
 									<ResultTable sheet={orderSheet(preview.sheet, order)} version="board" editing={tableEditing} />
+									{/* and who signs, where they sign: below the sheet */}
+									{canGenerate && headerSuggestions && header && (
+										<div className="mt-4">
+											<ResultSignaturesForm
+												idPrefix="newHeader"
+												header={header}
+												onChange={setHeaderDraft}
+												suggestions={headerSuggestions}
+												disabled={submitting}
+											/>
+										</div>
+									)}
 								</div>
 							</>
 						) : (

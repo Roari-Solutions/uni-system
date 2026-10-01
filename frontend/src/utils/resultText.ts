@@ -22,6 +22,13 @@ export const sheetTitle = (semester: number, kind: ResultKind) => {
 	return `(${term}${kind === "resit" ? " Sup & Sub" : ""} Examinations Result)`;
 };
 
+/** Who signs every page, each with the header field that may name them. */
+export const SIGNATORIES = [
+	{ field: "examinationOfficer", role: "Examination Officer's" },
+	{ field: "collegeRegistrar", role: "College Registrar" },
+	{ field: "dean", role: "Dean of the College" },
+] as const;
+
 /** The board copy's line under the title, unless staff typed another (or none). */
 export const DEFAULT_RESULT_TITLE = "College Board Results";
 

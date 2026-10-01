@@ -100,9 +100,10 @@ const ResultPrint = () => {
 		]
 			.filter(Boolean)
 			.join(" - ");
-		// measure once the fonts are in, then hand the laid-out pages to the dialog
+		// measure once the fonts and the logos are in, then hand the laid-out pages to the dialog
 		let cancelled = false;
-		void document.fonts.ready.then(() => {
+		const imagesReady = Promise.all([...document.images].map((img) => img.decode().catch(() => undefined)));
+		void Promise.all([document.fonts.ready, imagesReady]).then(() => {
 			if (cancelled) return;
 			fitPages();
 			window.print();

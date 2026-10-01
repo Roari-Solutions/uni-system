@@ -54,6 +54,22 @@ export class ResultHeaderDto {
   @MaxLength(100)
   resultTitle?: string;
 
+  /** The names under the signatures; optional, and a blank one prints a line to sign. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  examinationOfficer?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  collegeRegistrar?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  dean?: string;
+
   /** The dates are optional and typed by hand; left out or blank, they print as dots to write in. */
   @IsOptional()
   @IsString()

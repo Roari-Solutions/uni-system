@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { ResultHeader, ResultSheet, ResultVersion } from "../../types/result";
 import { DEFAULT_DEGREE } from "../../utils/resultHeader";
-import { dateText, levelText, sheetTitle, versionText } from "../../utils/resultText";
+import { dateText, levelText, sheetTitle, SIGNATORIES, versionText } from "../../utils/resultText";
 import ResultTable from "./resultTable";
 
 // the printed keys, as on the university's sheet
@@ -72,12 +72,8 @@ const band = "bg-background-secondary font-bold";
 const Fill = ({ value }: { value: string }) =>
 	value ? <span className="font-bold">{value}</span> : <span aria-hidden>……………</span>;
 
-/** The logo's place until the file is supplied. */
-const LogoPlaceholder = () => (
-	<div className="flex size-16 shrink-0 items-center justify-center border border-dashed border-foreground text-[10px]">
-		[LOGO]
-	</div>
-);
+/** The university's emblem in colour, as on the website (from uni-cms; large enough to print sharp). */
+const Logo = () => <img src="/university-logo.jpg" alt="" className="size-36 shrink-0 object-contain" />;
 
 /** Two-column key tables split a list into symbol/meaning pairs side by side. */
 const PairedKey = ({ title, head, rows }: { title: string; head: [string, string]; rows: [string, string][] }) => {
@@ -124,7 +120,7 @@ const TitleBlock = ({ header, sheet, version }: ResultDocumentProps) => {
 	const resultTitle = version === "board" ? (header.resultTitle ?? versionText(version)) : versionText(version);
 	return (
 		<header className="mb-2 flex items-start justify-between gap-4">
-			<LogoPlaceholder />
+			<Logo />
 			<div className="flex flex-col items-center text-center text-[12px] leading-tight">
 				<p className="text-[15px] font-bold">University of Technology</p>
 				<p>
@@ -153,13 +149,13 @@ const TitleBlock = ({ header, sheet, version }: ResultDocumentProps) => {
 				{/* the board's line is typed (blank leaves it off); the final copy's is fixed */}
 				{resultTitle && <p className="text-[11px] font-semibold uppercase tracking-wide">{resultTitle}</p>}
 			</div>
-			<LogoPlaceholder />
+			<Logo />
 		</header>
 	);
 };
 
-/** The exam and board dates; only the second semester's (year) result goes to the central board. */
-const Dates = ({ header, semester }: { header: ResultHeader; semester: number }) => (
+/** The exam and board dates, on every result whatever its semester. */
+const Dates = ({ header }: { header: ResultHeader }) => (
 	<div className="mb-3 flex justify-between border-b border-dotted border-foreground pb-1 text-[11px]">
 		<span>
 			Date of Exam <Fill value={dateText(header.examDate)} />
@@ -167,22 +163,25 @@ const Dates = ({ header, semester }: { header: ResultHeader; semester: number })
 		<span>
 			Date of College Board <Fill value={dateText(header.collegeBoardDate)} />
 		</span>
-		{semester === 2 && (
-			<span>
-				Date of Central Board <Fill value={dateText(header.centralBoardDate)} />
-			</span>
-		)}
+		<span>
+			Date of Central Board <Fill value={dateText(header.centralBoardDate)} />
+		</span>
 	</div>
 );
 
-const Signatures = () => (
+/** Who signs: a typed name, or a dotted line to sign by hand. */
+const Signatures = ({ header }: { header: ResultHeader }) => (
 	<footer className="mt-4 flex break-inside-avoid justify-between border-t border-dotted border-foreground pt-2 text-[11px] font-bold">
-		{["Examination Officer's", "College Registrar", "Dean of the College"].map((role) => (
-			<div key={role} className="flex w-48 flex-col gap-3">
+		{SIGNATORIES.map(({ field, role }) => (
+			<div key={field} className="flex w-48 flex-col gap-3">
 				<span>{role}</span>
-				<span aria-hidden className="font-normal">
-					……………………………
-				</span>
+				{header[field]?.trim() ? (
+					<span>{header[field]}</span>
+				) : (
+					<span aria-hidden className="font-normal">
+						……………………………
+					</span>
+				)}
 			</div>
 		))}
 	</footer>
@@ -223,7 +222,7 @@ const ResultDocument = ({ header, sheet, version }: ResultDocumentProps) => {
 			{version === "board" && (
 				<Page first>
 					<TitleBlock header={header} sheet={sheet} version={version} />
-					<Dates header={header} semester={sheet.semester} />
+					<Dates header={header} />
 
 					<div className="grid grid-cols-2 gap-4">
 						<div className="flex flex-col gap-3">
@@ -300,7 +299,7 @@ const ResultDocument = ({ header, sheet, version }: ResultDocumentProps) => {
 						</div>
 					</div>
 
-					<Signatures />
+					<Signatures header={header} />
 				</Page>
 			)}
 
@@ -309,9 +308,9 @@ const ResultDocument = ({ header, sheet, version }: ResultDocumentProps) => {
 				<Page key={i} first={version === "final" && i === 0}>
 					<TitleBlock header={header} sheet={sheet} version={version} />
 					{/* without the cover, the final results carry the dates themselves */}
-					{version === "final" && <Dates header={header} semester={sheet.semester} />}
+					{version === "final" && <Dates header={header} />}
 					<ResultTable sheet={{ ...sheet, students }} version={version} firstNumber={i * STUDENTS_PER_PAGE + 1} />
-					<Signatures />
+					<Signatures header={header} />
 				</Page>
 			))}
 		</div>

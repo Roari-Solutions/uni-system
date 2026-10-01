@@ -27,6 +27,9 @@ export const editableHeader = (header: ResultHeader): ResultHeader => ({
 	...header,
 	degree: header.degree ?? DEFAULT_DEGREE,
 	resultTitle: header.resultTitle ?? DEFAULT_RESULT_TITLE,
+	examinationOfficer: header.examinationOfficer ?? "",
+	collegeRegistrar: header.collegeRegistrar ?? "",
+	dean: header.dean ?? "",
 	examDate: dateText(header.examDate),
 	collegeBoardDate: dateText(header.collegeBoardDate),
 	centralBoardDate: dateText(header.centralBoardDate),
@@ -40,7 +43,10 @@ export const withoutDates = (header: ResultHeader): ResultHeader => ({
 	centralBoardDate: "",
 });
 
-export type HeaderSuggestions = Record<"degree" | "program" | "batch" | "academicYearLabel", string[]>;
+export type HeaderSuggestions = Record<
+	"degree" | "program" | "batch" | "academicYearLabel" | "examinationOfficer" | "collegeRegistrar" | "dean",
+	string[]
+>;
 
 type HeaderContext = {
 	/** The faculty's earlier results, newest first. */
@@ -82,6 +88,9 @@ export const headerDefaults = ({
 				specializationNameEn || pick(sameLevel, "program") || pick(previous, "program") || facultyNameEn,
 			batch: "",
 			resultTitle: DEFAULT_RESULT_TITLE,
+			examinationOfficer: "",
+			collegeRegistrar: "",
+			dean: "",
 			academicYearLabel: academicYear,
 			examDate: "",
 			collegeBoardDate: "",
@@ -95,6 +104,10 @@ export const headerDefaults = ({
 				facultyNameEn,
 			]),
 			batch: distinct(previous.map((r) => r.header.batch)),
+			// the people who signed the faculty's earlier results
+			examinationOfficer: distinct(previous.map((r) => r.header.examinationOfficer)),
+			collegeRegistrar: distinct(previous.map((r) => r.header.collegeRegistrar)),
+			dean: distinct(previous.map((r) => r.header.dean)),
 			academicYearLabel: distinct([
 				academicYear,
 				`${year - 1}/${year}`,

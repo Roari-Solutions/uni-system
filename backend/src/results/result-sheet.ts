@@ -21,6 +21,10 @@ export interface ResultHeader {
    * results from before it was asked for, which print the default.
    */
   resultTitle?: string;
+  /** Who signs each page; optional, and a blank one prints a line to sign. */
+  examinationOfficer?: string;
+  collegeRegistrar?: string;
+  dean?: string;
   examDate: string;
   collegeBoardDate: string;
   centralBoardDate: string;

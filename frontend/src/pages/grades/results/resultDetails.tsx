@@ -13,7 +13,7 @@ import {
 } from "@heroicons/react/24/outline";
 import ConfirmDialog from "../../../components/confirmDialog";
 import ApproveResultDialog from "../../../components/results/approveResultDialog";
-import ResultHeaderForm from "../../../components/results/resultHeaderForm";
+import ResultHeaderForm, { ResultSignaturesForm } from "../../../components/results/resultHeaderForm";
 import ResitEntry from "../../../components/results/resitEntry";
 import ResultStatusTag from "../../../components/results/resultStatusTag";
 import ResultTable from "../../../components/results/resultTable";
@@ -44,7 +44,15 @@ import { departmentName, placementName } from "../../../utils/specializations";
 import { generateError } from "../../../utils/resultErrors";
 import { orderSheet, type StudentOrder } from "../../../utils/studentOrder";
 
-const NO_SUGGESTIONS: HeaderSuggestions = { degree: [], program: [], batch: [], academicYearLabel: [] };
+const NO_SUGGESTIONS: HeaderSuggestions = {
+	degree: [],
+	program: [],
+	batch: [],
+	academicYearLabel: [],
+	examinationOfficer: [],
+	collegeRegistrar: [],
+	dean: [],
+};
 
 // header fields in a fixed order, so an edit is told apart from jsonb's key order
 const sameHeader = (a: ResultHeader, b: ResultHeader) =>
@@ -206,8 +214,7 @@ const ResultDetails = () => {
 					excludedStudentIds: kind === result.kind ? result.excludedStudentIds : undefined,
 				},
 				kind,
-				// only the second semester's (year) result goes to the central board
-				result.semester === 2 ? typed : { ...typed, centralBoardDate: "" },
+				typed,
 			);
 			setResitHeader(null);
 			setActionError(null);
@@ -402,6 +409,15 @@ const ResultDetails = () => {
 						sheet={{ ...result.sheet, kind: "resit" }}
 						disabled={submitting !== null}
 					/>
+					<div className="mt-6">
+						<ResultSignaturesForm
+							idPrefix="resitHeader"
+							header={resitHeader}
+							onChange={setResitHeader}
+							suggestions={suggestions}
+							disabled={submitting !== null}
+						/>
+					</div>
 					<div className="mt-6 flex flex-wrap justify-end gap-3">
 						<button
 							type="button"
@@ -476,6 +492,17 @@ const ResultDetails = () => {
 					</div>
 				)}
 				<ResultTable sheet={orderSheet(result.sheet, order)} version={pending ? "board" : version} />
+				{pending && header && (
+					<div className="mt-4">
+						<ResultSignaturesForm
+							idPrefix="resultHeader"
+							header={header}
+							onChange={setHeader}
+							suggestions={suggestions}
+							disabled={submitting !== null}
+						/>
+					</div>
+				)}
 			</section>
 
 			{result.kind === "regular" && !pending && (

@@ -16,6 +16,10 @@ export type ResultHeader = {
 	batch: string;
 	// the board copy's line under the title; blank leaves it off, absent prints the default
 	resultTitle?: string;
+	// who signs each page; blank prints a dotted line to sign by hand
+	examinationOfficer?: string;
+	collegeRegistrar?: string;
+	dean?: string;
 	academicYearLabel: string;
 	examDate: string;
 	collegeBoardDate: string;
