@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { fetchFaculties } from "../api/faculties";
 import useAuth from "../auth/useAuth";
+import { PERMISSIONS } from "../types/auth";
 import type { Faculty } from "../types/faculty";
 
 export type UseFacultiesResult = {
@@ -24,13 +25,15 @@ export type UseFacultiesResult = {
  * a choice. The lock is a UI affordance; the API enforces the same rule.
  */
 const useFaculties = (): UseFacultiesResult => {
-	const { status, facultyLocked, facultyId } = useAuth();
+	const { status, facultyLocked, facultyId, can } = useAuth();
+	// faculties belong to the grades system; another dashboard has none to load
+	const inGrades = can(PERMISSIONS.grades);
 	const [faculties, setFaculties] = useState<Faculty[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [failed, setFailed] = useState(false);
 
 	useEffect(() => {
-		if (status !== "authed") return;
+		if (status !== "authed" || !inGrades) return;
 
 		let cancelled = false;
 		// state changes live in the callbacks: the effect body itself stays sync-free
@@ -50,7 +53,7 @@ const useFaculties = (): UseFacultiesResult => {
 		return () => {
 			cancelled = true;
 		};
-	}, [status]);
+	}, [status, inGrades]);
 
 	const lockedFacultyId = facultyLocked ? facultyId : null;
 

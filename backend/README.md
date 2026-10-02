@@ -128,3 +128,73 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+
+## Sign-in portals and website content
+
+### Deploying this change to an existing database
+
+`drizzle-kit push` can't apply schema changes once `results` has rows, so apply
+the hand-written migrations first, in order:
+
+```bash
+psql "$DATABASE_URL" -f drizzle/0015_user_roles.sql   # roles a user may hold several of, and their permissions
+psql "$DATABASE_URL" -f drizzle/0016_site_pages.sql   # website pages and their saved versions
+psql "$DATABASE_URL" -f drizzle/0017_domain_user_admins.sql   # user management split by domain
+```
+
+Both are safe to run twice. 0015 gives every existing user exactly the role
+they had. The old per-page CMS tables (`main_page`, `about_page`, ...) are left
+untouched and unused.
+
+### Loading the website's content
+
+The content the website showed before the CMS is kept in
+`seed/site-content/` (27 pages and their images). Load it once:
+
+```bash
+bun run seed:site               # adds pages that have no content yet
+bun run seed:site --overwrite   # also replaces pages that do, as a new version
+```
+
+In Docker: `docker compose exec backend bun run seed:site`. Images are copied
+to `MEDIA_DIR/images`; the API serves them at `/images/...` and `/pdfs/...`.
+Content that existed in the website's code but was never shown is archived in
+`seed/site-content/unrendered.json` for reference.
+
+### Changing a page's structure
+
+A page's sections and fields are fixed by its template in
+`src/site-content/templates`; content managers only edit values, and a save
+that departs from the template is refused. After changing a template, update
+the snapshot to match (the `seed-content` test checks it), then regenerate the
+website's types and fallback content:
+
+```bash
+bun run site:export ../../uni-cms/src/content
+```
+
+### Environment
+
+- `CORS_ORIGINS` — every portal host and the public website, comma-separated.
+  Unset in development allows `localhost` and `*.localhost`.
+- `MEDIA_DIR` — where uploaded and seeded media is stored (default `/data/`).
+
+The API checks permissions, not role names: see `src/iam/permissions.ts` for
+what each role grants.
+
+User management is split by domain (`USER_SCOPES` in the same file): the
+grades admin (`admin`) manages data-entry users, the website admin
+(`cms-admin`) manages content managers, and the system administrator
+(`super-admin`) manages everyone. Each sees only the users and roles of their
+own domain; a user's roles in other domains are left as they are. Nobody is a
+super admin until one is named:
+
+```bash
+bun run grant-role <login> super-admin    # in Docker: docker compose exec backend bun run grant-role ...
+``` The portals (`staff`, `grades`, `cms`, `management`,
+`teachers`, `students`, `lms`) each admit only holders of their domain; `staff`
+admits any staff member. Sessions are shared across portals when every portal
+calls the API on one host of the same site (e.g. `api.<domain>`). Note that
+browsers treat `*.localhost` subdomains as separate sites, so to try
+cross-portal sessions locally use a name like `*.lvh.me`, which resolves to
+127.0.0.1.

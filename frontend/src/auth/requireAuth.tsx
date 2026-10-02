@@ -4,7 +4,7 @@ import useAuth from "./useAuth";
 
 /** Gates the dashboard: anonymous visitors are sent to the login page. */
 const RequireAuth = () => {
-	const { status } = useAuth();
+	const { status, signedOut } = useAuth();
 	const { t } = useTranslation();
 	const location = useLocation();
 
@@ -20,8 +20,9 @@ const RequireAuth = () => {
 	}
 
 	if (status === "anon") {
-		// remember where they were headed so login can send them back
-		return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+		// an expired session returns to where it was after signing in again; a
+		// sign-out starts over, so the staff portal offers its choice again
+		return <Navigate to="/login" replace state={signedOut ? undefined : { from: location.pathname }} />;
 	}
 
 	return <Outlet />;

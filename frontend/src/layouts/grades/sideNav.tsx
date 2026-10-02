@@ -14,6 +14,7 @@ import {
 	UserCircleIcon,
 } from "@heroicons/react/24/outline";
 import useAuth from "../../auth/useAuth";
+import { PERMISSIONS } from "../../types/auth";
 import useFaculties from "../../hooks/useFaculties";
 
 const HOVER_DELAY = 130; // ms — expand/collapse delay on mouse enter/leave
@@ -23,8 +24,8 @@ const BASE_PATH = "/dashboards/grades";
 type Section = {
 	id: "faculty" | "curriculum" | "students" | "grades" | "users";
 	icon: typeof BookOpenIcon;
-	// sections only some roles may reach
-	adminOnly?: boolean;
+	// sections only holders of one of these permissions may reach
+	permissions?: string[];
 };
 
 const SECTIONS: Section[] = [
@@ -32,7 +33,7 @@ const SECTIONS: Section[] = [
 	{ id: "curriculum", icon: BookOpenIcon },
 	{ id: "students", icon: AcademicCapIcon },
 	{ id: "grades", icon: ClipboardDocumentListIcon },
-	{ id: "users", icon: UsersIcon, adminOnly: true },
+	{ id: "users", icon: UsersIcon, permissions: [PERMISSIONS.usersManageGrades, PERMISSIONS.usersManageAll] },
 ];
 
 const SUB_OPTIONS = ["list", "entry"] as const;
@@ -55,9 +56,9 @@ const navItemClass =
 const SideNav = () => {
 	const { t, i18n } = useTranslation();
 	const { pathname } = useLocation();
-	const { user, logout } = useAuth();
+	const { user, logout, can } = useAuth();
 	// the API rejects these routes for anyone else; the nav just hides the door
-	const sections = SECTIONS.filter((s) => !s.adminOnly || user?.role === "admin");
+	const sections = SECTIONS.filter((s) => !s.permissions || s.permissions.some((p) => can(p)));
 	const { lockedFaculty } = useFaculties();
 
 	// hovering expands on pointer devices; `pinned` is the tap/keyboard path,
@@ -151,7 +152,7 @@ const SideNav = () => {
 					>
 						<p className="truncate text-body-sm font-medium">{user?.name}</p>
 						<p className="truncate text-caption text-accent-soft">
-							{user ? t(`roles.${user.role}`) : ""}
+							{user ? user.roles.map((r) => t(`roles.${r}`)).join(" · ") : ""}
 						</p>
 						{facultyName && (
 							<p className="truncate text-caption text-accent-soft">{facultyName}</p>

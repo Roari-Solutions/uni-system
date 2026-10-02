@@ -32,6 +32,7 @@ import { setStudentsDepartment, setStudentsSpecialization } from "../../../api/s
 import { departmentName, specializationName } from "../../../utils/specializations";
 import { conflictCode } from "../../../utils/apiError";
 import useAuth from "../../../auth/useAuth";
+import { PERMISSIONS } from "../../../types/auth";
 import { smallSecondaryButtonClass } from "../../../styles/form";
 import type { Student } from "../../../types/student";
 import { cardClass } from "../../../styles/form";
@@ -50,7 +51,7 @@ const StudentDetails = () => {
 	const lang = i18n.language === "ar" ? "ar" : "en";
 	const { studentId = "" } = useParams();
 	const { faculties } = useFaculties();
-	const { user } = useAuth();
+	const { can } = useAuth();
 
 	const [student, setStudent] = useState<Student | null>(null);
 	const [grades, setGrades] = useState<StudentYearGrade[]>([]);
@@ -309,7 +310,7 @@ const StudentDetails = () => {
 							</p>
 						</div>
 					</div>
-					{user?.role === "admin" && (
+					{can(PERMISSIONS.studentsReinstate) && (
 						<button
 							type="button"
 							onClick={() => setConfirmReinstate(true)}

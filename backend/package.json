@@ -16,6 +16,9 @@
     "test": "jest",
     "seed:faculties": "ts-node --transpile-only --compiler-options '{\"module\":\"commonjs\",\"moduleResolution\":\"node\",\"resolvePackageJsonExports\":false}' seed_faculties.ts",
     "seed:gr-test": "ts-node --transpile-only --compiler-options '{\"module\":\"commonjs\",\"moduleResolution\":\"node\",\"resolvePackageJsonExports\":false}' seed_gr_test.ts",
+    "seed:site": "bun seed/site-content/seed.ts",
+    "site:export": "bun scripts/site-export.ts",
+    "grant-role": "bun scripts/grant-role.ts",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix"
   },
   "dependencies": {

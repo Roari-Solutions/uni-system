@@ -1,12 +1,14 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import axios from "axios";
 import { useTranslation } from "react-i18next";
-import { Navigate, useLocation, useNavigate } from "react-router";
+import { Navigate, useLocation } from "react-router";
 import { LanguageIcon } from "@heroicons/react/24/outline";
 import { z } from "zod";
 import FormField from "../../components/formField";
 import PasswordInput from "../../components/passwordInput";
 import useAuth from "../../auth/useAuth";
+import { signInTarget } from "../../auth/signInTarget";
+import { HOST_PORTAL, LOGIN_PORTAL, staffLoginHref } from "../../portals";
 import { blockSubmitButtonClass, formCardClass, inputClass } from "../../styles/form";
 
 const REQUIRED = "login.errors.required";
@@ -28,8 +30,7 @@ const EMPTY_FORM: LoginForm = { email: "", password: "" };
 
 const Login = () => {
 	const { t, i18n } = useTranslation();
-	const { status, login } = useAuth();
-	const navigate = useNavigate();
+	const { status, user, login } = useAuth();
 	const location = useLocation();
 
 	const [form, setForm] = useState<LoginForm>(EMPTY_FORM);
@@ -41,9 +42,19 @@ const Login = () => {
 	// where the guard bounced them from, if anywhere
 	const from = (location.state as { from?: string } | null)?.from;
 
-	if (status === "authed") {
-		return <Navigate to={from ?? "/dashboards/grades/students/list"} replace />;
-	}
+	// once signed in (here, or on another portal sharing the session) the
+	// session decides where to go; signing in only has to establish it
+	const signedIn = status === "authed" && user ? signInTarget(user.portals, from) : null;
+	const otherHost = signedIn?.kind === "url" ? signedIn.to : null;
+
+	// a dashboard on another host is a full page load, not a route change
+	useEffect(() => {
+		if (otherHost) window.location.assign(otherHost);
+	}, [otherHost]);
+
+	if (signedIn?.kind === "path") return <Navigate to={signedIn.to} replace />;
+	if (signedIn?.kind === "choose") return <Navigate to="/choose" replace />;
+	const noDashboard = signedIn?.kind === "none";
 
 	const setField = <K extends keyof LoginForm>(key: K, value: LoginForm[K]) => {
 		setForm((prev) => ({ ...prev, [key]: value }));
@@ -63,7 +74,6 @@ const Login = () => {
 		setSubmitting(true);
 		try {
 			await login(result.data.email, result.data.password);
-			void navigate(from ?? "/dashboards/grades/students/list", { replace: true });
 		} catch (error) {
 			// only a 401 means the credentials were rejected. A 502 from the dev
 			// proxy, a dropped connection or a 500 must not accuse the user of
@@ -98,8 +108,12 @@ const Login = () => {
 			</div>
 
 			<div className="w-full max-w-sm">
-				<h1 className="mb-2 text-heading-3 text-accent-deep">{t("login.title")}</h1>
-				<p className="mb-6 text-body-md text-primary-hover">{t("login.subtitle")}</p>
+				<h1 className="mb-2 text-heading-3 text-accent-deep">
+					{t(`login.portals.${LOGIN_PORTAL}.title`)}
+				</h1>
+				<p className="mb-6 text-body-md text-primary-hover">
+					{t(`login.portals.${LOGIN_PORTAL}.subtitle`)}
+				</p>
 
 				<form noValidate onSubmit={handleSubmit} className={formCardClass}>
 					<FormField id="email" label={t("login.email")} error={errors.email?.[0]}>
@@ -125,9 +139,9 @@ const Login = () => {
 						/>
 					</FormField>
 
-					{failure && (
+					{(failure || noDashboard) && (
 						<p role="alert" className="text-body-sm text-error">
-							{t(`login.errors.${failure}`)}
+							{t(`login.errors.${failure ?? "noDashboard"}`)}
 						</p>
 					)}
 
@@ -135,6 +149,19 @@ const Login = () => {
 						{submitting ? t("login.submitting") : t("login.submit")}
 					</button>
 				</form>
+
+				{/* a dedicated portal points anyone else to the general staff sign-in */}
+				{HOST_PORTAL !== null && HOST_PORTAL !== "staff" && (
+					<p className="mt-6 text-center text-body-sm text-foreground">
+						{t("login.otherPortal")}{" "}
+						<a
+							href={staffLoginHref()}
+							className="font-semibold text-primary-hover underline-offset-4 hover:text-accent-deep hover:underline"
+						>
+							{t("login.staffPortal")}
+						</a>
+					</p>
+				)}
 			</div>
 		</main>
 	);

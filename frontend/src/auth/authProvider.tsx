@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import api from "../lib/api";
-import type { AuthUser } from "../types/auth";
+import { can as holds, PERMISSIONS, type AuthUser, type DomainPortal } from "../types/auth";
+import { LOGIN_PORTAL } from "../portals";
 import { AuthContext, type AuthStatus } from "./authContext";
 
 type AuthProviderProps = {
@@ -14,6 +15,8 @@ type AuthProviderProps = {
 const AuthProvider = ({ children }: AuthProviderProps) => {
 	const [user, setUser] = useState<AuthUser | null>(null);
 	const [status, setStatus] = useState<AuthStatus>("loading");
+	// a session the user ended themselves, as opposed to one that expired
+	const [signedOut, setSignedOut] = useState(false);
 
 	// restore the session on mount: a valid cookie survives a page reload
 	useEffect(() => {
@@ -39,11 +42,18 @@ const AuthProvider = ({ children }: AuthProviderProps) => {
 	}, []);
 
 	const login = useCallback(async (email: string, password: string) => {
+		// the portal decides who is let in; the API refuses anyone else with a 401
+		const { data: result } = await api.post<{ portals: DomainPortal[] }>("/auth/login", {
+			email,
+			password,
+			portal: LOGIN_PORTAL,
+		});
 		// login only sets the cookies; the profile comes from /auth/me
-		await api.post("/auth/login", { email, password });
 		const { data } = await api.get<AuthUser>("/auth/me");
 		setUser(data);
 		setStatus("authed");
+		setSignedOut(false);
+		return result.portals;
 	}, []);
 
 	const reloadUser = useCallback(async () => {
@@ -58,6 +68,7 @@ const AuthProvider = ({ children }: AuthProviderProps) => {
 			// drop the local session even if the request failed
 			setUser(null);
 			setStatus("anon");
+			setSignedOut(true);
 		}
 	}, []);
 
@@ -68,11 +79,13 @@ const AuthProvider = ({ children }: AuthProviderProps) => {
 			login,
 			logout,
 			reloadUser,
+			signedOut,
 			// admins work across every faculty; everyone else is pinned to their own
-			facultyLocked: user !== null && user.role !== "admin",
+			facultyLocked: user !== null && !holds(user, PERMISSIONS.gradesAllFaculties),
 			facultyId: user?.facultyId ?? null,
+			can: (permission: string) => holds(user, permission),
 		}),
-		[user, status, login, logout, reloadUser],
+		[user, status, signedOut, login, logout, reloadUser],
 	);
 
 	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

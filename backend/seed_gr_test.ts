@@ -4,6 +4,7 @@ import * as bcrypt from 'bcrypt';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import * as schema from './schema';
+import { ensureGrants, setUserRoles } from './src/iam/grants';
 import { config } from './config';
 
 const PASS = 'secret123';
@@ -68,16 +69,14 @@ async function ensureGrUser(
     .set({ password: hashed, facultyId, suspended: false })
     .where(eq(schema.users.id, user.id));
 
-  const roleId = await ensureRole(db, roleName);
+  await ensureRole(db, roleName);
 
   const emp = await db.query.employees.findFirst({
     where: eq(schema.employees.userId, user.id),
   });
-  if (!emp) {
-    await db.insert(schema.employees).values({ userId: user.id, departmentId, roleId });
-  } else {
-    await db.update(schema.employees).set({ roleId }).where(eq(schema.employees.id, emp.id));
-  }
+  if (!emp) await db.insert(schema.employees).values({ userId: user.id, departmentId });
+  await ensureGrants(db);
+  await setUserRoles(db, user.id, [roleName]);
 
   console.log(`user test-${name} (role=${roleName}) ready`);
 }

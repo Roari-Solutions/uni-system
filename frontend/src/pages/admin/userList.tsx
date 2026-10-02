@@ -3,13 +3,16 @@ import { useTranslation } from "react-i18next";
 import ConfirmDialog from "../../components/confirmDialog";
 import DataTable, { type Column } from "../../components/dataTable";
 import EditUserDialog, { type UserEdit } from "../../components/editUserDialog";
+import EditRolesDialog from "../../components/editRolesDialog";
 import FilterSelect from "../../components/filterSelect";
 import useAuth from "../../auth/useAuth";
+import { PERMISSIONS } from "../../types/auth";
 import useFaculties from "../../hooks/useFaculties";
 import {
 	fetchRoles,
 	fetchUsers,
 	updateUserIdentity,
+	updateUserRoles,
 	resetUserPassword,
 	setUserSuspended,
 } from "../../api/users";
@@ -19,7 +22,9 @@ import axios from "axios";
 const UserList = () => {
 	const { t, i18n } = useTranslation();
 	const lang = i18n.language === "ar" ? "ar" : "en";
-	const { user: currentUser, reloadUser } = useAuth();
+	const { user: currentUser, reloadUser, can } = useAuth();
+	// faculties are the grades system's; the website's users have none
+	const inGrades = can(PERMISSIONS.grades);
 	const { faculties } = useFaculties();
 
 	const [users, setUsers] = useState<ManagedUser[]>([]);
@@ -32,6 +37,9 @@ const UserList = () => {
 	const [editing, setEditing] = useState<ManagedUser | null>(null);
 	const [editSaving, setEditSaving] = useState(false);
 	const [editFailure, setEditFailure] = useState<string | null>(null);
+	const [editingRoles, setEditingRoles] = useState<ManagedUser | null>(null);
+	const [rolesSaving, setRolesSaving] = useState(false);
+	const [rolesFailure, setRolesFailure] = useState<string | null>(null);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -106,6 +114,28 @@ const UserList = () => {
 		}
 	};
 
+	const openRoles = (u: ManagedUser) => {
+		setRolesFailure(null);
+		setEditingRoles(u);
+	};
+
+	const saveRoles = async (nextRoles: string[], nextFaculty: string | null) => {
+		if (!editingRoles) return;
+		setRolesSaving(true);
+		setRolesFailure(null);
+		try {
+			const updated = await updateUserRoles(editingRoles.id, nextRoles, nextFaculty);
+			setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
+			setEditingRoles(null);
+		} catch (error) {
+			// the dialog stays open so the choice isn't lost; a user needs at least one role somewhere
+			const code = axios.isAxiosError(error) ? (error.response?.data as { code?: string } | undefined)?.code : undefined;
+			setRolesFailure(code === "ROLE_REQUIRED" ? "userEntry.errors.roleRequired" : "common.saveFailed");
+		} finally {
+			setRolesSaving(false);
+		}
+	};
+
 	const actionClass =
 		"rounded-xs px-3 py-2 text-body-sm text-accent-deep underline-offset-4 transition-colors duration-150 ease-out hover:bg-background hover:underline";
 
@@ -116,8 +146,14 @@ const UserList = () => {
 			header: t("userList.columns.email"),
 			render: (u) => <span dir="ltr">{u.email}</span>,
 		},
-		{ key: "role", header: t("userList.columns.role"), render: (u) => t(`roles.${u.role}`) },
-		{ key: "faculty", header: t("userList.columns.faculty"), render: (u) => facultyName(u.facultyId) },
+		{
+			key: "roles",
+			header: t("userList.columns.roles"),
+			render: (u) => u.roles.map((r) => t(`roles.${r}`)).join(" · "),
+		},
+		...(inGrades
+			? [{ key: "faculty", header: t("userList.columns.faculty"), render: (u: ManagedUser) => facultyName(u.facultyId) }]
+			: []),
 		{
 			key: "status",
 			header: t("userList.columns.status"),
@@ -129,23 +165,42 @@ const UserList = () => {
 			header: t("common.actions"),
 			render: (u) => (
 				<div className="flex flex-wrap items-center gap-1">
-					<button
-						type="button"
-						onClick={() => openEdit(u)}
-						aria-label={t("userList.editItem", { name: u.name })}
-						className={actionClass}
-					>
-						{t("userList.edit")}
-					</button>
+					{/* the API decides what this admin may do to whom; the list only offers that */}
+					{u.canEditAccount && (
+						<button
+							type="button"
+							onClick={() => openEdit(u)}
+							aria-label={t("userList.editItem", { name: u.name })}
+							className={actionClass}
+						>
+							{t("userList.edit")}
+						</button>
+					)}
+					{u.canEditRoles && (
+						<button
+							type="button"
+							onClick={() => openRoles(u)}
+							aria-label={t("userList.rolesItem", { name: u.name })}
+							className={actionClass}
+						>
+							{t("userList.roles")}
+						</button>
+					)}
 					{/* an admin may not suspend themselves: that locks everyone out */}
 					{u.id === currentUser?.id ? (
 						<span className="px-3 py-2 text-body-sm text-primary-hover">
 							{t("userList.you")}
 						</span>
-					) : (
+					) : u.canEditAccount ? (
 						<button type="button" onClick={() => setPendingSuspend(u)} className={actionClass}>
 							{t(u.suspended ? "userList.restore" : "userList.suspend")}
 						</button>
+					) : (
+						!u.canEditRoles && (
+							<span className="px-3 py-2 text-body-sm text-primary-hover">
+								{t("userList.readOnly")}
+							</span>
+						)
 					)}
 				</div>
 			),
@@ -159,14 +214,16 @@ const UserList = () => {
 			</h1>
 
 			<div className="mb-6 flex flex-wrap items-end gap-6">
-				<FilterSelect
-					id="facultyFilter"
-					label={t("userList.filters.faculty")}
-					value={facultyId}
-					onChange={setFacultyId}
-					allLabel={t("userList.filters.allFaculties")}
-					options={faculties.map((f) => ({ value: f.id, label: f.name[lang] }))}
-				/>
+				{inGrades && (
+					<FilterSelect
+						id="facultyFilter"
+						label={t("userList.filters.faculty")}
+						value={facultyId}
+						onChange={setFacultyId}
+						allLabel={t("userList.filters.allFaculties")}
+						options={faculties.map((f) => ({ value: f.id, label: f.name[lang] }))}
+					/>
+				)}
 				<FilterSelect
 					id="roleFilter"
 					label={t("userList.filters.role")}
@@ -211,6 +268,19 @@ const UserList = () => {
 				failure={editFailure}
 				onSave={(edit) => void saveEdit(edit)}
 				onCancel={() => setEditing(null)}
+			/>
+
+			<EditRolesDialog
+				open={editingRoles !== null}
+				name={editingRoles?.name ?? ""}
+				roles={roles.filter((r) => r.assignable)}
+				current={editingRoles?.roles ?? []}
+				facultyId={editingRoles?.facultyId ?? null}
+				self={editingRoles?.id === currentUser?.id}
+				saving={rolesSaving}
+				failure={rolesFailure}
+				onSave={(r, f) => void saveRoles(r, f)}
+				onCancel={() => setEditingRoles(null)}
 			/>
 		</div>
 	);

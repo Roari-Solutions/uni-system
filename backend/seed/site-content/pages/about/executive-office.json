@@ -1,0 +1,114 @@
+{
+  "profile": {
+    "name": {
+      "ar": "مدير المكتب التنفيذي",
+      "en": ""
+    },
+    "position": {
+      "ar": "مدير المكتب التنفيذي",
+      "en": ""
+    },
+    "description": {
+      "ar": "",
+      "en": ""
+    },
+    "image": "/images/4afa9c2bbb0197f2e0ec4f2dee24d25df5d3eb505c34b42b3ed66cd20882063f.png",
+    "badge": {
+      "ar": "المكتب التنفيذي",
+      "en": ""
+    },
+    "stats": [],
+    "primaryActionLabel": {
+      "ar": "",
+      "en": ""
+    },
+    "secondaryActionLabel": {
+      "ar": "",
+      "en": ""
+    }
+  },
+  "message": {
+    "title": {
+      "ar": "كلمة مدير المكتب التنفيذي",
+      "en": ""
+    },
+    "paragraphs": [
+      {
+        "ar": "رسالة من مدير المكتب التنفيذي للترحيب بالزوار وتوضيح مهام المكتب.",
+        "en": ""
+      }
+    ],
+    "authorName": {
+      "ar": "مدير المكتب التنفيذي",
+      "en": ""
+    },
+    "authorPosition": {
+      "ar": "المدير التنفيذي",
+      "en": ""
+    }
+  },
+  "pillars": {
+    "title": {
+      "ar": "ركائز التميز المؤسسي",
+      "en": ""
+    },
+    "items": []
+  },
+  "strategicPlan": {
+    "vision": {
+      "ar": "",
+      "en": ""
+    },
+    "mission": {
+      "ar": "",
+      "en": ""
+    },
+    "goals": [],
+    "values": []
+  },
+  "tasks": {
+    "tag": {
+      "ar": "",
+      "en": ""
+    },
+    "title": {
+      "ar": "",
+      "en": ""
+    },
+    "description": {
+      "ar": "",
+      "en": ""
+    },
+    "items": []
+  },
+  "regulations": {
+    "title": {
+      "ar": "",
+      "en": ""
+    },
+    "description": {
+      "ar": "",
+      "en": ""
+    },
+    "buttonLabel": {
+      "ar": "",
+      "en": ""
+    },
+    "items": []
+  },
+  "contacts": {
+    "tag": {
+      "ar": "",
+      "en": ""
+    },
+    "title": {
+      "ar": "",
+      "en": ""
+    },
+    "description": {
+      "ar": "",
+      "en": ""
+    },
+    "items": []
+  }
+}

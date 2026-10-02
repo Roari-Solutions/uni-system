@@ -20,6 +20,8 @@ import { config } from 'config';
 import ms, { StringValue } from 'ms';
 import { Response } from 'express';
 import { JwtPayload } from './auth.guard';
+import { AccessService } from 'src/iam/access.service';
+import { canEnter, portalsFor } from 'src/iam/portals';
 
 type AuthTokens = { accessToken: string; refreshToken: string };
 
@@ -33,15 +35,17 @@ export class AuthService {
   constructor(
     @Inject(DATABASE) private readonly db: Db,
     @Inject(JwtService) private readonly jwt: JwtService,
+    @Inject(AccessService) private readonly accessService: AccessService,
   ) {}
 
-  /** Validates credentials; throws UnauthorizedException on failure. */
+  /**
+   * Validates credentials and that the user may sign in at this portal. A user
+   * at the wrong portal gets the same 401 as a wrong password, so a form never
+   * tells anyone which accounts exist; the reason goes to the log only.
+   */
   async login(body: LoginDto) {
     const user = await this.db.query.users.findFirst({
       where: eq(schema.users.email, body.email),
-      with: {
-        employee: { with: { role: { columns: { name: true } } }, columns: {} },
-      },
       columns: { id: true, password: true, suspended: true },
     });
 
@@ -60,26 +64,27 @@ export class AuthService {
       throw new UnauthorizedException();
     }
 
-    if (!user.employee?.role) {
-      this.logger.warn(`Login blocked: user ${user.id} has no employee role`);
+    // read fresh: a role may have changed since this user was last seen
+    this.accessService.forget(user.id);
+    const access = await this.accessService.load(user.id);
+    if (!access || !canEnter(body.portal, access.permissions)) {
+      this.logger.warn(
+        `Login blocked: user ${user.id} may not use the ${body.portal} portal`,
+      );
       throw new UnauthorizedException();
     }
 
-    this.logger.log(`Login success: user ${user.id}`);
+    this.logger.log(
+      `Login success: user ${user.id} at the ${body.portal} portal`,
+    );
 
-    const { accessToken, refreshToken } = await this.issueTokens({
-      sub: user.id,
-      role: user.employee.role.name,
-    });
-    return { accessToken, refreshToken };
+    const tokens = await this.issueTokens({ sub: user.id });
+    return { tokens, portals: portalsFor(access.permissions) };
   }
 
   /** Signs a fresh access/refresh token pair for the payload. */
   async issueTokens(user: JwtPayload): Promise<AuthTokens> {
-    const payload = {
-      sub: user.sub,
-      role: user.role,
-    };
+    const payload = { sub: user.sub };
     const [accessToken, refreshToken] = await Promise.all([
       this.jwt.signAsync(payload, {
         secret: config.jwtAccessSecret,
@@ -107,55 +112,43 @@ export class AuthService {
       });
     }
 
-    const user = await this.db.query.users.findFirst({
-      where: eq(schema.users.id, payload.sub),
-      with: {
-        employee: { columns: {}, with: { role: { columns: { name: true } } } },
-      },
-    });
-    if (!user) {
-      this.logger.warn(`Refresh failed: user ${payload.sub} not found`);
+    const access = await this.accessService.load(payload.sub);
+    if (!access || portalsFor(access.permissions).length === 0) {
+      this.logger.warn(
+        `Refresh blocked: user ${payload.sub} is gone, suspended or has no roles`,
+      );
       throw new UnauthorizedException();
     }
 
-    if (user.suspended) {
-      this.logger.warn(`Refresh blocked: suspended user ${user.id}`);
-      throw new UnauthorizedException();
-    }
-
-    if (!user.employee?.role) {
-      this.logger.warn(`Refresh blocked: user ${user.id} has no employee role`);
-      throw new UnauthorizedException();
-    }
-
-    return this.issueTokens({ sub: user.id, role: user.employee.role.name });
+    return this.issueTokens({ sub: access.userId });
   }
 
-  /** Returns the safe profile (no password hash) plus the caller's role. */
+  /**
+   * Returns the safe profile (no password hash) plus the caller's roles,
+   * permissions and the portals they may open; the views branch on these.
+   */
   async me(userId: string) {
     const user = await this.db.query.users.findFirst({
       where: eq(schema.users.id, userId),
-      with: {
-        employee: { columns: {}, with: { role: { columns: { name: true } } } },
-      },
+      columns: { password: false },
     });
     if (!user) {
       this.logger.warn(`me: user ${userId} not found`);
       throw new NotFoundException();
     }
-    if (user.suspended) {
+
+    const access = await this.accessService.load(userId);
+    if (!access) {
       this.logger.warn(`me: forbidden for suspended user ${userId}`);
       throw new ForbiddenException();
     }
 
-    if (!user.employee?.role) {
-      this.logger.warn(`me: user ${userId} has no employee role`);
-      throw new ForbiddenException();
-    }
-
-    const { password: _password, employee: _employee, ...safe } = user;
-    // the views branch on role, so it travels with the profile
-    return { ...safe, role: user.employee.role.name };
+    return {
+      ...user,
+      roles: access.roles,
+      permissions: [...access.permissions].sort(),
+      portals: portalsFor(access.permissions),
+    };
   }
 
   /**

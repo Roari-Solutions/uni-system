@@ -1,0 +1,119 @@
+{
+  "switchboard": {
+    "label": {
+      "ar": "البدالة العامة",
+      "en": ""
+    },
+    "phone": "+249 183 770 000",
+    "ext": "",
+    "email": "info@ut.edu.sd"
+  },
+  "admissions": {
+    "label": {
+      "ar": "القبول والتسجيل",
+      "en": ""
+    },
+    "phone": "+249 183 770 112",
+    "ext": "",
+    "email": "admissions@ut.edu.sd"
+  },
+  "studentAffairs": {
+    "label": {
+      "ar": "عمادة شؤون الطلاب",
+      "en": ""
+    },
+    "phone": "+249 183 770 340",
+    "ext": "",
+    "email": "studentaffairs@ut.edu.sd"
+  },
+  "finance": {
+    "label": {
+      "ar": "الشؤون المالية",
+      "en": ""
+    },
+    "phone": "+249 183 770 210",
+    "ext": "",
+    "email": "[EMAIL ADDRESS]"
+  },
+  "humanResources": {
+    "label": {
+      "ar": "الموارد البشرية",
+      "en": ""
+    },
+    "phone": "+249 183 770 220",
+    "ext": "",
+    "email": "[EMAIL ADDRESS]"
+  },
+  "itCenter": {
+    "label": {
+      "ar": "مركز تقنية المعلومات",
+      "en": ""
+    },
+    "phone": "+249 183 770 230",
+    "ext": "",
+    "email": "itcenter@ut.edu.sd"
+  },
+  "scientificAffairs": {
+    "label": {
+      "ar": "أمانة الشؤون العلمية",
+      "en": ""
+    },
+    "phone": "+249 183 770 000",
+    "ext": "104 - 105",
+    "email": "scientific.affairs@ut.edu.sd"
+  },
+  "universityDirector": {
+    "label": {
+      "ar": "مكتب مدير الجامعة",
+      "en": ""
+    },
+    "phone": "+249 183 770 000",
+    "ext": "100",
+    "email": "director@ut.edu.sd"
+  },
+  "viceChancellor": {
+    "label": {
+      "ar": "وكالة الجامعة",
+      "en": ""
+    },
+    "phone": "[PHONE NUMBER]",
+    "ext": "",
+    "email": "vc@ut.edu.sd"
+  },
+  "libraries": {
+    "label": {
+      "ar": "عمادة المكتبات",
+      "en": ""
+    },
+    "phone": "[PHONE NUMBER]",
+    "ext": "",
+    "email": "libraries@ut.edu.sd"
+  },
+  "strategyCenter": {
+    "label": {
+      "ar": "مركز الاستراتيجية وعلوم المستقبل",
+      "en": ""
+    },
+    "phone": "[PHONE NUMBER]",
+    "ext": "",
+    "email": "strategy@ut.edu.sd"
+  },
+  "mediaCenter": {
+    "label": {
+      "ar": "المركز الإعلامي",
+      "en": ""
+    },
+    "phone": "[PHONE NUMBER]",
+    "ext": "",
+    "email": "media@ut.edu.sd"
+  },
+  "partnerships": {
+    "label": {
+      "ar": "الشراكات والتعاون",
+      "en": ""
+    },
+    "phone": "[PHONE NUMBER]",
+    "ext": "",
+    "email": "partnerships@ut.edu.sd"
+  }
+}

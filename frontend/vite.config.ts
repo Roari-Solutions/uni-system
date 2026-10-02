@@ -12,6 +12,9 @@ export default defineConfig({
         target: 'http://localhost:4000',
         changeOrigin: true,
       },
+      // website media the content editor previews
+      '/images': { target: 'http://localhost:4000', changeOrigin: true },
+      '/pdfs': { target: 'http://localhost:4000', changeOrigin: true },
     },
   },
 })

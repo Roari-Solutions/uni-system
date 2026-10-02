@@ -36,6 +36,13 @@ const FacultyField = ({
 	const lang = i18n.language === "ar" ? "ar" : "en";
 	const { faculties, locked, lockedFaculty, lockedFacultyId } = useFaculties();
 	const [query, setQuery] = useState("");
+	// a faculty already chosen (editing an existing record) shows by name
+	const [shownFor, setShownFor] = useState("");
+	const selectedName = faculties.find((f) => f.id === value)?.name[lang];
+	if (value && selectedName && shownFor !== value) {
+		setShownFor(value);
+		setQuery(selectedName);
+	}
 
 	// a locked caller never picks: adopt their faculty as soon as it is known
 	useEffect(() => {

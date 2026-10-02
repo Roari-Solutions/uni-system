@@ -11,6 +11,7 @@ import DepartmentFilter from "../../../components/departmentFilter";
 import SetSpecializationDialog, { type PlacementKind } from "../../../components/setSpecializationDialog";
 import SpecializationFilter from "../../../components/specializationFilter";
 import useAuth from "../../../auth/useAuth";
+import { PERMISSIONS } from "../../../types/auth";
 import useFaculties from "../../../hooks/useFaculties";
 import {
 	deleteCurriculum,
@@ -41,7 +42,7 @@ const CurriculumList = ({ facultyId: fixedFacultyId, onAdd, onEdit, reloadKey = 
 	const { t, i18n } = useTranslation();
 	const lang = i18n.language === "ar" ? "ar" : "en";
 	const { faculties, locked, lockedFacultyId } = useFaculties();
-	const { user } = useAuth();
+	const { can } = useAuth();
 	const embedded = fixedFacultyId !== undefined;
 
 	const [curriculums, setCurriculums] = useState<Curriculum[]>([]);
@@ -206,7 +207,7 @@ const CurriculumList = ({ facultyId: fixedFacultyId, onAdd, onEdit, reloadKey = 
 			render: (c) => (
 				<div className="flex items-center gap-1">
 					{/* a university requirement spans every faculty, so only an admin edits one */}
-					{(c.requirementType !== "university" || user?.role === "admin") &&
+					{(c.requirementType !== "university" || can(PERMISSIONS.gradesAllFaculties)) &&
 						(onEdit ? (
 							<button
 								type="button"

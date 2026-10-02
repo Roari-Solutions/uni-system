@@ -923,7 +923,7 @@ export class StudentsService {
    * now, is rebuilt.
    */
   async reinstateStudent(id: string, caller: GrCaller): Promise<StudentView> {
-    if (caller.role !== 'admin') throw new UnauthorizedException();
+    if (!caller.canReinstate) throw new UnauthorizedException();
     try {
       const row = await this.db.query.students.findFirst({ where: eq(students.id, id) });
       if (!row) throw new NotFoundException();

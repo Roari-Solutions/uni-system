@@ -1,59 +1,61 @@
 import {
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
   Inject,
   Injectable,
-  Logger,
-  UnauthorizedException,
 } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
-import { users } from 'schema';
-import { AuthedRequest } from 'src/auth/auth.guard';
-import { DATABASE, type Db } from 'src/database/database.module';
+import { PERMISSIONS } from 'src/iam/permissions';
+import { PermissionGuard, type AccessRequest } from 'src/iam/permission.guard';
 
-/** Caller identity for /gr authorization; facultyId set for data-entry only. */
+/** Caller identity for /gr authorization. */
 export interface GrCaller {
-  role: string;
+  /** Works across every faculty; otherwise pinned to facultyId. */
+  allFaculties: boolean;
+  /** Set for callers pinned to one faculty. */
   facultyId?: string;
+  /** May lift a student's suspension or dismissal. */
+  canReinstate: boolean;
 }
 
 /** Request carrying the verified user plus the guard-attached caller. */
-export interface GrRequest extends AuthedRequest {
+export interface GrRequest extends AccessRequest {
   grCaller: GrCaller;
 }
 
+/** The /gr caller these permissions make; null when they may not enter grades. */
+export function grCallerOf(
+  permissions: ReadonlySet<string>,
+  facultyId: string | null,
+): GrCaller | null {
+  if (!permissions.has(PERMISSIONS.grades)) return null;
+  const canReinstate = permissions.has(PERMISSIONS.studentsReinstate);
+  if (permissions.has(PERMISSIONS.gradesAllFaculties))
+    return { allFaculties: true, canReinstate };
+  // someone pinned to a faculty must have one
+  if (!facultyId) return null;
+  return { allFaculties: false, facultyId, canReinstate };
+}
+
 /**
- * Faculty-scope gate for /gr routes.
- * Must run after AuthGuard: relies on req.user being set.
+ * Gate for /gr routes: the caller needs the grades domain, and unless they work
+ * across faculties, a faculty of their own. Must run after AuthGuard.
  * Attaches req.grCaller; row-level checks live in the grades/students/curriculums services.
  */
 @Injectable()
 export class GrGurdGuard implements CanActivate {
-  private readonly logger = new Logger(GrGurdGuard.name);
-
-  constructor(@Inject(DATABASE) private readonly db: Db) {}
+  constructor(
+    @Inject(PermissionGuard) private readonly permissionGuard: PermissionGuard,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    await this.permissionGuard.canActivate(context);
     const req = context.switchToHttp().getRequest<GrRequest>();
 
-    if (!req.user) throw new UnauthorizedException();
+    const caller = grCallerOf(req.access.permissions, req.access.facultyId);
+    if (!caller) throw new ForbiddenException();
 
-    if (req.user.role === 'admin') {
-      req.grCaller = { role: req.user.role };
-      return true;
-    }
-
-    if (req.user.role !== 'data-entry') throw new UnauthorizedException();
-
-    const facultyObj = await this.db.query.users.findFirst({
-      where: eq(users.id, req.user.sub),
-      columns: { facultyId: true },
-    });
-
-    if (!facultyObj?.facultyId) throw new UnauthorizedException();
-
-    req.grCaller = { role: req.user.role, facultyId: facultyObj.facultyId };
-
+    req.grCaller = caller;
     return true;
   }
 }

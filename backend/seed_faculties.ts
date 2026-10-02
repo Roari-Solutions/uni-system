@@ -4,6 +4,7 @@ import * as bcrypt from 'bcrypt';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import * as schema from './schema';
+import { ensureGrants, setUserRoles } from './src/iam/grants';
 import { config } from './config';
 
 const PASS = 'secret123';
@@ -155,15 +156,13 @@ async function ensureUser(
     .set({ password: hashed, facultyId, suspended: false })
     .where(eq(schema.users.id, user.id));
 
-  const roleId = await ensureRole(db, roleName);
+  await ensureRole(db, roleName);
   const emp = await db.query.employees.findFirst({
     where: eq(schema.employees.userId, user.id),
   });
-  if (!emp) {
-    await db.insert(schema.employees).values({ userId: user.id, departmentId, roleId });
-  } else {
-    await db.update(schema.employees).set({ roleId }).where(eq(schema.employees.id, emp.id));
-  }
+  if (!emp) await db.insert(schema.employees).values({ userId: user.id, departmentId });
+  await ensureGrants(db);
+  await setUserRoles(db, user.id, [roleName]);
   console.log(`user ${email} (role=${roleName}) ready`);
 }
 
@@ -181,9 +180,13 @@ async function main() {
     await ensureRole(db, 'admin');
     await ensureRole(db, 'data-entry');
     await ensureRole(db, 'site-content-employee');
+    await ensureRole(db, 'cms-admin');
+    await ensureRole(db, 'super-admin');
     const deptId = await ensureDepartment(db, 'IT');
     await ensureUser(db, 'admin', 'Admin', 'admin', null, deptId);
     await ensureUser(db, 'test-testuser', 'Test User', 'site-content-employee', null, deptId);
+    await ensureUser(db, 'cms-admin', 'Website Admin', 'cms-admin', null, deptId);
+    await ensureUser(db, 'superadmin', 'Super Admin', 'super-admin', null, deptId);
     for (const f of rows) {
       await ensureUser(
         db,

@@ -366,9 +366,11 @@
     "stay": "Stay"
   },
   "roles": {
-    "admin": "Administrator",
+    "admin": "Grades administrator",
     "data-entry": "Data entry",
-    "site-content-employee": "Site content"
+    "site-content-employee": "Website content manager",
+    "cms-admin": "Website administrator",
+    "super-admin": "System administrator"
   },
   "login": {
     "title": "Sign in",
@@ -379,9 +381,42 @@
     "submitting": "Signing in…",
     "errors": {
       "required": "This field is required",
-      "credentials": "Incorrect email or password.",
-      "unavailable": "Couldn't reach the server. Please try again in a moment."
-    }
+      "credentials": "Couldn't sign you in. Check your login and password, and that this is the right sign-in page for your account.",
+      "unavailable": "Couldn't reach the server. Please try again in a moment.",
+      "noDashboard": "You're signed in, but none of your systems is available here yet."
+    },
+    "portals": {
+      "staff": {
+        "title": "Staff sign-in",
+        "subtitle": "One sign-in for every university system you work in."
+      },
+      "grades": {
+        "title": "Grades and results",
+        "subtitle": "Sign in with your university account."
+      },
+      "cms": {
+        "title": "Website content",
+        "subtitle": "Sign in to edit the university website."
+      },
+      "management": {
+        "title": "Management",
+        "subtitle": "Sign in with your university account."
+      },
+      "teachers": {
+        "title": "Teachers",
+        "subtitle": "Sign in with your university account."
+      },
+      "students": {
+        "title": "Students",
+        "subtitle": "Sign in with your university number."
+      },
+      "lms": {
+        "title": "Learning management",
+        "subtitle": "Sign in with your university account."
+      }
+    },
+    "otherPortal": "Working in another system?",
+    "staffPortal": "Use the staff sign-in"
   },
   "userList": {
     "title": "Users",
@@ -401,7 +436,8 @@
       "email": "Login",
       "role": "Role",
       "faculty": "Faculty",
-      "status": "Status"
+      "status": "Status",
+      "roles": "Roles"
     },
     "filters": {
       "faculty": "Faculty",
@@ -410,7 +446,10 @@
       "allRoles": "All roles"
     },
     "edit": "Edit",
-    "editItem": "Edit {{name}}"
+    "editItem": "Edit {{name}}",
+    "roles": "Roles",
+    "rolesItem": "Change {{name}}'s roles",
+    "readOnly": "Managed by another administrator"
   },
   "userEntry": {
     "title": "Add user",
@@ -423,7 +462,7 @@
     "faculty": "Faculty",
     "facultyPlaceholder": "Search faculties...",
     "noResults": "No results",
-    "unscopedRole": "Administrators are not tied to a faculty.",
+    "unscopedRole": "These roles aren't tied to a faculty.",
     "phone": "Phone (optional)",
     "submit": "Save",
     "saved": "User created.",
@@ -431,8 +470,10 @@
       "required": "This field is required",
       "passwordLength": "Password must be at least 8 characters",
       "taken": "That login is already in use.",
-      "unavailable": "Couldn't reach the server. Please try again in a moment."
-    }
+      "unavailable": "Couldn't reach the server. Please try again in a moment.",
+      "roleRequired": "Choose at least one role"
+    },
+    "roles": "Roles"
   },
   "editUser": {
     "title": "Edit user",
@@ -865,5 +906,118 @@
     "deleteHint": "A department can be deleted only while no specialization, student or curriculum uses it.",
     "deleteTitle": "Delete department",
     "deleteMessage": "Delete \"{{name}}\"? This can't be undone."
+  },
+  "portals": {
+    "staff": {
+      "name": "Staff sign-in"
+    },
+    "grades": {
+      "name": "Grades and results",
+      "description": "Students, curriculums, grades and result sheets"
+    },
+    "cms": {
+      "name": "Website content",
+      "description": "The text, images and files on the university website"
+    },
+    "management": {
+      "name": "Management",
+      "description": ""
+    },
+    "teachers": {
+      "name": "Teachers",
+      "description": ""
+    },
+    "students": {
+      "name": "Students",
+      "description": ""
+    },
+    "lms": {
+      "name": "Learning management",
+      "description": ""
+    }
+  },
+  "choosePortal": {
+    "title": "Where to?",
+    "subtitle": "{{name}}, you work in more than one system. Pick one to open."
+  },
+  "noAccess": {
+    "title": "Not available to this account",
+    "message": "{{name}}, your account can't use {{portal}}. Sign in through the staff sign-in to reach your own systems."
+  },
+  "editRoles": {
+    "title": "Roles",
+    "save": "Save roles",
+    "selfNote": "You can't change your own roles. Another administrator can."
+  },
+  "cmsNav": {
+    "title": "Website content",
+    "pages": "Pages",
+    "users": "Users",
+    "addUser": "Add user"
+  },
+  "cmsPages": {
+    "title": "Website pages",
+    "subtitle": "Each page's sections and layout are fixed; you edit the text, images, links and files in them.",
+    "groups": {
+      "site": "Every page and the home page",
+      "about": "About the university",
+      "leaders": "University leadership",
+      "units": "Deanships and centers",
+      "colleges": "Colleges"
+    },
+    "notSeeded": "No content in the database yet",
+    "savedBy": "Saved {{date}} by {{name}}",
+    "fromSnapshot": "As the website showed it before the CMS",
+    "snapshot": "Original website content",
+    "everyPage": "Shown on every page"
+  },
+  "cmsEditor": {
+    "back": "All pages",
+    "save": "Save",
+    "saved": "Saved as version {{version}}",
+    "version": "Version {{version}}",
+    "unsaved": "Unsaved changes",
+    "current": "Current",
+    "history": "History",
+    "closeHistory": "Close",
+    "historyHint": "Loading an earlier version puts it in the editor as unsaved changes. Save to make it the current one.",
+    "loadVersion": "Load this version",
+    "reload": "Load the latest version",
+    "viewOnWebsite": "View on website",
+    "arabic": "Arabic",
+    "english": "English",
+    "optional": "optional",
+    "noImage": "No image",
+    "noFile": "No file",
+    "uploadImage": "Upload image",
+    "uploadFile": "Upload PDF",
+    "uploading": "Uploading…",
+    "uploadFailed": "Couldn't upload the file. Use a JPG, PNG, WebP or GIF image, or a PDF, under 20 MB.",
+    "remove": "Remove",
+    "addItem": "Add {{item}}",
+    "removeItem": "Remove {{item}}",
+    "moveUp": "Move {{item}} up",
+    "moveDown": "Move {{item}} down",
+    "listMin": "At least {{count}}",
+    "listRange": "Between {{min}} and {{max}}",
+    "notSeededHelp": "This page has no content in the database yet. Load the website's original content with the content seed (bun run seed:site in the backend), then edit it here.",
+    "leaveTitle": "Leave without saving?",
+    "leaveMessage": "Your changes to this page haven't been saved and will be lost.",
+    "leave": "Leave",
+    "stay": "Keep editing",
+    "failures": {
+      "invalid": "Some fields need attention before this can be saved. They're marked below.",
+      "stale": "Someone saved this page after you opened it. Load the latest version to see their changes; your unsaved edits here will be lost.",
+      "save": "Couldn't save. Please try again."
+    },
+    "issues": {
+      "EMPTY": "Fill this in, in at least one language",
+      "BAD_FORMAT": "This isn't in the expected format",
+      "NOT_A_NUMBER": "Enter a whole number",
+      "LIST_LENGTH": "The number of items is outside what this section allows",
+      "TOO_LONG": "This is too long",
+      "BAD_CHOICE": "Choose one of the options",
+      "default": "This value can't be saved"
+    }
   }
 }

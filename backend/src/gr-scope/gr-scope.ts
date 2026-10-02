@@ -19,19 +19,17 @@ export async function assertFacultyExists(db: Db, facultyId: string): Promise<st
 
 /** Throws UnauthorizedException unless the caller may touch this faculty. */
 export function assertFaculty(caller: GrCaller, rowFacultyId: string): void {
-  if (caller.role === 'admin') return;
+  if (caller.allFaculties) return;
   if (rowFacultyId !== caller.facultyId) throw new UnauthorizedException();
 }
 
 /**
- * Faculty scope for list queries: null when unscoped (admin).
- * Throws UnauthorizedException for anyone else without a faculty.
+ * Faculty scope for list queries: null when unscoped (across all faculties).
+ * Throws UnauthorizedException for a scoped caller without a faculty.
  */
 export function scopeFacultyId(caller: GrCaller): string | null {
-  if (caller.role === 'admin') return null;
-  if (caller.role !== 'data-entry' || !caller.facultyId) {
-    throw new UnauthorizedException();
-  }
+  if (caller.allFaculties) return null;
+  if (!caller.facultyId) throw new UnauthorizedException();
   return caller.facultyId;
 }
 

@@ -1,0 +1,681 @@
+{
+  "_about": "Content present in the website source on 2026-10-02 but not shown on any page (commented-out sections or fields no component renders). Kept for reference; it is not part of any page schema and is not seeded.",
+  "home": {
+    "heroCallsToAction": [
+      {
+        "primaryCta": {
+          "label": "تعرف على الجامعة",
+          "href": "/about"
+        },
+        "secondaryCta": {
+          "label": "البرامج الدراسية",
+          "href": "/programs"
+        }
+      },
+      {
+        "primaryCta": {
+          "label": "استكشف البرامج",
+          "href": "/programs"
+        },
+        "secondaryCta": null
+      },
+      {
+        "primaryCta": {
+          "label": "الرؤية والرسالة",
+          "href": "/about/vision-mission"
+        },
+        "secondaryCta": null
+      }
+    ]
+  },
+  "about": {
+    "overviewPillarsTitle": "مرتكزات الهوية الاستراتيجية",
+    "overviewPillars": [
+      {
+        "title": "الاستقلالية والتميز",
+        "text": "الجامعة مؤسسة تعليمية مستقلة تهدف إلى تحقيق التميز الأكاديمي."
+      },
+      {
+        "title": "الريادة في التكنولوجيا",
+        "text": "تقديم برامج نوعية تواكب التطور التكنولوجي وتلبي احتياجات العصر."
+      },
+      {
+        "title": "ربط المخرجات بالسوق",
+        "text": "بناء شراكات استراتيجية مع قطاعات العمل لتحسين فرص الخريجين."
+      }
+    ],
+    "journey": {
+      "title": "المسيرة التكنولوجية ومحطات التحول",
+      "timeline": [
+        {
+          "year": "2018",
+          "title": "انطلاق الجامعة التكنولوجية",
+          "desc": "تأسيس الجامعة التكنولوجية كمؤسسة وطنية عليا متخصصة بالكامل في التعليم التقني والهندسي التطبيقي.",
+          "active": false,
+          "footerText": "التأسيس المعتمد 2018م"
+        },
+        {
+          "year": "2019",
+          "title": "المختبرات والورش",
+          "desc": "تدشين حزمة المختبرات الحاسوبية المتقدمة ومراكز محاكاة الشبكات والأنظمة الذكية في الحرم الجامعي.",
+          "active": false,
+          "footerText": "تجهيز البنية التحتية"
+        },
+        {
+          "year": "2021",
+          "title": "الشراكات الصناعية",
+          "desc": "عقد بروتوكولات تعاون مع قطاعات الاتصالات والبرمجيات والمصانع لتدريب الطلاب وربط المقررات بسوق العمل.",
+          "active": false,
+          "footerText": "شراكات قطاع التكنولوجيا"
+        },
+        {
+          "year": "2023",
+          "title": "برامج الذكاء الاصطناعي",
+          "desc": "إطلاق برامج متخصصة في الذكاء الاصطناعي، الحوسبة السحابية، وإنترنت الأشياء والأمن السيبراني.",
+          "active": true,
+          "footerText": "مواكبة الثورة الصناعية"
+        },
+        {
+          "year": "2025",
+          "title": "التوسع والاعتماد الدولي",
+          "desc": "توسيع برامج الدراسات العليا التقنية وحصد الاعتمادات الدولية للهندسة وتكنولوجيا الحواسيب.",
+          "active": false,
+          "footerText": "أفق عالمي واعتماد أكاديمي"
+        }
+      ]
+    },
+    "callToAction": {
+      "title": "الجامعة التكنولوجية: مسيرة متجددة لصناعة قادة الغد في الهندسة والتقنية",
+      "description": "نواصل العمل بخطى واثقة لتطوير بيئة تعليمية وتقنية متقدمة، ترتكز على أحدث المختبرات والشراكات مع قطاع الصناعة، لتخريج كفاءات وطنية وإقليمية تقود التحول الرقمي واقتصاد المعرفة.",
+      "primaryButtonText": "استكشف كليات وبرامج الجامعة التكنولوجية",
+      "secondaryButtonText": "دليل القبول والتسجيل الأكاديمي"
+    }
+  },
+  "leaders": {
+    "scientific-affairs-secretary": {
+      "department": "أمانة الشؤون العلمية - الجامعة التكنولوجية",
+      "taskLinkTexts": [
+        "عرض تفاصيل البرنامج",
+        "عرض تفاصيل الاعتماد",
+        "ملفات الترقيات العلمية",
+        "أسس الاعتماد المؤسسي",
+        "عرض تفاصيل الدراسات",
+        "عرض اللائحة الأكاديمية"
+      ]
+    },
+    "vice-chancellor": {
+      "department": "وكالة الجامعة",
+      "taskLinkTexts": []
+    },
+    "executive-office": {
+      "department": "المكتب التنفيذي",
+      "taskLinkTexts": []
+    },
+    "university-director": {
+      "department": "إدارة الجامعة - الجامعة التكنولوجية",
+      "taskLinkTexts": [
+        "التعرف على إدارة الجامعة",
+        "عرض المسار الأكاديمي",
+        "مجالات البحث والابتكار",
+        "عرض مبادرات الجودة",
+        "برامج خدمة المجتمع",
+        "الشراكات والاتفاقيات"
+      ]
+    },
+    "public-relations-media": {
+      "department": "إدارة العلاقات العامة والإعلام",
+      "taskLinkTexts": [
+        null,
+        null,
+        null,
+        null
+      ]
+    }
+  },
+  "scientificAffairs": {
+    "councilLinks": [
+      {
+        "link": "#",
+        "name": "التفاصيل"
+      },
+      {
+        "link": "#",
+        "name": "التفاصيل"
+      },
+      {
+        "link": "#",
+        "name": "التفاصيل"
+      },
+      {
+        "link": "#",
+        "name": "التفاصيل"
+      },
+      {
+        "link": "#",
+        "name": "التفاصيل"
+      },
+      {
+        "link": "#",
+        "name": "التفاصيل"
+      }
+    ],
+    "scientificServices": []
+  },
+  "footer": {
+    "brandDescription": "الريادة والتميز في التعليم والبحث التقني"
+  },
+  "studentAffairs": {
+    "commentedOutContactBox": {
+      "title": "تواصل مع العمادة",
+      "phone": "+966 780 123 4203",
+      "email": "studentaffairs@uotechnology.edu.sa",
+      "hours": "الاثنين - الجمعة: 8:00 ص-6:00 م"
+    }
+  },
+  "colleges": {
+    "business-studies": {
+      "departments": [],
+      "programs": [
+        {
+          "id": "accounting-finance",
+          "creditHours": null,
+          "departmentId": ""
+        },
+        {
+          "id": "banking-finance",
+          "creditHours": null,
+          "departmentId": ""
+        },
+        {
+          "id": "business-administration",
+          "creditHours": null,
+          "departmentId": ""
+        },
+        {
+          "id": "accounting",
+          "creditHours": null,
+          "departmentId": ""
+        }
+      ],
+      "sidebarLinks": [
+        {
+          "id": "about",
+          "label": "نبذة عن الكلية",
+          "href": "#about"
+        },
+        {
+          "id": "vision",
+          "label": "الرؤية والرسالة",
+          "href": "#vision"
+        },
+        {
+          "id": "administration",
+          "label": "إدارة الكلية",
+          "href": "#administration"
+        },
+        {
+          "id": "programs",
+          "label": "التخصصات والبرامج",
+          "href": "#programs"
+        },
+        {
+          "id": "news",
+          "label": "أخبار الكلية",
+          "href": "#news"
+        },
+        {
+          "id": "former-deans",
+          "label": "العمداء السابقين",
+          "href": "#former-deans"
+        }
+      ]
+    },
+    "architecture": {
+      "departments": [],
+      "programs": [
+        {
+          "id": "architecture-bachelor",
+          "creditHours": null,
+          "departmentId": "4578"
+        },
+        {
+          "id": "architecture-diploma",
+          "creditHours": null,
+          "departmentId": ""
+        }
+      ],
+      "sidebarLinks": [
+        {
+          "id": "about",
+          "label": "نبذة عن الكلية",
+          "href": "#about"
+        },
+        {
+          "id": "vision",
+          "label": "الرؤية والرسالة",
+          "href": "#vision"
+        },
+        {
+          "id": "administration",
+          "label": "إدارة الكلية",
+          "href": "#administration"
+        },
+        {
+          "id": "programs",
+          "label": "التخصصات والبرامج",
+          "href": "#programs"
+        },
+        {
+          "id": "news",
+          "label": "أخبار الكلية",
+          "href": "#news"
+        },
+        {
+          "id": "former-deans",
+          "label": "العمداء السابقين",
+          "href": "#former-deans"
+        }
+      ]
+    },
+    "civil-electrical-electronic-engineering": {
+      "departments": [
+        {
+          "id": "civil",
+          "name": "الهندسة المدنية"
+        },
+        {
+          "id": "electrical",
+          "name": "الهندسة الكهربائية"
+        },
+        {
+          "id": "electronic",
+          "name": "الهندسة الإلكترونية"
+        }
+      ],
+      "programs": [
+        {
+          "id": "civil-engineering-bachelor",
+          "creditHours": null,
+          "departmentId": "civil"
+        },
+        {
+          "id": "electrical-power-bachelor",
+          "creditHours": null,
+          "departmentId": "electrical"
+        },
+        {
+          "id": "electrical-control-bachelor",
+          "creditHours": null,
+          "departmentId": "electrical"
+        },
+        {
+          "id": "electronic-communications-bachelor",
+          "creditHours": null,
+          "departmentId": "electronic"
+        },
+        {
+          "id": "electronic-computer-bachelor",
+          "creditHours": null,
+          "departmentId": "electronic"
+        },
+        {
+          "id": "civil-engineering-diploma",
+          "creditHours": null,
+          "departmentId": "civil"
+        }
+      ],
+      "sidebarLinks": [
+        {
+          "id": "about",
+          "label": "نبذة عن الكلية",
+          "href": "#about"
+        },
+        {
+          "id": "vision",
+          "label": "الرؤية والرسالة",
+          "href": "#vision"
+        },
+        {
+          "id": "administration",
+          "label": "إدارة الكلية",
+          "href": "#administration"
+        },
+        {
+          "id": "programs",
+          "label": "التخصصات والبرامج",
+          "href": "#programs"
+        },
+        {
+          "id": "news",
+          "label": "أخبار الكلية",
+          "href": "#news"
+        },
+        {
+          "id": "former-deans",
+          "label": "العمداء السابقين",
+          "href": "#former-deans"
+        }
+      ]
+    },
+    "computer-science-information-technology": {
+      "departments": [],
+      "programs": [
+        {
+          "id": "information-technology",
+          "creditHours": 166,
+          "departmentId": ""
+        }
+      ],
+      "sidebarLinks": [
+        {
+          "id": "about",
+          "label": "نبذة عن الكلية",
+          "href": "#about"
+        },
+        {
+          "id": "vision",
+          "label": "الرؤية والرسالة",
+          "href": "#vision"
+        },
+        {
+          "id": "administration",
+          "label": "إدارة الكلية",
+          "href": "#administration"
+        },
+        {
+          "id": "programs",
+          "label": "التخصصات والبرامج",
+          "href": "#programs"
+        },
+        {
+          "id": "news",
+          "label": "أخبار الكلية",
+          "href": "#news"
+        },
+        {
+          "id": "former-deans",
+          "label": "العمداء السابقين",
+          "href": "#former-deans"
+        }
+      ]
+    },
+    "nursing-sciences": {
+      "departments": [
+        {
+          "id": "surgical-nursing",
+          "name": "تمريض الباطني الجراحي (رئيس القسم: أ.عزات محمد الخير محمد سليمان)"
+        },
+        {
+          "id": "nursing-basics",
+          "name": "أساسيات التمريض (رئيس القسم: أ.هبة محمد ميرغني محمد صالح)"
+        }
+      ],
+      "programs": [
+        {
+          "id": "nursing",
+          "creditHours": null,
+          "departmentId": ""
+        }
+      ],
+      "sidebarLinks": [
+        {
+          "id": "about",
+          "label": "نبذة عن الكلية",
+          "href": "#about"
+        },
+        {
+          "id": "vision",
+          "label": "الرؤية والرسالة",
+          "href": "#vision"
+        },
+        {
+          "id": "administration",
+          "label": "إدارة الكلية",
+          "href": "#administration"
+        },
+        {
+          "id": "programs",
+          "label": "التخصصات والبرامج",
+          "href": "#programs"
+        },
+        {
+          "id": "news",
+          "label": "أخبار الكلية",
+          "href": "#news"
+        },
+        {
+          "id": "former-deans",
+          "label": "العمداء السابقين",
+          "href": "#former-deans"
+        }
+      ]
+    },
+    "information-systems": {
+      "departments": [],
+      "programs": [
+        {
+          "id": "accounting-information-systems-bachelor",
+          "creditHours": 154,
+          "departmentId": ""
+        },
+        {
+          "id": "management-information-systems-bachelor",
+          "creditHours": 157,
+          "departmentId": ""
+        },
+        {
+          "id": "banking-information-systems-bachelor",
+          "creditHours": 154,
+          "departmentId": ""
+        },
+        {
+          "id": "accounting-information-systems-diploma",
+          "creditHours": null,
+          "departmentId": ""
+        },
+        {
+          "id": "banking-information-systems-diploma",
+          "creditHours": null,
+          "departmentId": ""
+        }
+      ],
+      "sidebarLinks": [
+        {
+          "id": "about",
+          "label": "نبذة عن الكلية",
+          "href": "#about"
+        },
+        {
+          "id": "vision",
+          "label": "الرؤية والرسالة",
+          "href": "#vision"
+        },
+        {
+          "id": "administration",
+          "label": "إدارة الكلية",
+          "href": "#administration"
+        },
+        {
+          "id": "programs",
+          "label": "التخصصات والبرامج",
+          "href": "#programs"
+        },
+        {
+          "id": "news",
+          "label": "أخبار الكلية",
+          "href": "#news"
+        },
+        {
+          "id": "former-deans",
+          "label": "العمداء السابقين",
+          "href": "#former-deans"
+        }
+      ]
+    },
+    "law": {
+      "departments": [],
+      "programs": [
+        {
+          "id": "law-bachelor",
+          "creditHours": null,
+          "departmentId": ""
+        }
+      ],
+      "sidebarLinks": [
+        {
+          "id": "about",
+          "label": "نبذة عن الكلية",
+          "href": "#about"
+        },
+        {
+          "id": "vision",
+          "label": "الرؤية والرسالة",
+          "href": "#vision"
+        },
+        {
+          "id": "administration",
+          "label": "إدارة الكلية",
+          "href": "#administration"
+        },
+        {
+          "id": "programs",
+          "label": "التخصصات والبرامج",
+          "href": "#programs"
+        },
+        {
+          "id": "news",
+          "label": "أخبار الكلية",
+          "href": "#news"
+        },
+        {
+          "id": "former-deans",
+          "label": "العمداء السابقين",
+          "href": "#former-deans"
+        }
+      ]
+    },
+    "postgraduate-studies": {
+      "departments": [],
+      "programs": [
+        {
+          "id": "postgraduate-business-administration",
+          "creditHours": null,
+          "departmentId": ""
+        },
+        {
+          "id": "postgraduate-accounting-finance",
+          "creditHours": null,
+          "departmentId": ""
+        },
+        {
+          "id": "postgraduate-banking-finance",
+          "creditHours": null,
+          "departmentId": ""
+        },
+        {
+          "id": "postgraduate-civil-engineering",
+          "creditHours": null,
+          "departmentId": ""
+        },
+        {
+          "id": "postgraduate-electrical-engineering",
+          "creditHours": null,
+          "departmentId": ""
+        },
+        {
+          "id": "postgraduate-architecture",
+          "creditHours": null,
+          "departmentId": ""
+        },
+        {
+          "id": "postgraduate-information-technology",
+          "creditHours": null,
+          "departmentId": ""
+        },
+        {
+          "id": "postgraduate-information-systems",
+          "creditHours": null,
+          "departmentId": ""
+        },
+        {
+          "id": "postgraduate-nursing",
+          "creditHours": null,
+          "departmentId": ""
+        },
+        {
+          "id": "postgraduate-law",
+          "creditHours": null,
+          "departmentId": ""
+        }
+      ],
+      "sidebarLinks": [
+        {
+          "id": "about",
+          "label": "نبذة عن الكلية",
+          "href": "#about"
+        },
+        {
+          "id": "vision",
+          "label": "الرؤية والرسالة",
+          "href": "#vision"
+        },
+        {
+          "id": "administration",
+          "label": "إدارة الكلية",
+          "href": "#administration"
+        },
+        {
+          "id": "programs",
+          "label": "التخصصات والبرامج",
+          "href": "#programs"
+        },
+        {
+          "id": "news",
+          "label": "أخبار الكلية",
+          "href": "#news"
+        },
+        {
+          "id": "former-deans",
+          "label": "العمداء السابقين",
+          "href": "#former-deans"
+        }
+      ]
+    },
+    "medical-laboratory-science": {
+      "departments": [],
+      "programs": [],
+      "sidebarLinks": [
+        {
+          "id": "about",
+          "label": "نبذة عن الكلية",
+          "href": "#about"
+        },
+        {
+          "id": "vision",
+          "label": "الرؤية والرسالة",
+          "href": "#vision"
+        },
+        {
+          "id": "administration",
+          "label": "إدارة الكلية",
+          "href": "#administration"
+        },
+        {
+          "id": "programs",
+          "label": "التخصصات والبرامج",
+          "href": "#programs"
+        },
+        {
+          "id": "news",
+          "label": "أخبار الكلية",
+          "href": "#news"
+        },
+        {
+          "id": "former-deans",
+          "label": "العمداء السابقين",
+          "href": "#former-deans"
+        }
+      ]
+    }
+  }
+}

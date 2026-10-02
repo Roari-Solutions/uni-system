@@ -10,15 +10,6 @@ import {
   boolean,
   jsonb,
 } from 'drizzle-orm/pg-core';
-import type { MainPageContent } from 'src/content/entities/main-page.entity';
-import type { FacultyPageContent } from 'src/content/entities/faculty-page.entity';
-import { AboutUs } from 'src/content/entities/about-page.entity';
-import { DeanshipAndCenters } from 'src/content/entities/deanship-and-centers-page.entity';
-import { ContactUs } from 'src/content/entities/contact-us-page.entity';
-import { CrewPage } from 'src/content/entities/crew-page.entity';
-import { ImagesExhibition } from 'src/content/entities/images-exhibition.entity';
-import { Partnerships } from 'src/content/entities/partnerships.entity';
-import { ScientificAffairsPage } from 'src/content/entities/scientific-affairs-page.entity';
 import type { ResultHeader, ResultSheet } from 'src/results/result-sheet';
 
 /** Blood group values stored on users. */
@@ -154,12 +145,27 @@ export const employees = pgTable('employees', {
   departmentId: uuid('department_id')
     .notNull()
     .references(() => departments.id),
-  roleId: uuid('role_id')
-    .notNull()
-    .references(() => roles.id),
+  /** Superseded by user_roles, which can hold several; no longer read or written. */
+  roleId: uuid('role_id').references(() => roles.id),
   title: text('title'),
   ...timestamps(),
 });
+
+/** The roles each user holds; a user may hold several (one pair once). */
+export const userRoles = pgTable(
+  'user_roles',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id),
+    roleId: uuid('role_id')
+      .notNull()
+      .references(() => roles.id),
+    ...timestamps(),
+  },
+  (t) => [unique('user_role').on(t.userId, t.roleId)],
+);
 
 /** Granular permissions granted via roles. */
 export const permissions = pgTable('permissions', {
@@ -463,16 +469,19 @@ export const resultStudents = pgTable(
 );
 
 // ============================================== CMS ==============================================
+// The per-page tables below held the first CMS's content. Nothing reads or
+// writes them since site_pages replaced them; they stay so a deploy never drops
+// data, and can be removed once their contents are confirmed unneeded.
 
 export const aboutPage = pgTable('about_page', {
   id: uuid().primaryKey().defaultRandom(),
-  content: jsonb().$type<AboutUs>().notNull(),
+  content: jsonb().$type<unknown>().notNull(),
   ...timestamps(),
 });
 
 export const contactUsPage = pgTable('contact_us_page', {
   id: uuid().primaryKey().defaultRandom(),
-  content: jsonb().$type<ContactUs>().notNull(),
+  content: jsonb().$type<unknown>().notNull(),
   ...timestamps(),
 });
 
@@ -482,32 +491,32 @@ export const crewPage = pgTable('crew_page', {
     .notNull()
     .unique()
     .references(() => crews.id),
-  content: jsonb().$type<CrewPage>().notNull(),
+  content: jsonb().$type<unknown>().notNull(),
   ...timestamps(),
 });
 
 export const deanshipPage = pgTable('deanship_page', {
   id: uuid().primaryKey().defaultRandom(),
-  content: jsonb().$type<DeanshipAndCenters>().notNull(),
+  content: jsonb().$type<unknown>().notNull(),
   ...timestamps(),
 });
 
 export const imageExhibitionPage = pgTable('image_exhibition_page', {
   id: uuid().primaryKey().defaultRandom(),
-  content: jsonb().$type<ImagesExhibition>().notNull(),
+  content: jsonb().$type<unknown>().notNull(),
   ...timestamps(),
 });
 
 /** Main page website content as a single JSON document. */
 export const mainPage = pgTable('main_page', {
   id: uuid('id').primaryKey().defaultRandom(),
-  content: jsonb('content').$type<MainPageContent>().notNull(),
+  content: jsonb('content').$type<unknown>().notNull(),
   ...timestamps(),
 });
 
 export const partnershipPage = pgTable('partnership_page', {
   id: uuid().primaryKey().defaultRandom(),
-  content: jsonb().$type<Partnerships>().notNull(),
+  content: jsonb().$type<unknown>().notNull(),
   ...timestamps(),
 });
 
@@ -518,15 +527,52 @@ export const facultyPages = pgTable('faculty_pages', {
     .notNull()
     .references(() => faculties.id)
     .unique(),
-  content: jsonb('content').$type<FacultyPageContent>().notNull(),
+  content: jsonb('content').$type<unknown>().notNull(),
   ...timestamps(),
 });
 
 export const scientificAffairsPage = pgTable('scientific_affairs_page', {
   id: uuid().primaryKey().defaultRandom(),
-  content: jsonb().$type<ScientificAffairsPage>().notNull(),
+  content: jsonb().$type<unknown>().notNull(),
   ...timestamps(),
 });
+
+// ============================================== WEBSITE CONTENT ==============================================
+
+/**
+ * One row per website page (or shared block like the footer): its content as
+ * one JSON document. The page's structure is fixed by its template in code
+ * (src/site-content); a save must fit it exactly. `version` counts saves and
+ * guards against two editors overwriting each other.
+ */
+export const sitePages = pgTable('site_pages', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  /** The page's key in the registry, e.g. `home` or `colleges/law`. */
+  key: text('key').notNull().unique(),
+  /** The template the content fits; must match the registry's. */
+  template: text('template').notNull(),
+  content: jsonb('content').notNull(),
+  version: integer('version').notNull().default(1),
+  /** Null for content loaded by the seed. */
+  updatedBy: uuid('updated_by').references(() => users.id),
+  ...timestamps(),
+});
+
+/** Every saved version of a page, the current one included, for history and restore. */
+export const sitePageRevisions = pgTable(
+  'site_page_revisions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    pageId: uuid('page_id')
+      .notNull()
+      .references(() => sitePages.id, { onDelete: 'cascade' }),
+    version: integer('version').notNull(),
+    content: jsonb('content').notNull(),
+    createdBy: uuid('created_by').references(() => users.id),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [unique('site_page_revision_unique').on(t.pageId, t.version)],
+);
 
 // ==============================================relations=============================================================
 
@@ -537,9 +583,10 @@ export const crewPageRelations = relations(crewPage, ({ one }) => ({
   }),
 }));
 
-/** Relations for users: employee, departments, faculty. */
+/** Relations for users: employee, roles, departments, faculty. */
 export const userRelations = relations(users, ({ many, one }) => ({
   employee: one(employees),
+  userRoles: many(userRoles),
   usersDepartments: many(usersDepartments),
   faculty: one(faculties, {
     fields: [users.facultyId],
@@ -567,9 +614,16 @@ export const crewRelations = relations(crews, ({ one }) => ({
   }),
 }));
 
-/** Relations for roles: employees, permission grants. */
+/** Relations for user-role assignments: user, role. */
+export const userRolesRelations = relations(userRoles, ({ one }) => ({
+  user: one(users, { fields: [userRoles.userId], references: [users.id] }),
+  role: one(roles, { fields: [userRoles.roleId], references: [roles.id] }),
+}));
+
+/** Relations for roles: employees, holders, permission grants. */
 export const roleRelations = relations(roles, ({ many }) => ({
   employees: many(employees),
+  userRoles: many(userRoles),
   rolePermission: many(rolePermissions),
 }));
 
@@ -731,6 +785,18 @@ export const resultStudentsRelations = relations(resultStudents, ({ one }) => ({
 }));
 
 /// cms relations
+
+/** Relations for website pages: last editor, saved versions. */
+export const sitePagesRelations = relations(sitePages, ({ one, many }) => ({
+  editor: one(users, { fields: [sitePages.updatedBy], references: [users.id] }),
+  revisions: many(sitePageRevisions),
+}));
+
+/** Relations for page versions: page, author. */
+export const sitePageRevisionsRelations = relations(sitePageRevisions, ({ one }) => ({
+  page: one(sitePages, { fields: [sitePageRevisions.pageId], references: [sitePages.id] }),
+  author: one(users, { fields: [sitePageRevisions.createdBy], references: [users.id] }),
+}));
 
 /** Relations for faculty pages: faculty. */
 export const facultyPagesRelations = relations(facultyPages, ({ one }) => ({

@@ -14,6 +14,8 @@ COPY package.json bun.lock tsconfig.json tsconfig.build.json nest-cli.json drizz
 COPY src ./src
 COPY drizzle ./drizzle
 COPY seed_faculties.ts seed_gr_test.ts ./
+COPY seed ./seed
+COPY scripts ./scripts
 RUN bun run build
 
 FROM base AS migrate
@@ -36,6 +38,12 @@ COPY --from=builder /usr/src/app/drizzle.config.ts ./drizzle.config.ts
 COPY --from=builder /usr/src/app/drizzle ./drizzle
 COPY --from=builder /usr/src/app/seed_faculties.ts ./seed_faculties.ts
 COPY --from=builder /usr/src/app/seed_gr_test.ts ./seed_gr_test.ts
+# the website content snapshot and what it needs to load: `bun run seed:site`
+COPY --from=builder /usr/src/app/seed ./seed
+COPY --from=builder /usr/src/app/src/site-content ./src/site-content
+# `bun run grant-role <login> <role>`, e.g. to make the first super admin
+COPY --from=builder /usr/src/app/scripts ./scripts
+COPY --from=builder /usr/src/app/src/iam ./src/iam
 RUN apk add --no-cache wget
 
 USER bun

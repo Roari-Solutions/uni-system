@@ -7,6 +7,7 @@ import DataTable, { type Column } from "../../../components/dataTable";
 import DeleteButton from "../../../components/deleteButton";
 import FormField from "../../../components/formField";
 import useAuth from "../../../auth/useAuth";
+import { PERMISSIONS } from "../../../types/auth";
 import CurriculumList from "../curriculum/curriculumList";
 import CurriculumEntry from "../curriculum/curriculumEntry";
 import {
@@ -100,7 +101,7 @@ const FacultyDetails = () => {
 	const { t, i18n } = useTranslation();
 	const lang = i18n.language === "ar" ? "ar" : "en";
 	const { facultyId = "" } = useParams();
-	const { user } = useAuth();
+	const { can } = useAuth();
 
 	const [faculty, setFaculty] = useState<FacultyDetail | null>(null);
 	const [failed, setFailed] = useState(false);
@@ -393,7 +394,7 @@ const FacultyDetails = () => {
 
 	return (
 		<div>
-			{user?.role === "admin" && (
+			{can(PERMISSIONS.gradesAllFaculties) && (
 				<Link
 					to="../view"
 					relative="path"

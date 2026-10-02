@@ -22,6 +22,7 @@ import { SEMESTERS, STUDY_LEVELS } from "../../../utils/academicYears";
 import { REQUIREMENT_TYPES, type RequirementType } from "../../../types/requirementType";
 import { ABBREVIATION_PATTERN } from "../../../types/curriculum";
 import useAuth from "../../../auth/useAuth";
+import { PERMISSIONS } from "../../../types/auth";
 
 // messages are i18n keys, translated when rendered
 const curriculumSchema = z.object({
@@ -106,7 +107,7 @@ const CurriculumEntry = ({
 }: CurriculumEntryProps = {}) => {
 	const { t, i18n } = useTranslation();
 	const lang = i18n.language === "ar" ? "ar" : "en";
-	const { user } = useAuth();
+	const { can } = useAuth();
 	const { faculties } = useFaculties();
 	const { curriculumId: routeId } = useParams();
 	const curriculumId = givenId ?? routeId;
@@ -114,7 +115,7 @@ const CurriculumEntry = ({
 	const embedded = onSaved !== undefined;
 	// a university requirement spans every faculty, so only an admin may add one
 	const types = REQUIREMENT_TYPES.filter(
-		(type) => type !== "university" || user?.role === "admin",
+		(type) => type !== "university" || can(PERMISSIONS.gradesAllFaculties),
 	);
 
 	const [form, setForm] = useState<CurriculumForm>({

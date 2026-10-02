@@ -11,7 +11,7 @@ export type UserPayload = {
 	name: string;
 	email: string;
 	password: string;
-	role: string;
+	roles: string[];
 	// omitted for staff who span every faculty, such as admins
 	facultyId?: string;
 	phone?: string;
@@ -38,6 +38,23 @@ export const updateUserIdentity = async (
 	changes: { name?: string; email?: string },
 ): Promise<ManagedUser> => {
 	const { data } = await api.patch<ManagedUser>(`/admin/users/${id}`, changes);
+	return data;
+};
+
+/**
+ * Replaces a user's roles, and their faculty with them: data entry needs one,
+ * other roles span every faculty. An admin may not change their own roles.
+ */
+export const updateUserRoles = async (
+	id: string,
+	roles: string[],
+	facultyId: string | null,
+): Promise<ManagedUser> => {
+	const { data } = await api.patch<ManagedUser>(`/admin/users/${id}`, {
+		roles,
+		// null clears it: a user who needs no faculty is not tied to one
+		facultyId,
+	});
 	return data;
 };
 

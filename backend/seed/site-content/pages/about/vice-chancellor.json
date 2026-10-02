@@ -1,0 +1,122 @@
+{
+  "profile": {
+    "name": {
+      "ar": "د. وكيل الجامعة",
+      "en": ""
+    },
+    "position": {
+      "ar": "وكيل الجامعة",
+      "en": ""
+    },
+    "description": {
+      "ar": "كلمة ترحيبية من وكيل الجامعة تستعرض الرؤية والخطط الاستراتيجية.",
+      "en": ""
+    },
+    "image": "/images/4afa9c2bbb0197f2e0ec4f2dee24d25df5d3eb505c34b42b3ed66cd20882063f.png",
+    "badge": {
+      "ar": "وكالة الجامعة",
+      "en": ""
+    },
+    "stats": [],
+    "primaryActionLabel": {
+      "ar": "",
+      "en": ""
+    },
+    "secondaryActionLabel": {
+      "ar": "",
+      "en": ""
+    }
+  },
+  "message": {
+    "title": {
+      "ar": "",
+      "en": ""
+    },
+    "paragraphs": [],
+    "authorName": {
+      "ar": "",
+      "en": ""
+    },
+    "authorPosition": {
+      "ar": "",
+      "en": ""
+    }
+  },
+  "pillars": {
+    "title": {
+      "ar": "ركائز التميز المؤسسي",
+      "en": ""
+    },
+    "items": []
+  },
+  "strategicPlan": {
+    "vision": {
+      "ar": "",
+      "en": ""
+    },
+    "mission": {
+      "ar": "",
+      "en": ""
+    },
+    "goals": [],
+    "values": []
+  },
+  "tasks": {
+    "tag": {
+      "ar": "",
+      "en": ""
+    },
+    "title": {
+      "ar": "",
+      "en": ""
+    },
+    "description": {
+      "ar": "",
+      "en": ""
+    },
+    "items": []
+  },
+  "regulations": {
+    "title": {
+      "ar": "",
+      "en": ""
+    },
+    "description": {
+      "ar": "",
+      "en": ""
+    },
+    "buttonLabel": {
+      "ar": "",
+      "en": ""
+    },
+    "items": []
+  },
+  "contacts": {
+    "tag": {
+      "ar": "",
+      "en": ""
+    },
+    "title": {
+      "ar": "",
+      "en": ""
+    },
+    "description": {
+      "ar": "",
+      "en": ""
+    },
+    "items": [
+      {
+        "title": {
+          "ar": "البريد الإلكتروني",
+          "en": ""
+        },
+        "kind": "email",
+        "text": {
+          "ar": "",
+          "en": ""
+        },
+        "contact": "viceChancellor"
+      }
+    ]
+  }
+}

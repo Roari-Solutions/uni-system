@@ -27,16 +27,21 @@ export class AuthController {
 
   constructor(@Inject(AuthService) private readonly authService: AuthService) {}
 
-  /** POST /auth/login — validates credentials, sets auth cookies. */
+  /**
+   * POST /auth/login — validates credentials for the given portal, sets auth
+   * cookies, and returns the portals the user may open so the general staff
+   * portal can send them on.
+   */
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(
     @Body() body: LoginDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    this.logger.log(`Login attempt for ${body.email}`);
-    const tokens = await this.authService.login(body);
+    this.logger.log(`Login attempt for ${body.email} at the ${body.portal} portal`);
+    const { tokens, portals } = await this.authService.login(body);
     this.authService.setAuthCookies(res, tokens);
+    return { portals };
   }
 
   /** GET /auth/refresh — rotates tokens from the refresh cookie. */

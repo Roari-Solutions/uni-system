@@ -1,4 +1,8 @@
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  ArrayUnique,
+  IsArray,
   IsBoolean,
   IsIn,
   IsNotEmpty,
@@ -8,18 +12,17 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
-import { PartialType } from '@nestjs/mapped-types';
+import { OmitType, PartialType } from '@nestjs/mapped-types';
+import { ALL_ROLES, type Role } from 'src/iam/permissions';
 
 /** Minimum length for an admin-set password. */
 export const MIN_PASSWORD_LENGTH = 8;
 
 /**
- * The roles this dashboard may hand out. `site-content-employee` belongs to the
- * CMS and is deliberately not offered here, so it can be neither assigned nor
- * filtered on from the grades system.
+ * Any role name is accepted here; which ones a caller may actually grant
+ * depends on their domain and is checked by the service.
  */
-export const ASSIGNABLE_ROLES = ['admin', 'data-entry'] as const;
-export type AssignableRole = (typeof ASSIGNABLE_ROLES)[number];
+export const ROLE_NAMES = ALL_ROLES;
 
 /** Body for creating a user. */
 export class CreateUserDto {
@@ -39,9 +42,16 @@ export class CreateUserDto {
   @MaxLength(128)
   password!: string;
 
-  /** One of ASSIGNABLE_ROLES; anything else is rejected. */
-  @IsIn(ASSIGNABLE_ROLES)
-  role!: AssignableRole;
+  /**
+   * On create, the user's roles. On update, their roles within the caller's
+   * reach; roles outside it are kept as they are.
+   */
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(ROLE_NAMES.length)
+  @ArrayUnique()
+  @IsIn(ROLE_NAMES, { each: true })
+  roles!: Role[];
 
   /** Omit for staff who are not tied to a single faculty, such as admins. */
   @IsOptional()
@@ -55,7 +65,20 @@ export class CreateUserDto {
 }
 
 /** Body for patching a user. Password and email are handled separately. */
-export class UpdateUserDto extends PartialType(CreateUserDto) {
+export class UpdateUserDto extends PartialType(
+  OmitType(CreateUserDto, ['roles'] as const),
+) {
+  /**
+   * The user's roles within the caller's reach; may be empty for a user who
+   * keeps roles in another domain. Roles outside the caller's reach are kept.
+   */
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(ROLE_NAMES.length)
+  @ArrayUnique()
+  @IsIn(ROLE_NAMES, { each: true })
+  roles?: Role[];
+
   @IsOptional()
   @IsBoolean()
   suspended?: boolean;
@@ -76,8 +99,8 @@ export class ListUsersQueryDto {
   facultyId?: string;
 
   @IsOptional()
-  @IsIn(ASSIGNABLE_ROLES)
-  role?: AssignableRole;
+  @IsIn(ROLE_NAMES)
+  role?: Role;
 
   @IsOptional()
   @IsString()

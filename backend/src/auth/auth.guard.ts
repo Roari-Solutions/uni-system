@@ -11,10 +11,12 @@ import { JwtService } from '@nestjs/jwt';
 import { type Request } from 'express';
 import { config } from 'config';
 
-/** JWT payload carried on authenticated requests. */
+/**
+ * JWT payload carried on authenticated requests. Only the user's id: roles are
+ * read per request, so a change to them applies without signing in again.
+ */
 export interface JwtPayload {
   sub: string;
-  role: string;
 }
 
 /** Express request with the verified JWT payload attached. */
@@ -46,7 +48,7 @@ export class AuthGuard implements CanActivate {
     }
 
     req.user = payload;
-    this.logger.debug(`Authenticated user ${payload.sub} (role: ${payload.role})`);
+    this.logger.debug(`Authenticated user ${payload.sub}`);
     return true;
   }
 }

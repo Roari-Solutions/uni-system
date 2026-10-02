@@ -5,7 +5,9 @@ import axios from "axios";
 import FacultyField from "../../components/facultyField";
 import FormField from "../../components/formField";
 import PasswordInput from "../../components/passwordInput";
+import RoleChecklist from "../../components/roleChecklist";
 import { createUser, fetchRoles } from "../../api/users";
+import { needsFaculty } from "../../utils/roles";
 import type { AssignableRole } from "../../types/user";
 import { formCardClass, inputClass, submitButtonClass } from "../../styles/form";
 
@@ -14,20 +16,17 @@ const REQUIRED = "userEntry.errors.required";
 // mirrors MIN_PASSWORD_LENGTH in the API
 const MIN_PASSWORD = 8;
 
-// a role that spans every faculty leaves facultyId empty
-const UNSCOPED_ROLES = ["admin"];
-
 // messages are i18n keys, translated when rendered
 const userSchema = z
 	.object({
 		name: z.string().trim().min(1, REQUIRED),
 		email: z.string().trim().min(1, REQUIRED),
 		password: z.string().min(MIN_PASSWORD, "userEntry.errors.passwordLength"),
-		role: z.string().min(1, REQUIRED),
+		roles: z.array(z.string()).min(1, "userEntry.errors.roleRequired"),
 		facultyId: z.string(),
 		phone: z.string().trim(),
 	})
-	.refine((v) => UNSCOPED_ROLES.includes(v.role) || v.facultyId !== "", {
+	.refine((v) => !needsFaculty(v.roles) || v.facultyId !== "", {
 		path: ["facultyId"],
 		message: REQUIRED,
 	});
@@ -39,7 +38,7 @@ const EMPTY_FORM: UserForm = {
 	name: "",
 	email: "",
 	password: "",
-	role: "",
+	roles: [],
 	facultyId: "",
 	phone: "",
 };
@@ -77,7 +76,7 @@ const UserEntry = () => {
 		setForm((prev) => (prev.facultyId === facultyId ? prev : { ...prev, facultyId }));
 	}, []);
 
-	const unscoped = UNSCOPED_ROLES.includes(form.role);
+	const unscoped = !needsFaculty(form.roles);
 
 	const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
@@ -97,7 +96,7 @@ const UserEntry = () => {
 				name: result.data.name,
 				email: result.data.email,
 				password: result.data.password,
-				role: result.data.role,
+				roles: result.data.roles,
 				facultyId: unscoped ? undefined : result.data.facultyId,
 				phone: result.data.phone || undefined,
 			});
@@ -160,27 +159,19 @@ const UserEntry = () => {
 					<p className="text-body-sm text-primary-hover">{t("userEntry.passwordHint")}</p>
 				</FormField>
 
-				<FormField id="role" label={t("userEntry.role")} error={errors.role?.[0]}>
-					<select
-						id="role"
-						value={form.role}
-						onChange={(e) => setField("role", e.target.value)}
-						aria-invalid={!!errors.role}
-						className={inputClass(!!errors.role)}
-					>
-						<option value="" disabled>
-							{t("userEntry.selectRole")}
-						</option>
-						{roles.map((role) => (
-							<option key={role.id} value={role.name}>
-								{t(`roles.${role.name}`)}
-							</option>
-						))}
-					</select>
-				</FormField>
+				<RoleChecklist
+					id="roles"
+					label={t("userEntry.roles")}
+					roles={roles.filter((r) => r.assignable)}
+					value={form.roles}
+					onChange={(value) => setField("roles", value)}
+					error={errors.roles?.[0]}
+				/>
 
 				{unscoped ? (
-					<p className="text-body-sm text-primary-hover">{t("userEntry.unscopedRole")}</p>
+					form.roles.length > 0 && (
+						<p className="text-body-sm text-primary-hover">{t("userEntry.unscopedRole")}</p>
+					)
 				) : (
 					<FacultyField
 						label={t("userEntry.faculty")}

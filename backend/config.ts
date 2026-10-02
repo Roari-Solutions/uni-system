@@ -37,4 +37,33 @@ export const config = {
     }
     return this.nodeEnv === 'production';
   },
+  /**
+   * Origins allowed to call the API: every sign-in portal's host and the public
+   * website. Comma-separated in CORS_ORIGINS; the defaults cover local development.
+   */
+  get corsOrigins(): string[] {
+    const raw = process.env.CORS_ORIGINS;
+    if (!raw?.trim()) {
+      return [
+        'http://localhost:5173',
+        'http://localhost:5174',
+        'http://localhost:3000',
+        'http://localhost:4000',
+        // the portals, by subdomain, in development (browsers resolve *.localhost locally)
+        ...[
+          'staff',
+          'grades',
+          'cms',
+          'management',
+          'teachers',
+          'students',
+          'lms',
+        ].map((p) => `http://${p}.localhost:5173`),
+      ];
+    }
+    return raw
+      .split(',')
+      .map((o) => o.trim())
+      .filter(Boolean);
+  },
 };
