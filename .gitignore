@@ -1,4 +1,5 @@
 .env
+.env.production
 **/*.lock
 node_modules/
 *.vim
