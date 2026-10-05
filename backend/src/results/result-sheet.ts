@@ -141,9 +141,10 @@ export interface ResultStudent {
   /** Second-semester sheets only: the whole academic year. */
   year: ResultTotals | null;
   /**
-   * Second-semester sheets only: the cumulative GPA, the plain average of every
-   * semester GPA the student has to date, this year's two included. Null when
-   * none has one yet; absent on sheets from before it was printed.
+   * Second-semester sheets only: the cumulative GPA over every semester of every
+   * year to date, this year's two included, weighted by credit hours (all GP /
+   * all CH). Null when no hours count yet; absent on sheets from before it was
+   * printed.
    */
   cgpa?: number | null;
 }
@@ -164,6 +165,12 @@ export interface ResultSheet {
   department?: string;
   semester: number;
   kind: 'regular' | 'resit';
+  /**
+   * What the CH, GP and GPA columns print: `year` on second-semester sheets,
+   * whose columns cover both semesters. Absent prints each student's `semester`
+   * totals, as sheets from before it did (approved ones keep printing that way).
+   */
+  totals?: 'year';
   courses: ResultCourse[];
   students: ResultStudent[];
 }
@@ -210,34 +217,37 @@ export function totalsOf(
   return { ch, gp: round(gp, 2), gpa: ch ? round(gp / ch, 2) : null };
 }
 
+/** Points and hours, the two sums every GPA here is weighted from. */
+export interface GradePoints {
+  gp: number;
+  ch: number;
+}
+
+/** GP / CH to two places; null when no hours count. */
+const weightedGpa = (parts: GradePoints[]): number | null => {
+  const ch = parts.reduce((acc, p) => acc + p.ch, 0);
+  const gp = parts.reduce((acc, p) => acc + p.gp, 0);
+  return ch ? round(gp / ch, 2) : null;
+};
+
 /**
- * The year's totals: hours and points summed, and the GPA as the plain average
- * of the semesters that have one, matching the annual GPA the system shows.
+ * The year's totals: hours and points summed, and the GPA weighted by credit
+ * hours (the year's GP / CH), like the annual GPA the system shows.
  */
 export function yearTotalsOf(semesters: ResultTotals[]): ResultTotals {
-  const gpas = semesters
-    .map((s) => s.gpa)
-    .filter((g): g is number => g !== null);
   return {
     ch: semesters.reduce((acc, s) => acc + s.ch, 0),
     gp: round(
       semesters.reduce((acc, s) => acc + s.gp, 0),
       2,
     ),
-    gpa: gpas.length
-      ? round(gpas.reduce((acc, g) => acc + g, 0) / gpas.length, 2)
-      : null,
+    gpa: weightedGpa(semesters),
   };
 }
 
-/** The cumulative GPA: the plain average of the semester GPAs that exist, like the annual GPA. */
-export function cumulativeGpaOf(
-  semesterGpas: (number | null)[],
-): number | null {
-  const counted = semesterGpas.filter((g): g is number => g !== null);
-  return counted.length
-    ? round(counted.reduce((acc, g) => acc + g, 0) / counted.length, 2)
-    : null;
+/** The cumulative GPA: every semester's points over every semester's hours. */
+export function cumulativeGpaOf(semesters: GradePoints[]): number | null {
+  return weightedGpa(semesters);
 }
 
 /** JSON with object keys sorted, so two sheets compare equal whatever order jsonb kept them in. */

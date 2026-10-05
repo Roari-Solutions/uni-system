@@ -87,8 +87,9 @@ export type ResultStudent = {
 	semester: ResultTotals;
 	// second-semester sheets only
 	year: ResultTotals | null;
-	// second-semester sheets only: the cumulative GPA over every semester to date;
-	// absent on sheets from before it was printed, which keep their year columns
+	// second-semester sheets only: the cumulative GPA over every semester to date,
+	// weighted by credit hours; absent on sheets from before it was printed,
+	// which keep their year columns
 	cgpa?: number | null;
 };
 
@@ -103,6 +104,9 @@ export type ResultSheet = {
 	department?: string;
 	semester: number;
 	kind: ResultKind;
+	// "year": the CH, GP and GPA columns print each student's `year` (second-semester
+	// sheets); absent, their `semester`, as sheets from before it did
+	totals?: "year";
 	courses: ResultCourse[];
 	students: ResultStudent[];
 };

@@ -1,4 +1,5 @@
 import type { ResultSheet, ResultStudent } from "../types/result";
+import { printedTotals } from "./resultText";
 
 // every exported sheet is in English, so the remarks' wording lives here
 
@@ -49,9 +50,13 @@ export const resitCounts = (student: ResultStudent) => ({
 export const withCount = (code: "Sup" | "Sub", count: number) =>
 	!count ? code : code === "Sup" ? `Sup ${count}F` : `${count} Sub`;
 
+/** What the automatic remark reads off the sheet: its kind, and which GPA it prints. */
+type RemarkSheet = Pick<ResultSheet, "kind" | "totals">;
+
 /**
- * The remark a regular sheet fills in by itself, from the semester's GPA and
- * its Sup & Sub curriculums:
+ * The remark a regular sheet fills in by itself, from the GPA the sheet prints
+ * (the year's on a second-semester sheet, the semester's otherwise) and its
+ * Sup & Sub curriculums:
  *  - GPA 2.00 or above with none to resit: Pas;
  *  - GPA 1.50 or above with some to resit: Sup and/or Sub, with how many. They
  *    come before Pas: a student with any to resit hasn't passed yet;
@@ -60,8 +65,8 @@ export const withCount = (code: "Sup" | "Sub", count: number) =>
  * records the re-exams themselves. (Remarks from the student's record, such as
  * a freeze, are meant to come in ahead of these rules.)
  */
-export const autoRemark = (student: ResultStudent, sheet: Pick<ResultSheet, "kind">): RemarkCode | "" => {
-	const gpa = student.semester.gpa;
+export const autoRemark = (student: ResultStudent, sheet: RemarkSheet): RemarkCode | "" => {
+	const gpa = printedTotals(student, sheet).gpa;
 	if (sheet.kind !== "regular" || gpa === null) return "";
 	const { sup, sub } = resitCounts(student);
 	if (gpa >= 2 && !sup && !sub) return "Pas";
@@ -91,7 +96,7 @@ export const remarkText = (student: ResultStudent, code: RemarkCode | "", automa
  */
 export const remarkOf = (
 	student: ResultStudent,
-	sheet: Pick<ResultSheet, "kind">,
+	sheet: RemarkSheet,
 	choices: RemarkChoices | undefined,
 ) => {
 	if (!choices) return { code: "" as const, text: "", automatic: false };

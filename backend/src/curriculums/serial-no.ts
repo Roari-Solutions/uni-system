@@ -1,103 +1,112 @@
-import { and, asc, eq, isNull } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { curriculums, facultyCurriculums } from 'schema';
 import type { Db } from 'src/database/database.module';
 import type { AcademicYear, Semester } from 'src/common/academic-year';
+import type { RequirementType } from 'src/common/requirement-type';
+
+/** Where a requirement type sits: university, then faculty, then specialization (major). */
+const TYPE_RANK: Record<RequirementType, number> = {
+  university: 0,
+  faculty: 1,
+  major: 2,
+};
+
+/** What orders a faculty's curriculums within one year and semester. */
+export interface Orderable {
+  curriculumId: string;
+  code: string | null;
+  /** Null on curriculums from before requirement types; they go last. */
+  requirementType: RequirementType | null;
+}
 
 /**
- * The S.No.s a faculty already uses in one year and semester, leaving out one
- * curriculum (the one being placed).
+ * The order curriculums take on the results sheets, and so their S.No.:
+ * university requirements, then faculty requirements, then specialization
+ * requirements, each by abbreviation. Ties fall back to the id, so the order
+ * never depends on how the rows came back.
  */
-async function takenSerialNos(
+export function compareCurriculums(a: Orderable, b: Orderable): number {
+  const rank = (c: Orderable) =>
+    c.requirementType ? TYPE_RANK[c.requirementType] : 3;
+  const text = (x: string | null, y: string | null) =>
+    x === y ? 0 : x === null ? 1 : y === null ? -1 : x < y ? -1 : 1;
+  return (
+    rank(a) - rank(b) ||
+    text(a.code, b.code) ||
+    text(a.curriculumId, b.curriculumId)
+  );
+}
+
+/** One faculty's curriculums in one year and semester: the set an S.No. counts within. */
+export interface SerialGroup {
+  facultyId: string;
+  academicYear: AcademicYear;
+  semester: Semester;
+}
+
+const groupKey = (g: SerialGroup) =>
+  `${g.facultyId}:${g.academicYear}:${g.semester}`;
+
+/**
+ * Numbers each group's curriculums 1..n in the sheets' order, writing only the
+ * S.No.s that change. With no groups given, renumbers every group. Run after
+ * anything that adds, removes, moves or re-sorts a curriculum, so the S.No.s
+ * always follow the order.
+ */
+export async function renumberSerialNos(
   db: Db,
-  facultyId: string,
-  academicYear: AcademicYear,
-  semester: Semester,
-  curriculumId: string,
-): Promise<Set<number>> {
+  groups?: SerialGroup[],
+): Promise<number> {
+  if (groups && !groups.length) return 0;
+  const facultyIds = groups
+    ? [...new Set(groups.map((g) => g.facultyId))]
+    : null;
   const rows = await db
     .select({
-      curriculumId: facultyCurriculums.curriculumId,
+      linkId: facultyCurriculums.id,
       serialNo: facultyCurriculums.serialNo,
+      facultyId: facultyCurriculums.facultyId,
+      curriculumId: facultyCurriculums.curriculumId,
+      academicYear: curriculums.academicYear,
+      semester: curriculums.semester,
+      code: curriculums.abbreviation,
+      requirementType: curriculums.requirementType,
     })
     .from(facultyCurriculums)
     .innerJoin(curriculums, eq(curriculums.id, facultyCurriculums.curriculumId))
     .where(
-      and(
-        eq(facultyCurriculums.facultyId, facultyId),
-        eq(curriculums.academicYear, academicYear),
-        eq(curriculums.semester, semester),
-      ),
+      facultyIds
+        ? inArray(facultyCurriculums.facultyId, facultyIds)
+        : undefined,
     );
-  return new Set(
-    rows
-      .filter((r) => r.curriculumId !== curriculumId && r.serialNo !== null)
-      .map((r) => r.serialNo as number),
-  );
+
+  const wanted = groups ? new Set(groups.map(groupKey)) : null;
+  const byGroup = new Map<string, typeof rows>();
+  for (const row of rows) {
+    const key = groupKey(row);
+    if (wanted && !wanted.has(key)) continue;
+    byGroup.set(key, [...(byGroup.get(key) ?? []), row]);
+  }
+
+  let changed = 0;
+  for (const members of byGroup.values()) {
+    const ordered = [...members].sort(compareCurriculums);
+    for (const [index, row] of ordered.entries()) {
+      if (row.serialNo === index + 1) continue;
+      await db
+        .update(facultyCurriculums)
+        .set({ serialNo: index + 1 })
+        .where(eq(facultyCurriculums.id, row.linkId));
+      changed++;
+    }
+  }
+  return changed;
 }
 
-const firstFree = (taken: Set<number>) => {
-  let serial = 1;
-  while (taken.has(serial)) serial++;
-  return serial;
-};
-
-/**
- * Gives the curriculum the first free S.No. in each of these faculties, for the
- * year and semester it now sits in. Like the code's serial, a number freed by a
- * deleted or moved curriculum is reused.
- */
-export async function assignSerialNos(
-  db: Db,
-  curriculumId: string,
+/** The groups a curriculum sits in: each faculty offering it, in its year and semester. */
+export const groupsOf = (
   facultyIds: string[],
   academicYear: AcademicYear,
   semester: Semester,
-): Promise<void> {
-  for (const facultyId of facultyIds) {
-    const taken = await takenSerialNos(
-      db,
-      facultyId,
-      academicYear,
-      semester,
-      curriculumId,
-    );
-    await db
-      .update(facultyCurriculums)
-      .set({ serialNo: firstFree(taken) })
-      .where(
-        and(
-          eq(facultyCurriculums.facultyId, facultyId),
-          eq(facultyCurriculums.curriculumId, curriculumId),
-        ),
-      );
-  }
-}
-
-/**
- * Numbers every placement that has no S.No. yet (curriculums created before
- * S.No.s existed), in code order within each faculty -> year -> semester.
- */
-export async function backfillSerialNos(db: Db): Promise<number> {
-  const missing = await db
-    .select({
-      curriculumId: facultyCurriculums.curriculumId,
-      facultyId: facultyCurriculums.facultyId,
-      academicYear: curriculums.academicYear,
-      semester: curriculums.semester,
-    })
-    .from(facultyCurriculums)
-    .innerJoin(curriculums, eq(curriculums.id, facultyCurriculums.curriculumId))
-    .where(isNull(facultyCurriculums.serialNo))
-    .orderBy(asc(curriculums.abbreviation));
-
-  for (const row of missing) {
-    await assignSerialNos(
-      db,
-      row.curriculumId,
-      [row.facultyId],
-      row.academicYear,
-      row.semester,
-    );
-  }
-  return missing.length;
-}
+): SerialGroup[] =>
+  facultyIds.map((facultyId) => ({ facultyId, academicYear, semester }));
