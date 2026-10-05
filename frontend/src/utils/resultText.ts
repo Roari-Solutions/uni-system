@@ -1,5 +1,13 @@
 import type { Resit } from "../types/grade";
-import type { ResultCell, ResultCourse, ResultKind, ResultSheet, ResultTotals, ResultVersion } from "../types/result";
+import type {
+	ResultCell,
+	ResultCourse,
+	ResultKind,
+	ResultSheet,
+	ResultStudent,
+	ResultTotals,
+	ResultVersion,
+} from "../types/result";
 
 // every exported sheet is in English, whatever the dashboard's language, so its
 // wording lives here rather than in the locale files
@@ -97,6 +105,13 @@ export const dateText = (value: string) => {
 	const [, y, m, d] = match.map(Number);
 	return new Date(y, m - 1, d).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
 };
+
+/**
+ * The totals a student's CH, GP and GPA columns print: the whole year's on a
+ * second-semester sheet, the semester's otherwise (and on sheets from before).
+ */
+export const printedTotals = (student: ResultStudent, sheet: Pick<ResultSheet, "totals">) =>
+	sheet.totals === "year" && student.year ? student.year : student.semester;
 
 /** CH as a whole number, GP to one decimal and GPA to two, as the university's sheet has them. */
 export const totalsText = (totals: ResultTotals) => ({

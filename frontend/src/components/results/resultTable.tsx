@@ -8,7 +8,7 @@ import type {
 } from "../../types/result";
 import { autoRemark, remarkOf, remarkText, resitCounts, type RemarkChoices } from "../../utils/remarks";
 import RemarkPicker from "./remarkPicker";
-import { cellText, ownSemester, printedName, totalsText } from "../../utils/resultText";
+import { cellText, ownSemester, printedName, printedTotals, totalsText } from "../../utils/resultText";
 
 /**
  * Makes the preview editable. The sheet itself stays English; these labels are
@@ -64,8 +64,9 @@ const failedCell = "bg-accent-soft font-bold";
 /**
  * The results sheet itself: one row per student, one column per curriculum
  * (by S.No.; a second-semester sheet ends the year, so it leads with the first
- * semester's), then the semester's CH, GP and GPA, the CGPA on a second-
- * semester sheet, and the Remarks column. Always English and LTR: it is
+ * semester's), then CH, GP and GPA (the whole year's on a second-semester
+ * sheet, the semester's otherwise), the CGPA on a second-semester sheet, and
+ * the Remarks column. Always English and LTR: it is
  * the exported document, whatever language the dashboard is in.
  */
 const ResultTable = ({
@@ -159,7 +160,7 @@ const ResultTable = ({
 			</thead>
 			<tbody className="text-center">
 				{sheet.students.map((student, index) => {
-					const semester = totalsText(student.semester);
+					const totals = totalsText(printedTotals(student, sheet));
 					const year = student.year ? totalsText(student.year) : null;
 					const remark = remarkOf(student, sheet, remarks);
 					return (
@@ -215,9 +216,9 @@ const ResultTable = ({
 									</td>
 								);
 							})}
-							<td className={cell}>{semester.ch}</td>
-							<td className={cell}>{semester.gp}</td>
-							<td className={cell}>{semester.gpa}</td>
+							<td className={cell}>{totals.ch}</td>
+							<td className={cell}>{totals.gp}</td>
+							<td className={cell}>{totals.gpa}</td>
 							{withCgpa ? (
 								<td className={`${cell} font-bold`}>{student.cgpa == null ? "—" : student.cgpa.toFixed(2)}</td>
 							) : (

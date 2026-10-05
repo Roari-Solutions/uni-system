@@ -127,7 +127,7 @@ export const updateGrade = async (id: string, payload: Partial<GradePayload>): P
 };
 
 
-// a stored semester GPA; the annual figure averages the semesters on read
+// a stored semester GPA; the annual figure weighs the semesters by their hours on read
 export type SemesterGpa = {
 	semester: number;
 	gpSum: number;

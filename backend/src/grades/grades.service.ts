@@ -113,7 +113,7 @@ export interface StudentGpasView {
     gpa: number;
     status: 'pass' | 'fail' | null;
   }[];
-  /** The plain average of the semesters above; null until a semester is stored. */
+  /** The semesters above weighted by their hours (all GP / all CH); null until one is stored. */
   annual: number | null;
 }
 
@@ -443,7 +443,8 @@ export class GradesService {
 
   /**
    * A student's stored semester GPAs for one academic year, plus the annual
-   * figure: the plain average of those semesters, computed here and never stored.
+   * figure: those semesters weighted by their hours (all GP / all CH), as the
+   * results sheet's year GPA is; computed here and never stored.
    */
   async studentGpas(studentId: string, caller: GrCaller): Promise<StudentGpasView> {
     try {
@@ -468,10 +469,9 @@ export class GradesService {
         }))
         .sort((a, b) => a.semester - b.semester);
 
-      const annual = semesters.length
-        ? Number(
-            (semesters.reduce((acc, s) => acc + s.gpa, 0) / semesters.length).toFixed(2),
-          )
+      const hours = semesters.reduce((acc, s) => acc + s.courseHours, 0);
+      const annual = hours
+        ? Number((semesters.reduce((acc, s) => acc + s.gpSum, 0) / hours).toFixed(2))
         : null;
 
       return { academicYear: academicYearToNumber(student.academicYear), semesters, annual };

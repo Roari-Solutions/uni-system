@@ -36,7 +36,11 @@ import {
 } from 'src/common/academic-year';
 import { letterOf, type LetterGrade } from 'src/grades/letter-grade';
 import { resitKindOf, type ResitView } from 'src/grades/grades.service';
-import { backfillSerialNos } from 'src/curriculums/serial-no';
+import {
+  compareCurriculums,
+  groupsOf,
+  renumberSerialNos,
+} from 'src/curriculums/serial-no';
 import { approvedStudents } from './result-lock';
 import { takesCurriculum, type StudentTrack } from 'src/common/specialization';
 import {
@@ -53,6 +57,7 @@ import {
   ownSemester,
   cumulativeGpaOf,
   REMARK_CODES,
+  type GradePoints,
   type RemarkCode,
   type CellState,
   type ResultCell,
@@ -263,7 +268,8 @@ export class ResultsService {
   /**
    * The curriculums a faculty offers in one year and semester that the batch's
    * students take (the shared ones, and the majors of their specialization and
-   * department, or of none), in S.No. order.
+   * department, or of none): university, then faculty, then specialization
+   * requirements, each by abbreviation, which is also their S.No. order.
    */
   private async coursesOf(
     facultyId: string,
@@ -296,16 +302,27 @@ export class ResultsService {
           l.curriculum.semester === semester &&
           takesCurriculum(track, l.curriculum),
       )
+      .sort((a, b) =>
+        compareCurriculums(
+          {
+            curriculumId: a.curriculum.id,
+            code: a.curriculum.abbreviation,
+            requirementType: a.curriculum.requirementType,
+          },
+          {
+            curriculumId: b.curriculum.id,
+            code: b.curriculum.abbreviation,
+            requirementType: b.curriculum.requirementType,
+          },
+        ),
+      )
       .map((l) => ({
         sNo: l.serialNo ?? 0,
         curriculumId: l.curriculum.id,
         code: l.curriculum.abbreviation,
         name: l.curriculum.nameEn,
         hours: l.curriculum.courseHours,
-      }))
-      .sort(
-        (a, b) => a.sNo - b.sNo || (a.code ?? '').localeCompare(b.code ?? ''),
-      );
+      }));
   }
 
   /** The sheet as it would be generated now. */
@@ -361,8 +378,11 @@ export class ResultsService {
       throw new BadRequestException({ code: 'DEPARTMENT_MISMATCH' });
     }
 
-    // curriculums from before S.No.s existed get theirs before they are printed
-    await backfillSerialNos(this.db);
+    // S.No.s follow the sheets' order; any placed before that rule get theirs now
+    await renumberSerialNos(this.db, [
+      ...groupsOf([batch.facultyId], batch.academicYear, '1'),
+      ...groupsOf([batch.facultyId], batch.academicYear, '2'),
+    ]);
     const courses = await this.coursesOf(
       batch.facultyId,
       batch.academicYear,
@@ -427,23 +447,29 @@ export class ResultsService {
     const listed = withResit ? cohort.filter((s) => resat.has(s.id)) : cohort;
     if (!listed.length) throw new BadRequestException({ code: 'NO_RESITS' });
 
-    // the CGPA counts every earlier year's stored semester GPAs (they follow resits);
-    // this year's two come from the sheet itself, as the year's totals do
+    // the CGPA weighs every earlier year's stored semesters (they follow resits)
+    // by their hours; this year's two come from the sheet itself, as the year's
+    // totals do
     const level = academicYearToNumber(batch.academicYear);
-    const earlierGpas = new Map<string, number[]>();
+    const earlierSemesters = new Map<string, GradePoints[]>();
     if (yearSheet) {
       const stored = await this.db.query.gpas.findMany({
         where: inArray(
           gpas.studentId,
           listed.map((s) => s.id),
         ),
-        columns: { studentId: true, academicYear: true, gpa: true },
+        columns: {
+          studentId: true,
+          academicYear: true,
+          gpSum: true,
+          courseHours: true,
+        },
       });
       for (const row of stored) {
         if (academicYearToNumber(row.academicYear) >= level) continue;
-        earlierGpas.set(row.studentId, [
-          ...(earlierGpas.get(row.studentId) ?? []),
-          Number(row.gpa),
+        earlierSemesters.set(row.studentId, [
+          ...(earlierSemesters.get(row.studentId) ?? []),
+          { gp: Number(row.gpSum), ch: row.courseHours },
         ]);
       }
     }
@@ -456,6 +482,8 @@ export class ResultsService {
       department: department?.nameEn,
       semester: semesterToNumber(batch.semester),
       kind,
+      // a second-semester sheet's CH, GP and GPA cover the whole year
+      ...(yearSheet ? { totals: 'year' as const } : {}),
       courses: yearSheet ? yearCourses(firstCourses, courses) : courses,
       students: listed
         .sort((a, b) => a.uniNumber.localeCompare(b.uniNumber))
@@ -476,6 +504,7 @@ export class ResultsService {
             ),
           );
           const first = totalsOf(firstCells, firstCourses, true);
+          const year = yearSheet ? yearTotalsOf([first, semester]) : null;
           return {
             id: s.id,
             uniNumber: s.uniNumber,
@@ -484,15 +513,14 @@ export class ResultsService {
             // the first semester's cells lead, as its columns do
             cells: yearSheet ? [...firstCells, ...cells] : cells,
             semester,
-            // kept for the record; the sheet prints the CGPA in its place
-            year: yearSheet ? yearTotalsOf([first, semester]) : null,
+            // what a second-semester sheet's CH, GP and GPA print
+            year,
             // left off first-semester sheets, so theirs stay exactly as they were
-            ...(yearSheet
+            ...(year
               ? {
                   cgpa: cumulativeGpaOf([
-                    ...(earlierGpas.get(s.id) ?? []),
-                    first.gpa,
-                    semester.gpa,
+                    ...(earlierSemesters.get(s.id) ?? []),
+                    year,
                   ]),
                 }
               : {}),

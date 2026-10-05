@@ -38,7 +38,7 @@ import {
   UpdateCurriculumDto,
 } from './dto/curriculums.dto';
 import { abbreviationLetters, buildAbbreviation, serialOf } from './abbreviation';
-import { assignSerialNos, backfillSerialNos } from './serial-no';
+import { groupsOf, renumberSerialNos } from './serial-no';
 
 /** A curriculum as the views consume it: one faculty, one study year, one semester. */
 export interface CurriculumView {
@@ -78,14 +78,18 @@ export class CurriculumsService implements OnModuleInit {
     @Inject() private readonly gradesService: GradesService,
   ) {}
 
-  /** Numbers the curriculums created before S.No.s existed. */
+  /**
+   * Brings every S.No. into the sheets' order (university, faculty, then
+   * specialization requirements, each by abbreviation): numbers those created
+   * before S.No.s existed, and renumbers those placed by the old first-free rule.
+   */
   async onModuleInit(): Promise<void> {
     try {
-      const count = await backfillSerialNos(this.db);
-      if (count) this.logger.log(`Assigned S.No. to ${count} curriculum placements`);
+      const count = await renumberSerialNos(this.db);
+      if (count) this.logger.log(`Renumbered S.No. of ${count} curriculum placements`);
     } catch (error) {
       // the app still serves without them; the results sheets need them
-      this.logger.error('Failed to assign S.No. to existing curriculums', error);
+      this.logger.error('Failed to renumber curriculum S.No.s', error);
     }
   }
 
@@ -336,13 +340,7 @@ export class CurriculumsService implements OnModuleInit {
       await this.db
         .insert(facultyCurriculums)
         .values(offering.map((id) => ({ facultyId: id, curriculumId: created.id })));
-      await assignSerialNos(
-        this.db,
-        created.id,
-        offering,
-        created.academicYear,
-        created.semester,
-      );
+      await renumberSerialNos(this.db, groupsOf(offering, created.academicYear, created.semester));
       const placed = await this.db.query.facultyCurriculums.findFirst({
         where: and(
           eq(facultyCurriculums.facultyId, offering[0]),
@@ -620,17 +618,12 @@ export class CurriculumsService implements OnModuleInit {
         return next;
       });
 
-      // a curriculum moved to another year or semester takes that group's next
-      // S.No.; a faculty that newly offers it numbers it too
-      const regrouped =
-        updated.academicYear !== row.academicYear || updated.semester !== row.semester;
-      await assignSerialNos(
-        this.db,
-        row.id,
-        regrouped ? after : added,
-        updated.academicYear,
-        updated.semester,
-      );
+      // its S.No. follows its type and abbreviation, so both the groups it left
+      // and the ones it now sits in are renumbered
+      await renumberSerialNos(this.db, [
+        ...groupsOf(before, row.academicYear, row.semester),
+        ...groupsOf(after, updated.academicYear, updated.semester),
+      ]);
 
       // the hours weight each grade's points, so those are rebuilt first
       if (updated.courseHours !== row.courseHours) {
@@ -726,6 +719,8 @@ export class CurriculumsService implements OnModuleInit {
         await tx.delete(curriculums).where(eq(curriculums.id, row.id));
       });
 
+      // the rest of its groups close the gap it leaves
+      await renumberSerialNos(this.db, groupsOf(offering, row.academicYear, row.semester));
       await this.gradesService.refreshFacultiesSemester(offering, row.academicYear, row.semester);
 
       this.logger.log(`Deleted curriculum: ${row.id}`);

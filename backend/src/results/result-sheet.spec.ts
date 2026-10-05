@@ -86,16 +86,17 @@ describe('totalsOf', () => {
 });
 
 describe('yearTotalsOf', () => {
-  it('sums hours and points and averages the semester GPAs', () => {
+  it('sums hours and points and weighs the GPA by hours (GP / CH)', () => {
+    // a plain average of 3.00 and 2.00 would give 2.50
     expect(
       yearTotalsOf([
-        { ch: 16, gp: 54, gpa: 3.38 },
-        { ch: 14, gp: 42, gpa: 3 },
+        { ch: 15, gp: 45, gpa: 3 },
+        { ch: 21, gp: 42, gpa: 2 },
       ]),
-    ).toEqual({ ch: 30, gp: 96, gpa: 3.19 });
+    ).toEqual({ ch: 36, gp: 87, gpa: 2.42 });
   });
 
-  it('averages only the semesters that have a GPA', () => {
+  it('a semester with no counted hours adds nothing', () => {
     expect(
       yearTotalsOf([
         { ch: 0, gp: 0, gpa: null },
@@ -103,17 +104,32 @@ describe('yearTotalsOf', () => {
       ]),
     ).toEqual({ ch: 10, gp: 25, gpa: 2.5 });
   });
+
+  it('is null when no hours count in either semester', () => {
+    expect(
+      yearTotalsOf([
+        { ch: 0, gp: 0, gpa: null },
+        { ch: 0, gp: 0, gpa: null },
+      ]).gpa,
+    ).toBeNull();
+  });
 });
 
 describe('cumulativeGpaOf', () => {
-  it('averages every semester GPA to date', () => {
-    // two earlier years and this one: six semesters
-    expect(cumulativeGpaOf([3, 3.5, 2.5, 3, 2.61, 2.85])).toBe(2.91);
+  it('weighs every semester to date by its hours', () => {
+    // two earlier semesters, then this year's totals
+    expect(
+      cumulativeGpaOf([
+        { gp: 48, ch: 16 },
+        { gp: 35, ch: 14 },
+        { gp: 87, ch: 36 },
+      ]),
+    ).toBe(2.58);
   });
 
-  it('skips semesters without a GPA, and is null when none has one', () => {
-    expect(cumulativeGpaOf([3, null, 2])).toBe(2.5);
-    expect(cumulativeGpaOf([null, null])).toBeNull();
+  it('is null when no hours count yet', () => {
+    expect(cumulativeGpaOf([])).toBeNull();
+    expect(cumulativeGpaOf([{ gp: 0, ch: 0 }])).toBeNull();
   });
 });
 
