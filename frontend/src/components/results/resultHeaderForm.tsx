@@ -107,7 +107,7 @@ const ResultHeaderForm = ({ idPrefix, header, onChange, suggestions, sheet, disa
 						</Line>
 					)}
 					<Line>Academic Year {text("academicYearLabel")}</Line>
-					<p className="font-bold">{sheetTitle(sheet.semester, sheet.kind)}</p>
+					<p className="font-bold">{sheetTitle(sheet.semester, sheet.kind, sheet.academicYear)}</p>
 					{/* it prints in capitals, so it is typed as it will look */}
 					<Line>
 						{free("resultTitle", "text-body-sm uppercase tracking-wide")}

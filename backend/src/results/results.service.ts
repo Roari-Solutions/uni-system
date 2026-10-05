@@ -49,6 +49,8 @@ import {
   canonicalJson,
   totalsOf,
   yearTotalsOf,
+  yearCourses,
+  ownSemester,
   cumulativeGpaOf,
   REMARK_CODES,
   type RemarkCode,
@@ -318,9 +320,11 @@ export class ResultsService {
   /**
    * Builds the sheet from the grades as they stand, leaving off the excluded
    * students. A regular sheet shows the semester's own marks; a resit sheet
-   * shows the Sup & Sub marks over them. A second-semester sheet adds the
-   * year's totals, with the first semester counted as it finally stands (its
-   * resits included). Also hands back the grade rows and who was left off.
+   * shows the Sup & Sub marks over them. A second-semester sheet ends the year:
+   * it shows the first semester's curriculums too, as they finally stand (their
+   * resits included), ahead of its own, and adds the year's totals and the
+   * CGPA; its CH, GP and GPA stay the second semester's. Also hands back the
+   * grade rows and who was left off.
    */
   private async assemble(batch: Batch, kind: ResultKind, excluded: string[]) {
     const faculty = await this.db.query.faculties.findFirst({
@@ -452,7 +456,7 @@ export class ResultsService {
       department: department?.nameEn,
       semester: semesterToNumber(batch.semester),
       kind,
-      courses,
+      courses: yearSheet ? yearCourses(firstCourses, courses) : courses,
       students: listed
         .sort((a, b) => a.uniNumber.localeCompare(b.uniNumber))
         .map((s) => {
@@ -477,7 +481,8 @@ export class ResultsService {
             uniNumber: s.uniNumber,
             name: s.nameEn,
             standing: s.standing,
-            cells,
+            // the first semester's cells lead, as its columns do
+            cells: yearSheet ? [...firstCells, ...cells] : cells,
             semester,
             // kept for the record; the sheet prints the CGPA in its place
             year: yearSheet ? yearTotalsOf([first, semester]) : null,
@@ -922,7 +927,10 @@ export class ResultsService {
         throw new ConflictException({ code: 'RESULTS_NOT_APPROVED' });
       }
 
-      const { courses } = row.sheet;
+      // a second-semester sheet also shows the first semester, which had its own re-exams
+      const courses = row.sheet.courses.filter((c) =>
+        ownSemester(c, row.sheet.semester),
+      );
       const cohort = await this.db.query.students.findMany({
         where: and(
           inArray(

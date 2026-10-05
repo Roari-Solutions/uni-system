@@ -91,7 +91,7 @@ const ResitEntry = ({ candidates, locked, onChange }: ResitEntryProps) => {
 			// as the approved board results printed it
 			render: (c) => (
 				<span dir="ltr" className="font-semibold">
-					{cellText({ ...c, resit: null }, "board", "regular").text}
+					{cellText({ ...c, resit: null }, "board").text}
 				</span>
 			),
 		},

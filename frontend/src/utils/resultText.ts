@@ -1,5 +1,5 @@
 import type { Resit } from "../types/grade";
-import type { ResultCell, ResultKind, ResultTotals, ResultVersion } from "../types/result";
+import type { ResultCell, ResultCourse, ResultKind, ResultSheet, ResultTotals, ResultVersion } from "../types/result";
 
 // every exported sheet is in English, whatever the dashboard's language, so its
 // wording lives here rather than in the locale files
@@ -15,12 +15,23 @@ export const levelText = (academicYear: number) => `${LEVELS[academicYear - 1] ?
 
 /**
  * "(First Semester Examinations Result)"; the second semester's sheet carries
- * the whole year, so it is the year's result: "(Year Sup & Sub Examinations Result)".
+ * the whole year, so it is the year's result, named by the study year:
+ * "(Third Year Sup & Sub Examinations Result)".
  */
-export const sheetTitle = (semester: number, kind: ResultKind) => {
-	const term = semester === 2 ? "Year" : `${SEMESTERS[semester - 1] ?? semester} Semester`;
+export const sheetTitle = (semester: number, kind: ResultKind, academicYear: number) => {
+	const term = semester === 2 ? levelText(academicYear) : `${SEMESTERS[semester - 1] ?? semester} Semester`;
 	return `(${term}${kind === "resit" ? " Sup & Sub" : ""} Examinations Result)`;
 };
+
+/**
+ * Whether a column is the sheet's own semester. A second-semester sheet also
+ * shows the first semester's curriculums, which aren't edited, re-examined or
+ * counted in its remarks from here; older sheets tag none and are all their own.
+ */
+export const ownSemester = (
+	course: ResultCourse | undefined,
+	sheet: Pick<ResultSheet, "semester">,
+): course is ResultCourse => !!course && (course.semester === undefined || course.semester === sheet.semester);
 
 /** A student's name as the sheet prints it: with anything added to it on this result. */
 export const printedName = (name: string, addition: string | undefined) =>
@@ -46,18 +57,15 @@ export const joinYears = (years: string[]) =>
 
 /**
  * What one cell prints, and whether it is shaded as a fail. The board version
- * shows "mark letter" (85 A); the final one the letter alone. On a resit sheet
- * a re-exam replaces the cell, marked * (supplementary) or ** (substitute).
+ * shows "mark letter" (85 A); the final one the letter alone. A re-exam, which
+ * the sheet carries on a resit sheet and in the first-semester columns of a
+ * second-semester one, replaces the cell, marked * (supplementary) or ** (substitute).
  */
-export const cellText = (
-	cell: ResultCell,
-	version: ResultVersion,
-	kind: ResultKind,
-): { text: string; failed: boolean } => {
+export const cellText = (cell: ResultCell, version: ResultVersion): { text: string; failed: boolean } => {
 	const withMark = (mark: number | null, letter: string) =>
 		version === "board" && mark !== null ? `${mark} ${letter}` : letter;
 
-	if (kind === "resit" && cell.resit) {
+	if (cell.resit) {
 		const letter = `${cell.resit.letter}${resitSymbol(cell.resit.kind)}`;
 		return { text: withMark(cell.resit.mark, letter), failed: cell.resit.letter === "F" };
 	}

@@ -136,7 +136,7 @@ const TitleBlock = ({ header, sheet, version }: ResultDocumentProps) => {
 				<p>
 					Academic Year <Fill value={header.academicYearLabel} />
 				</p>
-				<p className="font-bold">{sheetTitle(sheet.semester, sheet.kind)}</p>
+				<p className="font-bold">{sheetTitle(sheet.semester, sheet.kind, sheet.academicYear)}</p>
 				{/* the board's line is typed (blank leaves it off); the final copy's is fixed */}
 				{resultTitle && <p className="text-[11px] font-semibold uppercase tracking-wide">{resultTitle}</p>}
 			</div>

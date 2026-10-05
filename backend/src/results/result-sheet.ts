@@ -67,7 +67,32 @@ export interface ResultCourse {
   code: string | null;
   name: string;
   hours: number;
+  /**
+   * The semester the curriculum is taught in, on second-semester sheets only
+   * (they carry the whole year's curriculums). Absent on first-semester sheets
+   * and on those from before, whose columns are all the sheet's own semester.
+   */
+  semester?: number;
 }
+
+/**
+ * A second-semester sheet's columns: the first semester's curriculums, then
+ * the second's, each tagged with its semester and numbered straight through
+ * (the second semester's S.No.s carry on from the first's).
+ */
+export function yearCourses(
+  first: ResultCourse[],
+  second: ResultCourse[],
+): ResultCourse[] {
+  return [
+    ...first.map((c) => ({ ...c, semester: 1 })),
+    ...second.map((c) => ({ ...c, semester: 2 })),
+  ].map((c, i) => ({ ...c, sNo: i + 1 }));
+}
+
+/** Whether a column is the sheet's own semester (not an earlier one shown for the year). */
+export const ownSemester = (course: ResultCourse, semester: number) =>
+  course.semester === undefined || course.semester === semester;
 
 /**
  * How a cell prints. `marked` is an ordinary mark; `cheating` a case decided
