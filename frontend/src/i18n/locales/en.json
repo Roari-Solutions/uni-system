@@ -744,6 +744,7 @@
     "remarkAutomaticOption": "Automatic",
     "remarkNone": "none",
     "remarkBlank": "Leave blank",
+    "remarkNoResits": "None to resit",
     "remarkKeyHeading": "Academic status key",
     "remarksHint": "The Remarks column fills in by itself from the semester's GPA: Pas, Sup/Sub with how many, or Rpt. Pick another remark from the status key in any row.",
     "removed": "Removed from this result:",

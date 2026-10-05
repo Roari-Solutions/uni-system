@@ -2,7 +2,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { CheckIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
-import { REMARKS, type RemarkChoices } from "../../utils/remarks";
+import { REMARKS, withCount, type RemarkChoices } from "../../utils/remarks";
 
 // what each option stands for: the automatic remark, a blank cell, or a code from the key
 type Choice = RemarkChoices[string] | undefined;
@@ -16,6 +16,8 @@ type RemarkPickerProps = {
 	automaticText: string;
 	/** The student's chosen remark; undefined while the automatic one stands. */
 	choice: Choice;
+	/** How many curriculums the student has to resit: Sup and Sub show them, and can't be picked without any. */
+	counts: { sup: number; sub: number };
 	onChange: (choice: Choice) => void;
 };
 
@@ -31,7 +33,7 @@ const EDGE = 8;
  * automatic one, or leave the cell blank. The panel opens above the page, so
  * the sheet's scrolling box doesn't cut it off.
  */
-const RemarkPicker = ({ label, text, automaticText, choice, onChange }: RemarkPickerProps) => {
+const RemarkPicker = ({ label, text, automaticText, choice, counts, onChange }: RemarkPickerProps) => {
 	const { t, i18n } = useTranslation();
 	const listId = useId();
 	const trigger = useRef<HTMLButtonElement>(null);
@@ -47,13 +49,23 @@ const RemarkPicker = ({ label, text, automaticText, choice, onChange }: RemarkPi
 	const selected = options.findIndex((o) => o.value === choice);
 	const [active, setActive] = useState(selected);
 
+	// Sup and Sub print with how many curriculums go to them, so with none they can't be chosen
+	const countOf = (value: Choice) => (value === "Sup" ? counts.sup : value === "Sub" ? counts.sub : null);
+	const isDisabled = (index: number) => countOf(options[index].value) === 0;
+	// the nearest option that can be picked, from `from` on in `step`'s direction (where it is, if none)
+	const enabledFrom = (from: number, step: 1 | -1, fallback: number) => {
+		for (let i = from; i >= 0 && i < options.length; i += step) if (!isDisabled(i)) return i;
+		return fallback;
+	};
+
 	const close = (refocus: boolean) => {
 		setOpen(false);
 		if (refocus) trigger.current?.focus();
 	};
 
-	const pick = (value: Choice) => {
-		onChange(value);
+	const pick = (index: number) => {
+		if (isDisabled(index)) return;
+		onChange(options[index].value);
 		close(true);
 	};
 
@@ -108,17 +120,17 @@ const RemarkPicker = ({ label, text, automaticText, choice, onChange }: RemarkPi
 	const onListKey = (e: KeyboardEvent) => {
 		const last = options.length - 1;
 		const moves: Record<string, number> = {
-			ArrowDown: Math.min(last, active + 1),
-			ArrowUp: Math.max(0, active - 1),
-			Home: 0,
-			End: last,
+			ArrowDown: enabledFrom(active + 1, 1, active),
+			ArrowUp: enabledFrom(active - 1, -1, active),
+			Home: enabledFrom(0, 1, active),
+			End: enabledFrom(last, -1, active),
 		};
 		if (e.key in moves) {
 			e.preventDefault();
 			setActive(moves[e.key]);
 		} else if (e.key === "Enter" || e.key === " ") {
 			e.preventDefault();
-			pick(options[active].value);
+			pick(active);
 		} else if (e.key === "Escape") {
 			e.preventDefault();
 			close(true);
@@ -132,6 +144,7 @@ const RemarkPicker = ({ label, text, automaticText, choice, onChange }: RemarkPi
 
 	const row = (index: number, content: ReactNode) => {
 		const isSelected = index === selected;
+		const disabled = isDisabled(index);
 		return (
 			<li
 				key={options[index].key}
@@ -139,14 +152,17 @@ const RemarkPicker = ({ label, text, automaticText, choice, onChange }: RemarkPi
 				data-index={index}
 				role="option"
 				aria-selected={isSelected}
+				aria-disabled={disabled || undefined}
 				// mousedown, so the panel doesn't lose focus before the choice lands
 				onMouseDown={(e) => {
 					e.preventDefault();
-					pick(options[index].value);
+					pick(index);
 				}}
-				onMouseEnter={() => setActive(index)}
-				className={`flex cursor-pointer items-center gap-3 px-3 py-2 text-body-sm transition-colors duration-150 ease-out ${
-					index === active ? "bg-background" : ""
+				onMouseEnter={() => !disabled && setActive(index)}
+				className={`flex items-center gap-3 px-3 py-2 text-body-sm ${
+					disabled
+						? "cursor-not-allowed text-primary-hover"
+						: `cursor-pointer transition-colors duration-150 ease-out ${index === active ? "bg-background" : ""}`
 				}`}
 			>
 				<span className="flex min-w-0 flex-1 items-center gap-3">{content}</span>
@@ -233,20 +249,22 @@ const RemarkPicker = ({ label, text, automaticText, choice, onChange }: RemarkPi
 							{t("results.remarkKeyHeading")}
 						</li>
 
-						{REMARKS.map(([code, meaning], i) =>
-							row(
+						{REMARKS.map(([code, meaning], i) => {
+							const count = countOf(code);
+							return row(
 								i + 2,
 								// the codes line up in one column at the row's start, their meanings beside them
 								<>
-									<span dir="ltr" lang="en" className="w-9 shrink-0 font-en font-bold">
-										{code}
+									<span dir="ltr" lang="en" className="min-w-9 shrink-0 whitespace-nowrap font-en font-bold">
+										{count && (code === "Sup" || code === "Sub") ? withCount(code, count) : code}
 									</span>
-									<span dir="ltr" lang="en" className="truncate font-en text-foreground/80">
+									<span dir="ltr" lang="en" className={`truncate font-en ${count === 0 ? "" : "text-foreground/80"}`}>
 										{meaning}
 									</span>
+									{count === 0 && <span className="ms-auto shrink-0 text-caption">{t("results.remarkNoResits")}</span>}
 								</>,
-							),
-						)}
+							);
+						})}
 					</ul>,
 					document.body,
 				)}

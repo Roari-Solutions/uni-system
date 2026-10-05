@@ -48,6 +48,8 @@ export type ResultCourse = {
 	code: string | null;
 	name: string;
 	hours: number;
+	// second-semester sheets only, which carry the whole year's curriculums: the one it's taught in
+	semester?: number;
 };
 
 // how a cell prints: an ordinary mark, an absence, a bar, a substitute (sub), no mark (inc),

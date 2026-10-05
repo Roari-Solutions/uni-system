@@ -31,25 +31,30 @@ export type RemarkCode = (typeof REMARKS)[number][0];
  */
 export type RemarkChoices = Record<string, RemarkCode | "">;
 
-/** How many of the student's curriculums go to a supplementary (any F) or a substitute (an excused absence) exam. */
+/**
+ * How many of the student's curriculums on the sheet still go to a
+ * supplementary (any F) or a substitute (an excused absence) exam. Every column
+ * counts, the first semester's on a second-semester sheet included; a cell
+ * with a re-exam counts as that re-exam stands (a passed C* is done with).
+ */
 export const resitCounts = (student: ResultStudent) => ({
-	sup: student.cells.filter((c) => c.letter === "F").length,
-	sub: student.cells.filter((c) => c.state === "substitute").length,
+	sup: student.cells.filter((c) => (c.resit?.letter ?? c.letter) === "F").length,
+	sub: student.cells.filter((c) => c.state === "substitute" && !c.resit).length,
 });
 
 /**
- * Where the count sits beside the abbreviation: before "Sup" and after "Sub"
- * ("2 Sup", "Sub 1"). The university's own convention wasn't confirmed, so
- * this is the one line to change if it's the other way round.
+ * Where the count sits beside the abbreviation: after "Sup", with the F grade
+ * that sends those curriculums to it, and before "Sub" ("Sup 2F", "1 Sub").
  */
-const withCount = (code: "Sup" | "Sub", count: number) =>
-	!count ? code : code === "Sup" ? `${count} Sup` : `Sub ${count}`;
+export const withCount = (code: "Sup" | "Sub", count: number) =>
+	!count ? code : code === "Sup" ? `Sup ${count}F` : `${count} Sub`;
 
 /**
  * The remark a regular sheet fills in by itself, from the semester's GPA and
  * its Sup & Sub curriculums:
  *  - GPA 2.00 or above with none to resit: Pas;
- *  - GPA 1.50 or above with some to resit: Sup and/or Sub, with how many;
+ *  - GPA 1.50 or above with some to resit: Sup and/or Sub, with how many. They
+ *    come before Pas: a student with any to resit hasn't passed yet;
  *  - GPA from 1.26 up to (not including) 1.50: Rpt.
  * Anything else is left for staff to choose. A Sup & Sub sheet gets none: it
  * records the re-exams themselves. (Remarks from the student's record, such as
@@ -68,7 +73,7 @@ export const autoRemark = (student: ResultStudent, sheet: Pick<ResultSheet, "kin
 
 /**
  * What the Remarks cell prints. Sup and Sub carry their counts; an automatic
- * Sup also names the Sub curriculums when the student has both ("2 Sup, Sub 1").
+ * Sup also names the Sub curriculums when the student has both ("Sup 2F, 1 Sub").
  */
 export const remarkText = (student: ResultStudent, code: RemarkCode | "", automatic: boolean) => {
 	const { sup, sub } = resitCounts(student);
@@ -79,6 +84,8 @@ export const remarkText = (student: ResultStudent, code: RemarkCode | "", automa
 
 /**
  * The student's remark: the one chosen for them, or else the automatic one.
+ * A chosen Sup or Sub the student no longer has any curriculums for (a mark
+ * corrected since) gives way to the automatic one, as it can't print a count.
  * `choices` is undefined on approved results from before remarks were filled
  * in; those keep the blank column they were approved with.
  */
@@ -89,7 +96,8 @@ export const remarkOf = (
 ) => {
 	if (!choices) return { code: "" as const, text: "", automatic: false };
 	const chosen = choices[student.id];
-	const automatic = chosen === undefined;
+	const { sup, sub } = resitCounts(student);
+	const automatic = chosen === undefined || (chosen === "Sup" && !sup) || (chosen === "Sub" && !sub);
 	const code = automatic ? autoRemark(student, sheet) : chosen;
 	return { code, text: remarkText(student, code, automatic), automatic };
 };

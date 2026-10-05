@@ -2,7 +2,9 @@ import { capLetter, SUPPLEMENTARY_CAP } from 'src/grades/letter-grade';
 import {
   canonicalJson,
   cumulativeGpaOf,
+  ownSemester,
   totalsOf,
+  yearCourses,
   yearTotalsOf,
   type ResultCell,
   type ResultCourse,
@@ -130,5 +132,34 @@ describe('canonicalJson', () => {
     expect(canonicalJson({ b: 1, a: [{ d: 2, c: null }] })).toBe(
       canonicalJson({ a: [{ c: null, d: 2 }], b: 1 }),
     );
+  });
+});
+
+describe('yearCourses', () => {
+  const placed = (curriculumId: string, sNo: number): ResultCourse => ({
+    ...course(curriculumId, 3),
+    sNo,
+  });
+
+  it('puts the first semester first and numbers straight through', () => {
+    const columns = yearCourses(
+      [placed('a', 1), placed('b', 2)],
+      [placed('c', 1), placed('d', 2), placed('e', 3)],
+    );
+    expect(columns.map((c) => [c.curriculumId, c.sNo, c.semester])).toEqual([
+      ['a', 1, 1],
+      ['b', 2, 1],
+      ['c', 3, 2],
+      ['d', 4, 2],
+      ['e', 5, 2],
+    ]);
+  });
+
+  it("tells the sheet's own semester from the one shown for the year", () => {
+    const [first, second] = yearCourses([placed('a', 1)], [placed('b', 1)]);
+    expect(ownSemester(first, 2)).toBe(false);
+    expect(ownSemester(second, 2)).toBe(true);
+    // first-semester sheets, and second-semester ones from before, carry no semester
+    expect(ownSemester(course('c', 3), 2)).toBe(true);
   });
 });

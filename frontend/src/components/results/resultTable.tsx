@@ -6,9 +6,9 @@ import type {
 	ResultStudent,
 	ResultVersion,
 } from "../../types/result";
-import { autoRemark, remarkOf, remarkText, type RemarkChoices } from "../../utils/remarks";
+import { autoRemark, remarkOf, remarkText, resitCounts, type RemarkChoices } from "../../utils/remarks";
 import RemarkPicker from "./remarkPicker";
-import { cellText, printedName, totalsText } from "../../utils/resultText";
+import { cellText, ownSemester, printedName, totalsText } from "../../utils/resultText";
 
 /**
  * Makes the preview editable. The sheet itself stays English; these labels are
@@ -63,8 +63,9 @@ const failedCell = "bg-accent-soft font-bold";
 
 /**
  * The results sheet itself: one row per student, one column per curriculum
- * (by S.No.), then the semester's CH, GP and GPA, the year's on a second-
- * semester sheet, and an empty Remarks column. Always English and LTR: it is
+ * (by S.No.; a second-semester sheet ends the year, so it leads with the first
+ * semester's), then the semester's CH, GP and GPA, the CGPA on a second-
+ * semester sheet, and the Remarks column. Always English and LTR: it is
  * the exported document, whatever language the dashboard is in.
  */
 const ResultTable = ({
@@ -81,7 +82,9 @@ const ResultTable = ({
 	// a second-semester sheet ends with the CGPA; one generated before the CGPA was
 	// printed keeps the year's CH, GP and GPA it was approved with
 	const withCgpa = yearSheet && sheet.students.every((s) => s.cgpa !== undefined);
-	const totalColumns = yearSheet && !withCgpa ? ["CH", "GP", "GPA", "CH", "GP", "GPA"] : ["CH", "GP", "GPA"];
+	// only that older sheet heads its two sets of totals "Semester" and "Year"
+	const grouped = yearSheet && !withCgpa;
+	const totalColumns = grouped ? ["CH", "GP", "GPA", "CH", "GP", "GPA"] : ["CH", "GP", "GPA"];
 
 	return (
 		<table
@@ -105,27 +108,28 @@ const ResultTable = ({
 							{c.sNo}
 						</th>
 					))}
-					{yearSheet ? (
+					{grouped ? (
 						<>
 							<th scope="colgroup" colSpan={3} className={cell}>
 								Semester
 							</th>
-							{withCgpa ? (
+							<th scope="colgroup" colSpan={3} className={cell}>
+								Year
+							</th>
+						</>
+					) : (
+						<>
+							{totalColumns.map((label) => (
+								<th key={label} scope="col" rowSpan={2} className={cell}>
+									{label}
+								</th>
+							))}
+							{withCgpa && (
 								<th scope="col" rowSpan={2} className={cell}>
 									CGPA
 								</th>
-							) : (
-								<th scope="colgroup" colSpan={3} className={cell}>
-									Year
-								</th>
 							)}
 						</>
-					) : (
-						totalColumns.map((label) => (
-							<th key={label} scope="col" rowSpan={2} className={cell}>
-								{label}
-							</th>
-						))
 					)}
 					<th scope="col" rowSpan={2} className={`${cell} min-w-16 text-error`}>
 						Remarks
@@ -145,7 +149,7 @@ const ResultTable = ({
 							{c.hours}
 						</td>
 					))}
-					{yearSheet &&
+					{grouped &&
 						totalColumns.map((label, i) => (
 							<th key={i} scope="col" className={cell}>
 								{label}
@@ -186,9 +190,10 @@ const ResultTable = ({
 								)}
 							</td>
 							{student.cells.map((c, i) => {
-								const { text, failed } = cellText(c, version, sheet.kind);
+								const { text, failed } = cellText(c, version);
 								const course = sheet.courses[i];
-								const editable = editing && course && editing.canEdit(student);
+								// the first semester's columns on a second-semester sheet are its approved result
+								const editable = editing && ownSemester(course, sheet) && editing.canEdit(student);
 								return (
 									<td
 										key={c.curriculumId}
@@ -230,7 +235,9 @@ const ResultTable = ({
 										label={remarkEditing.label(student)}
 										text={remark.text}
 										automaticText={remarkText(student, autoRemark(student, sheet), true)}
-										choice={remarks?.[student.id]}
+										counts={resitCounts(student)}
+										// a chosen Sup or Sub with nothing left to count stands as automatic
+										choice={remark.automatic ? undefined : remarks?.[student.id]}
 										onChange={(choice) => remarkEditing.onChange(student, choice)}
 									/>
 								</td>

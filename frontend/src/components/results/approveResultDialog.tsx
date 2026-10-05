@@ -15,6 +15,7 @@ import {
 } from "../../styles/form";
 import { conflictCode } from "../../utils/apiError";
 import { gradeSchema, markToSend, takesNoMark, voidsMark } from "../../utils/gradeInput";
+import { ownSemester } from "../../utils/resultText";
 
 // a grade still waiting on someone: an undecided cheating case, or no mark at all
 type OpenItem = {
@@ -98,7 +99,8 @@ const ApproveResultDialog = ({ open, result, onApproved, onCancel }: ApproveResu
 					if (student.standing !== "active") continue;
 					student.cells.forEach((cell, i) => {
 						const course = preview.sheet.courses[i];
-						if (!course) return;
+						// the first semester's columns were settled when its own result was approved
+						if (!ownSemester(course, preview.sheet)) return;
 						const kind =
 							cell.state === "cheatingPending" ? "cheating" : cell.state === "incomplete" ? "missing" : null;
 						if (!kind) return;
