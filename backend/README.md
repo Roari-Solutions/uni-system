@@ -140,9 +140,10 @@ the hand-written migrations first, in order:
 psql "$DATABASE_URL" -f drizzle/0015_user_roles.sql   # roles a user may hold several of, and their permissions
 psql "$DATABASE_URL" -f drizzle/0016_site_pages.sql   # website pages and their saved versions
 psql "$DATABASE_URL" -f drizzle/0017_domain_user_admins.sql   # user management split by domain
+psql "$DATABASE_URL" -f drizzle/0018_site_pages_client_feedback.sql   # saved content moved to the changed leader, student affairs and libraries templates
 ```
 
-Both are safe to run twice. 0015 gives every existing user exactly the role
+All are safe to run twice. 0015 gives every existing user exactly the role
 they had. The old per-page CMS tables (`main_page`, `about_page`, ...) are left
 untouched and unused.
 

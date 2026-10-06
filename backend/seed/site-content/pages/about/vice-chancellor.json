@@ -27,6 +27,16 @@
       "en": ""
     }
   },
+  "about": {
+    "title": {
+      "ar": "نبذة عن الوكالة",
+      "en": ""
+    },
+    "text": {
+      "ar": "",
+      "en": ""
+    }
+  },
   "message": {
     "title": {
       "ar": "",
@@ -75,6 +85,66 @@
       "en": ""
     },
     "items": []
+  },
+  "departments": {
+    "tag": {
+      "ar": "",
+      "en": ""
+    },
+    "title": {
+      "ar": "الإدارات التابعة للوكالة",
+      "en": ""
+    },
+    "description": {
+      "ar": "",
+      "en": ""
+    },
+    "items": [
+      {
+        "title": {
+          "ar": "الخدمات والمخازن",
+          "en": ""
+        },
+        "description": {
+          "ar": "",
+          "en": ""
+        },
+        "points": []
+      },
+      {
+        "title": {
+          "ar": "إدارة الموارد البشرية",
+          "en": ""
+        },
+        "description": {
+          "ar": "",
+          "en": ""
+        },
+        "points": []
+      },
+      {
+        "title": {
+          "ar": "الإدارة الهندسية",
+          "en": ""
+        },
+        "description": {
+          "ar": "",
+          "en": ""
+        },
+        "points": []
+      },
+      {
+        "title": {
+          "ar": "إدارة الحرس الجامعي",
+          "en": ""
+        },
+        "description": {
+          "ar": "",
+          "en": ""
+        },
+        "points": []
+      }
+    ]
   },
   "regulations": {
     "title": {

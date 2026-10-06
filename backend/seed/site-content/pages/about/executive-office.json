@@ -27,6 +27,16 @@
       "en": ""
     }
   },
+  "about": {
+    "title": {
+      "ar": "",
+      "en": ""
+    },
+    "text": {
+      "ar": "",
+      "en": ""
+    }
+  },
   "message": {
     "title": {
       "ar": "كلمة مدير المكتب التنفيذي",
@@ -67,6 +77,21 @@
     "values": []
   },
   "tasks": {
+    "tag": {
+      "ar": "",
+      "en": ""
+    },
+    "title": {
+      "ar": "",
+      "en": ""
+    },
+    "description": {
+      "ar": "",
+      "en": ""
+    },
+    "items": []
+  },
+  "departments": {
     "tag": {
       "ar": "",
       "en": ""

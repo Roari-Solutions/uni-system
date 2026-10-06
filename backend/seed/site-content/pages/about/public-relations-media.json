@@ -27,6 +27,16 @@
       "en": ""
     }
   },
+  "about": {
+    "title": {
+      "ar": "",
+      "en": ""
+    },
+    "text": {
+      "ar": "",
+      "en": ""
+    }
+  },
   "message": {
     "title": {
       "ar": "كلمة مدير إدارة العلاقات العامة والإعلام",
@@ -191,6 +201,21 @@
         "icon": "briefcase-business"
       }
     ]
+  },
+  "departments": {
+    "tag": {
+      "ar": "",
+      "en": ""
+    },
+    "title": {
+      "ar": "",
+      "en": ""
+    },
+    "description": {
+      "ar": "",
+      "en": ""
+    },
+    "items": []
   },
   "regulations": {
     "title": {

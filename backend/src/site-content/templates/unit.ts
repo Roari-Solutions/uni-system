@@ -1,7 +1,7 @@
 import { f, type PageSchema } from '../schema/fields';
 import { contactRef } from './site';
 
-/** A center's or deanship's page: the IT, media and strategy centers and the libraries deanship. */
+/** A center's page: the IT, media and strategy centers. */
 export const unitSchema: PageSchema = f.group(
   ['صفحة مركز أو عمادة', 'Center or deanship page'],
   {
