@@ -1,7 +1,9 @@
 import { Link, Navigate, useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import { EyeIcon } from "@heroicons/react/24/outline";
-import DataTable, { type Column } from "../../../components/dataTable";
+import PageBackdrop from "../../../components/pageBackdrop";
+import type { Column } from "../../../components/dataTable";
+import DataTable from "../../../components/paginatedDataTable";
 import useFaculties from "../../../hooks/useFaculties";
 import type { Faculty } from "../../../types/faculty";
 import { smallSecondaryButtonClass } from "../../../styles/form";
@@ -58,12 +60,14 @@ const FacultyIndex = () => {
 		},
 	];
 
-	return (
-		<div>
-			<h1 className="mb-8 border-s-3 border-primary ps-4 text-heading-3 text-accent-deep">
+		return (
+		<div className="relative isolate flex h-full min-h-0 flex-col">
+			<PageBackdrop />
+			<h1 className="mb-4 shrink-0 border-s-3 border-primary ps-4 text-heading-3 text-accent-deep">
 				{t("faculty.title")}
 			</h1>
 			<DataTable
+				paginated={false}
 				columns={columns}
 				rows={faculties}
 				getRowId={(f) => f.id}
@@ -72,6 +76,9 @@ const FacultyIndex = () => {
 			/>
 		</div>
 	);
+
+
+	
 };
 
 export default FacultyIndex;
