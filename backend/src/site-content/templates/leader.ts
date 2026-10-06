@@ -36,6 +36,10 @@ export const leaderSchema: PageSchema = f.group(
         'Second button text',
       ),
     }),
+    about: f.group(['النبذة', 'About'], {
+      title: optionalText('العنوان', 'Heading'),
+      text: optionalPara('النص', 'Text'),
+    }),
     message: f.group(['الكلمة', 'Message'], {
       title: optionalText('العنوان', 'Heading'),
       paragraphs: f.list(
@@ -96,6 +100,26 @@ export const leaderSchema: PageSchema = f.group(
         { max: 12 },
       ),
     }),
+    departments: f.group(['الإدارات التابعة', 'Departments'], {
+      tag: optionalText('العنوان الصغير', 'Eyebrow'),
+      title: optionalText('العنوان', 'Heading'),
+      description: optionalPara('الوصف', 'Description'),
+      items: f.list(
+        ['الإدارات', 'Departments'],
+        ['إدارة', 'Department'],
+        f.group(['إدارة', 'Department'], {
+          title: f.text(['اسم الإدارة', 'Name']),
+          description: optionalPara('الوصف', 'Description'),
+          points: f.list(
+            ['النقاط', 'Bullet points'],
+            ['نقطة', 'Point'],
+            f.para(['النقطة', 'Point']),
+            { max: 12 },
+          ),
+        }),
+        { max: 12 },
+      ),
+    }),
     regulations: f.group(['اللوائح والوثائق', 'Regulations and documents'], {
       title: optionalText('العنوان', 'Heading'),
       description: optionalPara('الوصف', 'Description'),
@@ -145,5 +169,20 @@ export const leaderSchema: PageSchema = f.group(
         { max: 8 },
       ),
     }),
+  },
+);
+
+/** The university director's page: a leader's page under a full-width banner photo. */
+export const directorSchema: PageSchema = f.group(
+  ['صفحة مدير الجامعة', "University director's page"],
+  {
+    banner: f.image(['صورة الشريط العلوي', 'Banner photo'], {
+      optional: true,
+      help: [
+        'تظهر أعلى الصفحة بنفس مقاس صور الكليات؛ لا يظهر الشريط بدون صورة',
+        "Shown across the top at the college banners' size; no banner without a photo",
+      ],
+    }),
+    ...leaderSchema.fields,
   },
 );

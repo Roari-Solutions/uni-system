@@ -1,4 +1,5 @@
 {
+  "banner": "",
   "profile": {
     "name": {
       "ar": "بروفيسور/ أحمد عبد القادر آدم",
@@ -53,6 +54,16 @@
     },
     "secondaryActionLabel": {
       "ar": "التعرف على إدارة الجامعة",
+      "en": ""
+    }
+  },
+  "about": {
+    "title": {
+      "ar": "",
+      "en": ""
+    },
+    "text": {
+      "ar": "",
       "en": ""
     }
   },
@@ -221,6 +232,21 @@
         "icon": "arrow-left-right"
       }
     ]
+  },
+  "departments": {
+    "tag": {
+      "ar": "",
+      "en": ""
+    },
+    "title": {
+      "ar": "",
+      "en": ""
+    },
+    "description": {
+      "ar": "",
+      "en": ""
+    },
+    "items": []
   },
   "regulations": {
     "title": {

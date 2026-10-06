@@ -4,7 +4,8 @@ import { collegeSchema } from './templates/college';
 import { contactSchema } from './templates/contact';
 import { gallerySchema } from './templates/gallery';
 import { homeSchema } from './templates/home';
-import { leaderSchema } from './templates/leader';
+import { directorSchema, leaderSchema } from './templates/leader';
+import { librarySchema } from './templates/library';
 import { partnershipsSchema } from './templates/partnerships';
 import { scientificAffairsSchema } from './templates/scientific-affairs';
 import { contactsSchema, footerSchema } from './templates/site';
@@ -21,8 +22,10 @@ export const TEMPLATES = {
   gallery: gallerySchema,
   partnerships: partnershipsSchema,
   leader: leaderSchema,
+  director: directorSchema,
   unit: unitSchema,
   'student-affairs': studentAffairsSchema,
+  library: librarySchema,
   'scientific-affairs': scientificAffairsSchema,
   college: collegeSchema,
 } satisfies Record<string, PageSchema>;
@@ -94,7 +97,7 @@ export const PAGES: readonly SitePage[] = [
   ),
   page(
     'about/university-director',
-    'leader',
+    'director',
     'leaders',
     'مدير الجامعة',
     'University director',
@@ -136,7 +139,7 @@ export const PAGES: readonly SitePage[] = [
   ),
   page(
     'deanships/libraries',
-    'unit',
+    'library',
     'units',
     'عمادة المكتبات',
     'Libraries deanship',

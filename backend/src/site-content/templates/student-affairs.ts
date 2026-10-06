@@ -1,12 +1,45 @@
 import { f, type PageSchema } from '../schema/fields';
 
-const bullets = (max: number) =>
+export const bullets = (max: number) =>
   f.list(
     ['النقاط', 'Bullet points'],
     ['نقطة', 'Point'],
     f.para(['النقطة', 'Point']),
     { max },
   );
+
+/** One section of a deanship: a name, a description and up to four sub-sections. */
+export const departmentItem = f.group(['قسم', 'Section'], {
+  title: f.text(['اسم القسم', 'Name']),
+  description: f.para(['الوصف', 'Description'], { optional: true }),
+  blocks: f.list(
+    ['الفقرات الفرعية', 'Sub-sections'],
+    ['فقرة فرعية', 'Sub-section'],
+    f.group(['فقرة فرعية', 'Sub-section'], {
+      heading: f.text(['العنوان', 'Heading'], { optional: true }),
+      paragraph: f.para(['النص', 'Text'], { optional: true }),
+      bullets: bullets(12),
+    }),
+    { max: 4 },
+  ),
+});
+
+/** The former deans' table. */
+export const formerDeans = f.group(['العمداء السابقون', 'Former deans'], {
+  title: f.text(['العنوان', 'Heading']),
+  numberColumn: f.text(['عنوان عمود الرقم', '"No." column heading']),
+  nameColumn: f.text(['عنوان عمود الاسم', '"Name" column heading']),
+  periodColumn: f.text(['عنوان عمود الفترة', '"Period" column heading']),
+  items: f.list(
+    ['العمداء', 'Deans'],
+    ['عميد', 'Dean'],
+    f.group(['عميد', 'Dean'], {
+      name: f.text(['الاسم', 'Name']),
+      period: f.text(['الفترة', 'Period']),
+    }),
+    { max: 30 },
+  ),
+});
 
 export const studentAffairsSchema: PageSchema = f.group(
   ['عمادة شؤون الطلاب', 'Student affairs deanship'],
@@ -59,49 +92,27 @@ export const studentAffairsSchema: PageSchema = f.group(
       items: f.list(
         ['الأقسام', 'Sections'],
         ['قسم', 'Section'],
-        f.group(['قسم', 'Section'], {
-          title: f.text(['اسم القسم', 'Name']),
-          description: f.para(['الوصف', 'Description'], { optional: true }),
-          blocks: f.list(
-            ['الفقرات الفرعية', 'Sub-sections'],
-            ['فقرة فرعية', 'Sub-section'],
-            f.group(['فقرة فرعية', 'Sub-section'], {
-              heading: f.text(['العنوان', 'Heading'], { optional: true }),
-              paragraph: f.para(['النص', 'Text'], { optional: true }),
-              bullets: bullets(12),
-            }),
-            { max: 4 },
-          ),
-        }),
+        departmentItem,
         { min: 1, max: 10 },
       ),
     }),
-    formerDeans: f.group(['العمداء السابقون', 'Former deans'], {
+    formerDeans,
+    news: f.group(['أخبار العمادة', 'Deanship news'], {
       title: f.text(['العنوان', 'Heading']),
-      numberColumn: f.text(['عنوان عمود الرقم', '"No." column heading']),
-      nameColumn: f.text(['عنوان عمود الاسم', '"Name" column heading']),
-      periodColumn: f.text(['عنوان عمود الفترة', '"Period" column heading']),
       items: f.list(
-        ['العمداء', 'Deans'],
-        ['عميد', 'Dean'],
-        f.group(['عميد', 'Dean'], {
-          name: f.text(['الاسم', 'Name']),
-          period: f.text(['الفترة', 'Period']),
+        ['الأخبار', 'News'],
+        ['خبر', 'News item'],
+        f.group(['خبر', 'News item'], {
+          title: f.text(['العنوان', 'Title']),
+          date: f.string(['التاريخ', 'Date'], { format: 'date' }),
+          image: f.image(['الصورة', 'Image']),
+          excerpt: f.para(['الملخص', 'Summary']),
         }),
-        { max: 30 },
-      ),
-    }),
-    sidebar: f.group(['الفهرس الجانبي', 'Side index'], {
-      title: f.text(['العنوان', 'Heading']),
-      items: f.list(
-        ['البنود', 'Entries'],
-        ['بند', 'Entry'],
-        f.text(['البند', 'Entry']),
         {
-          length: 6,
+          max: 12,
           help: [
-            'كل بند ينقل إلى القسم المقابل بالترتيب',
-            'Each entry jumps to the matching section, in order',
+            'يُخفى القسم إذا لم تكن هناك أخبار',
+            'The section is hidden while there is no news',
           ],
         },
       ),
