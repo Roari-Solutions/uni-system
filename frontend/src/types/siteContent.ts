@@ -12,7 +12,7 @@ type Base = { label: Localized; help?: Localized };
 export type TextField = Base & { type: "text"; multiline?: boolean; optional?: boolean };
 export type StringField = Base & {
 	type: "string";
-	format?: "plain" | "email" | "phone" | "url" | "date";
+	format?: "plain" | "email" | "phone" | "url" | "date" | "map";
 	optional?: boolean;
 };
 export type NumberField = Base & { type: "number"; integer?: boolean; optional?: boolean };

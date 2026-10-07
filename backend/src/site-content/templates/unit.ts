@@ -66,7 +66,6 @@ export const unitSchema: PageSchema = f.group(
       ),
     }),
     sidebar: f.group(['الفهرس الجانبي', 'Side index'], {
-      code: f.string(['الرمز', 'Code']),
       title: f.text(['العنوان', 'Heading']),
       items: f.list(
         ['البنود', 'Entries'],

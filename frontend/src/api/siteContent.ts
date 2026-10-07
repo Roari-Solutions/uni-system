@@ -17,14 +17,15 @@ export const fetchPage = async (key: string): Promise<EditablePage> => {
 /**
  * Saves the whole page as its next version. Fails with 400 INVALID_CONTENT (and
  * the issues) when it doesn't fit the page's structure, and with 409
- * STALE_VERSION when someone else saved since `version` was loaded.
+ * STALE_VERSION when someone else saved since `version` was loaded. Returns the
+ * content as saved, which can differ from what was sent (map links are converted).
  */
 export const savePage = async (
 	key: string,
 	content: Record<string, unknown>,
 	version: number,
-): Promise<{ key: string; version: number }> => {
-	const { data } = await api.put<{ key: string; version: number }>(`/cms/pages/${keyPath(key)}`, {
+): Promise<{ key: string; version: number; content: Record<string, unknown> }> => {
+	const { data } = await api.put<{ key: string; version: number; content: Record<string, unknown> }>(`/cms/pages/${keyPath(key)}`, {
 		content,
 		version,
 	});

@@ -78,7 +78,6 @@ export const librarySchema: PageSchema = f.group(
     }),
     formerDeans,
     sidebar: f.group(['الفهرس الجانبي', 'Side index'], {
-      code: f.string(['الرمز', 'Code']),
       title: f.text(['العنوان', 'Heading']),
       items: f.list(
         ['البنود', 'Entries'],

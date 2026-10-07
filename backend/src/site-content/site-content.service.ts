@@ -10,6 +10,7 @@ import { and, desc, eq } from 'drizzle-orm';
 import { sitePageRevisions, sitePages } from 'schema';
 import { DATABASE, type Db } from 'src/database/database.module';
 import { findPage, PAGES, schemaOf, type SitePage } from './pages';
+import { normalizeMapLinks } from './schema/map-links';
 import { validateContent } from './schema/validate';
 
 /** What the website reads for one page. */
@@ -95,7 +96,8 @@ export class SiteContentService {
    * Saves a page's whole content as its next version. Refused with
    * INVALID_CONTENT (and the issues) when it departs from the page's
    * structure, and with STALE_VERSION when someone saved since the editor
-   * loaded it, so no one overwrites another's work unseen.
+   * loaded it, so no one overwrites another's work unseen. Map links are
+   * turned into embed links first; the content as saved is returned.
    */
   async savePage(
     key: string,
@@ -105,6 +107,7 @@ export class SiteContentService {
   ) {
     const page = this.pageOrThrow(key);
 
+    content = await normalizeMapLinks(schemaOf(page), content);
     const issues = validateContent(schemaOf(page), content);
     if (issues.length)
       throw new BadRequestException({ code: 'INVALID_CONTENT', issues });
@@ -160,7 +163,7 @@ export class SiteContentService {
         .insert(sitePageRevisions)
         .values({ pageId, version: next, content, createdBy: userId });
       this.logger.log(`Page ${key} saved as version ${next} by user ${userId}`);
-      return { key, version: next };
+      return { key, version: next, content };
     });
   }
 

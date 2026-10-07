@@ -7,6 +7,7 @@ import { homeSchema } from './templates/home';
 import { directorSchema, leaderSchema } from './templates/leader';
 import { librarySchema } from './templates/library';
 import { partnershipsSchema } from './templates/partnerships';
+import { publicRelationsSchema } from './templates/public-relations';
 import { scientificAffairsSchema } from './templates/scientific-affairs';
 import { contactsSchema, footerSchema } from './templates/site';
 import { studentAffairsSchema } from './templates/student-affairs';
@@ -26,6 +27,7 @@ export const TEMPLATES = {
   unit: unitSchema,
   'student-affairs': studentAffairsSchema,
   library: librarySchema,
+  'public-relations': publicRelationsSchema,
   'scientific-affairs': scientificAffairsSchema,
   college: collegeSchema,
 } satisfies Record<string, PageSchema>;
@@ -125,9 +127,9 @@ export const PAGES: readonly SitePage[] = [
   ),
   page(
     'about/public-relations-media',
-    'leader',
+    'public-relations',
     'leaders',
-    'مدير العلاقات العامة والإعلام',
+    'إدارة العلاقات العامة والإعلام',
     'Public relations and media',
   ),
   page(

@@ -2,6 +2,30 @@ import { f, type PageSchema } from '../schema/fields';
 import { icon } from './icons';
 import { contactRef } from './site';
 
+/** Who held the post before, shown at the foot of the page while the list has anyone in it. */
+export const formerHolders = f.group(
+  ['شاغلو المنصب سابقاً', 'Former holders'],
+  {
+    title: f.text(['العنوان', 'Heading'], { optional: true }),
+    items: f.list(
+      ['الأشخاص', 'People'],
+      ['شخص', 'Person'],
+      f.group(['شخص', 'Person'], {
+        name: f.text(['الاسم', 'Name']),
+        period: f.text(['الفترة', 'Period'], { optional: true }),
+        image: f.image(['الصورة', 'Photo'], { optional: true }),
+      }),
+      {
+        max: 30,
+        help: [
+          'يُخفى القسم إذا كانت القائمة فارغة',
+          'The section is hidden while the list is empty',
+        ],
+      },
+    ),
+  },
+);
+
 const optionalText = (ar: string, en: string) =>
   f.text([ar, en], { optional: true });
 const optionalPara = (ar: string, en: string) =>
@@ -169,6 +193,7 @@ export const leaderSchema: PageSchema = f.group(
         { max: 8 },
       ),
     }),
+    formerHolders,
   },
 );
 

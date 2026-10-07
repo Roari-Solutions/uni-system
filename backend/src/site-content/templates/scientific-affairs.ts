@@ -1,5 +1,6 @@
 import { f, type PageSchema } from '../schema/fields';
 import { icon } from './icons';
+import { formerHolders } from './leader';
 import { contactRef } from './site';
 
 const node = (ar: string, en: string) =>
@@ -52,11 +53,6 @@ export const scientificAffairsSchema: PageSchema = f.group(
     overview: f.group(['نبذة عن الأمانة', 'About the secretariat'], {
       title: f.text(['العنوان', 'Heading']),
       text: f.para(['النص', 'Text']),
-      quote: f.group(['الاقتباس', 'Quote'], {
-        content: f.para(['الاقتباس', 'Quote']),
-        author: f.text(['القائل', 'Author']),
-        position: f.text(['المنصب', 'Position']),
-      }),
     }),
     vision: f.group(['الرؤية والرسالة والأهداف', 'Vision, mission and goals'], {
       title: f.text(['العنوان', 'Heading']),
@@ -114,5 +110,6 @@ export const scientificAffairsSchema: PageSchema = f.group(
         { max: 30 },
       ),
     }),
+    formerHolders,
   },
 );

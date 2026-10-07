@@ -23,7 +23,7 @@
       "en": ""
     },
     "description": {
-      "ar": "المجمع الإداري والأكاديمي الرئيسي، شارع النيلين التقني، الخرطوم، جمهورية السودان.",
+      "ar": "المجمع الإداري والأكاديمي الرئيسي\nشارع النيلين التقني\nالخرطوم\nجمهورية السودان",
       "en": ""
     },
     "postalLabel": {
@@ -100,7 +100,7 @@
       "ar": "إحداثيات الحرم المباشر",
       "en": ""
     },
-    "embedUrl": "https://www.google.com/maps?q=Khartoum&output=embed"
+    "embedUrl": "https://maps.google.com/maps?q=15.547568,32.5472408&z=16&output=embed"
   },
   "phoneGroups": [
     {

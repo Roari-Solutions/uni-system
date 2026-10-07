@@ -141,6 +141,7 @@ psql "$DATABASE_URL" -f drizzle/0015_user_roles.sql   # roles a user may hold se
 psql "$DATABASE_URL" -f drizzle/0016_site_pages.sql   # website pages and their saved versions
 psql "$DATABASE_URL" -f drizzle/0017_domain_user_admins.sql   # user management split by domain
 psql "$DATABASE_URL" -f drizzle/0018_site_pages_client_feedback.sql   # saved content moved to the changed leader, student affairs and libraries templates
+psql "$DATABASE_URL" -f drizzle/0019_site_pages_meeting_notes.sql   # former holders, no code chips, secretariat without the secretary's quote, public relations on its own template
 ```
 
 All are safe to run twice. 0015 gives every existing user exactly the role

@@ -17,7 +17,12 @@ export const contactSchema: PageSchema = f.group(
     }),
     location: f.group(['الموقع', 'Location'], {
       title: f.text(['العنوان', 'Heading']),
-      description: f.para(['الوصف', 'Description']),
+      description: f.para(['العنوان البريدي', 'Address'], {
+        help: [
+          'كل سطر يظهر في سطر مستقل، بالترتيب: الشارع ثم المدينة ثم الدولة',
+          'Each line shows on its own line, in order: street, city, country',
+        ],
+      }),
       postalLabel: f.text(['عنوان الرمز البريدي', 'Postal code label']),
       postalValue: f.text(['الرمز البريدي', 'Postal code']),
     }),
@@ -41,11 +46,11 @@ export const contactSchema: PageSchema = f.group(
       title: f.text(['العنوان', 'Heading']),
       subtitle: f.text(['العنوان الفرعي', 'Subheading']),
       badge: f.text(['الشارة', 'Badge']),
-      embedUrl: f.string(['رابط تضمين الخريطة', 'Map embed link'], {
-        format: 'url',
+      embedUrl: f.string(['رابط الموقع على خرائط Google', 'Google Maps link'], {
+        format: 'map',
         help: [
-          'رابط خرائط Google بصيغة التضمين (output=embed)',
-          'A Google Maps embed link (output=embed)',
+          'الصق رابط المشاركة من خرائط Google لموقع محدد بدبوس؛ يُحوَّل عند الحفظ إلى خريطة تعرض الدبوس',
+          'Paste a Google Maps share link to a pinned place; it is turned into a map showing the pin when you save',
         ],
       }),
     }),

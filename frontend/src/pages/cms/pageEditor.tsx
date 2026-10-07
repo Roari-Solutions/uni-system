@@ -91,7 +91,9 @@ const PageEditor = () => {
 		setSaved(false);
 		try {
 			const result = await savePage(page.key, draft, page.version);
-			setPage({ ...page, content: draft, version: result.version });
+			// the server may have tidied the content (map links become embed links)
+			setPage({ ...page, content: result.content, version: result.version });
+			setDraft(result.content);
 			setIssues([]);
 			setDirty(false);
 			setSaved(true);

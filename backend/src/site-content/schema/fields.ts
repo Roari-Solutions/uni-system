@@ -26,10 +26,14 @@ export interface TextField extends Base {
   optional?: boolean;
 }
 
-/** Single-language text that reads the same in both languages: emails, phones, links, dates. */
+/**
+ * Single-language text that reads the same in both languages: emails, phones,
+ * links, dates. A `map` link is saved as a Google Maps embed link; a share or
+ * place link is converted on save (see map-links.ts).
+ */
 export interface StringField extends Base {
   type: 'string';
-  format?: 'plain' | 'email' | 'phone' | 'url' | 'date';
+  format?: 'plain' | 'email' | 'phone' | 'url' | 'date' | 'map';
   optional?: boolean;
 }
 

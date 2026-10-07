@@ -1014,6 +1014,7 @@
     "issues": {
       "EMPTY": "Fill this in, in at least one language",
       "BAD_FORMAT": "This isn't in the expected format",
+      "BAD_MAP_LINK": "We couldn't read a location from this link. Paste a Google Maps share link to a pinned place",
       "NOT_A_NUMBER": "Enter a whole number",
       "LIST_LENGTH": "The number of items is outside what this section allows",
       "TOO_LONG": "This is too long",

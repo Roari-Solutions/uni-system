@@ -14,6 +14,7 @@ export interface ContentIssue {
     | 'NOT_A_NUMBER'
     | 'NOT_A_BOOLEAN'
     | 'BAD_FORMAT'
+    | 'BAD_MAP_LINK'
     | 'BAD_CHOICE'
     | 'LIST_LENGTH'
     | 'TOO_LONG';
@@ -30,6 +31,10 @@ const FORMATS: Record<string, RegExp> = {
   url: /^(https?:\/\/\S+|\/\S*|#\S*|mailto:\S+|tel:\S+)$/,
   date: /^\d{4}-\d{2}-\d{2}$/,
 };
+
+/** A Google Maps link that a page may show in a frame; other Google Maps pages refuse to be framed. */
+export const MAP_EMBED =
+  /^https:\/\/(www\.|maps\.)?google\.[a-z.]+\/maps(\/embed\?pb=\S+|\?\S*output=embed\S*)$/;
 
 /** Stored media lives under /images or /pdfs; anything else must be an absolute URL. */
 const MEDIA_URL = /^(\/(images|pdfs)\/[\w.-]+|https?:\/\/\S+)$/;
@@ -124,6 +129,11 @@ function walk(
       if (!checkString(value, path, issues)) return;
       if (!value.trim()) {
         if (!field.optional) issues.push({ path, code: 'EMPTY' });
+        return;
+      }
+      if (field.format === 'map') {
+        if (!MAP_EMBED.test(value.trim()))
+          issues.push({ path, code: 'BAD_MAP_LINK' });
         return;
       }
       const format = field.format && FORMATS[field.format];
