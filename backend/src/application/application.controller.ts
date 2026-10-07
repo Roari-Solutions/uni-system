@@ -89,7 +89,7 @@ export class ApplicationController {
       { name: 'finantialAidDocuments', maxCount: 10 },
     ]),
   )
-  async copleteApplication(
+  async completeApplication(
     @Param('formNumber') formNumber: string,
     @Body() body: BodyWrapper,
     @UploadedFiles()

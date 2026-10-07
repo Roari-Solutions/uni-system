@@ -124,8 +124,9 @@ export class ApplicationService {
   ) {
     try {
       this.logger.log(`Completing application ${formNumber}`);
+      const key = formNumber.trim();
       const exists = await this.db.query.applications.findFirst({
-        where: eq(applications.formNumber, formNumber),
+        where: eq(applications.formNumber, key),
       });
       if (!exists) {
         this.logger.warn(`Completing ${formNumber}: not found`);
@@ -146,7 +147,7 @@ export class ApplicationService {
           nationalIdFile: hashes.sotringNationalId,
           status: true,
         })
-        .where(eq(applications.formNumber, formNumber))
+        .where(eq(applications.formNumber, key))
         .returning();
 
       this.logger.log(`Completed application ${formNumber}: ${updated.length} row(s) updated`);
@@ -175,14 +176,10 @@ export class ApplicationService {
         throw new NotFoundException({ code: 'NF' });
       }
       // mandatory upload: storeImage throws PI on non-image content
-      const doctorSignature = signature
-        ? await this.mediaService.storeImage(signature.buffer, signature.mimetype)
-        : undefined;
-
-      if (!doctorSignature) {
-        this.logger.warn(`Saving medical form for ${formNumber}: signature not stored`);
-        throw new BadRequestException({ code: 'MA' });
-      }
+      const doctorSignature = await this.mediaService.storeImage(
+        signature.buffer,
+        signature.mimetype,
+      );
 
       const [row] = await this.db
         .insert(medicalForms)
@@ -192,9 +189,7 @@ export class ApplicationService {
           set: { ...dto, doctorSignature, status: true },
         })
         .returning();
-      this.logger.log(
-        `Saved medical form for ${formNumber}: signature ${doctorSignature ? 'stored' : 'unchanged'}`,
-      );
+      this.logger.log(`Saved medical form for ${formNumber}: signature stored`);
       return row;
     } catch (error) {
       if (error instanceof NotFoundException || error instanceof BadRequestException) throw error;
