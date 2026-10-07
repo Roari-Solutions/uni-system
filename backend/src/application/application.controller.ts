@@ -9,13 +9,16 @@ import {
   Param,
   Patch,
   Post,
+  UploadedFile,
   UploadedFiles,
   UseInterceptors,
 } from '@nestjs/common';
 import { ApplicationService, type ApplicationCompletionFiles } from './application.service';
 import { ApplicationUpdateDto, BulkApplicationsDto } from './dto/create-application.dto';
-import { FileFieldsInterceptor, FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
-import { plainToInstance } from 'class-transformer';
+import { MedicalFormDto } from './dto/medical-form.dto';
+import { FileFieldsInterceptor, FileInterceptor } from '@nestjs/platform-express';
+import type { MediaFile } from 'src/media/media.service';
+import { plainToInstance, type ClassConstructor } from 'class-transformer';
 import { validate } from 'class-validator';
 
 interface BodyWrapper {
@@ -28,10 +31,46 @@ export class ApplicationController {
 
   constructor(private readonly applicationService: ApplicationService) {}
 
+  /** Parses a multipart `body` string field into a validated DTO. */
+  private async parseJsonBody<T extends object>(
+    type: ClassConstructor<T>,
+    body: BodyWrapper,
+    formNumber: string,
+  ): Promise<T> {
+    let raw: unknown;
+    try {
+      raw = JSON.parse(body?.body);
+    } catch {
+      this.logger.warn(`Request for ${formNumber}: body is not valid JSON`);
+      throw new BadRequestException({ code: 'PI' });
+    }
+    if (typeof raw !== 'object' || raw === null) {
+      this.logger.warn(`Request for ${formNumber}: body is not a JSON object`);
+      throw new BadRequestException({ code: 'PI' });
+    }
+    // the global ValidationPipe only sees the string wrapper, so the parsed DTO is checked here
+    const dto = plainToInstance(type, raw);
+    const errors = await validate(dto);
+    if (errors.length) {
+      this.logger.warn(
+        `Request for ${formNumber}: validation failed: ${errors.map((e) => e.property).join(', ')}`,
+      );
+      throw new BadRequestException({ code: 'PI' });
+    }
+    return dto;
+  }
+
   /** GET /application — every staged application. */
   @Get()
   async list() {
     return await this.applicationService.listApplications();
+  }
+
+  /** GET /application/medical — every medical fitness form. */
+  @Get('medical')
+  async listMedical() {
+    this.logger.log('Listing medical forms');
+    return await this.applicationService.listMedicalForms();
   }
 
   /** GET /application/:formNumber — one application by its form number. */
@@ -63,26 +102,7 @@ export class ApplicationController {
         .map(([key, value]) => `${key}: ${value?.length ?? 0}`)
         .join(', ')}}`,
     );
-    let raw: unknown;
-    try {
-      raw = JSON.parse(body?.body);
-    } catch {
-      this.logger.warn(`Completing ${formNumber}: body is not valid JSON`);
-      throw new BadRequestException({ code: 'PI' });
-    }
-    if (typeof raw !== 'object' || raw === null) {
-      this.logger.warn(`Completing ${formNumber}: body is not a JSON object`);
-      throw new BadRequestException({ code: 'PI' });
-    }
-    // the global ValidationPipe only sees the string wrapper, so the parsed DTO is checked here
-    const dto = plainToInstance(ApplicationUpdateDto, raw);
-    const errors = await validate(dto);
-    if (errors.length) {
-      this.logger.warn(
-        `Completing ${formNumber}: validation failed: ${errors.map((e) => e.property).join(', ')}`,
-      );
-      throw new BadRequestException({ code: 'PI' });
-    }
+    const dto = await this.parseJsonBody(ApplicationUpdateDto, body, formNumber);
     const result = await this.applicationService.completeApplication(formNumber, files, dto);
     this.logger.log(`Completed ${formNumber}`);
     return result;
@@ -99,5 +119,31 @@ export class ApplicationController {
   @Post('bulk')
   async import(@Body() dto: BulkApplicationsDto) {
     return await this.applicationService.importBulk(dto);
+  }
+
+  /** POST /application/medical/:formNumber — saves the medical form plus signature image. */
+  @Post('medical/:formNumber')
+  @UseInterceptors(FileInterceptor('doctorSignature'))
+  async saveMedical(
+    @Param('formNumber') formNumber: string,
+    @Body() body: BodyWrapper,
+    @UploadedFile() signature?: MediaFile,
+  ) {
+    this.logger.log(
+      `Saving medical form for ${formNumber}: signature ${signature ? 'present' : 'missing'}`,
+    );
+    const dto = await this.parseJsonBody(MedicalFormDto, body, formNumber);
+    const result = await this.applicationService.saveMedicalForm(formNumber, dto, signature);
+    this.logger.log(`Saved medical form for ${formNumber}`);
+    return result;
+  }
+
+  /** GET /application/medical/:formNumber — the medical fitness form. */
+  @Get('medical/:formNumber')
+  async getMedical(@Param('formNumber') formNumber: string) {
+    this.logger.log(`Getting medical form for ${formNumber}`);
+    const result = await this.applicationService.getMedicalForm(formNumber);
+    this.logger.log(`Got medical form for ${formNumber}`);
+    return result;
   }
 }
