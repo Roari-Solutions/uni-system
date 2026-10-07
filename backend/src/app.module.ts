@@ -14,6 +14,7 @@ import { MediaModule } from './media/media.module';
 import { IamModule } from './iam/iam.module';
 import { SiteContentModule } from './site-content/site-content.module';
 import { ResultsModule } from './results/results.module';
+import { ApplicationModule } from './application/application.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { ResultsModule } from './results/results.module';
     DatabaseModule,
     MediaModule,
     SiteContentModule,
+    ApplicationModule,
   ],
   controllers: [AppController],
   providers: [AppService, GrGurdGuard],

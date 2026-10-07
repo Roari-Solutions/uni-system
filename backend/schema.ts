@@ -347,6 +347,31 @@ export const students = pgTable('students', {
   ...timestamps(),
 });
 
+/** Admission applications, staged by bulk import before enrolment. Names are stored as written; the import only checks they exist and belong together. */
+export const applications = pgTable('applications', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  formNumber: text('form_number').notNull().unique(),
+  schoolName: text('school_name').notNull(),
+  code: text('code').notNull(),
+  facultyName: text('faculty_name').notNull(),
+  departmentName: text('department_name'),
+  specializationName: text('specialization_name'),
+  acceptanceType: text('acceptance_type').notNull(),
+  nationalId: text('national_id'),
+  notes: text('notes'),
+  name: text('name').notNull(),
+  nameEn: text('name_en'),
+  residencyType: text('residency_type'),
+  state: text('state'),
+  nationalIdFile: text('national_id_file'),
+  studentPhoto: text('student_photo'),
+  highSchoolCertificate: text('high_school_certificate'),
+  finantialAidDocuments: text('finantial_aid_documents').array(),
+  finantialAidNote: text('finantial_aid_note'),
+  status: boolean('status').notNull().default(false),
+  ...timestamps(),
+});
+
 /** Per-student per-course grades (one row each). */
 export const grades = pgTable(
   'grades',
@@ -439,15 +464,16 @@ export const results = pgTable(
     ...timestamps(),
   },
   (t) => [
-    unique('result_batch_unique').on(
-      t.facultyId,
-      t.academicYear,
-      t.acceptanceYear,
-      t.specializationId,
-      t.departmentId,
-      t.semester,
-      t.kind,
-    )
+    unique('result_batch_unique')
+      .on(
+        t.facultyId,
+        t.academicYear,
+        t.acceptanceYear,
+        t.specializationId,
+        t.departmentId,
+        t.semester,
+        t.kind,
+      )
       // an all-acceptance-years, no-specialization or no-department result (null) is still one per batch
       .nullsNotDistinct(),
   ],
