@@ -23,6 +23,7 @@ export const PERMISSIONS = {
   teachers: 'domain.teachers',
   students: 'domain.students',
   lms: 'domain.lms',
+  medical: 'medical.form',
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -49,12 +50,14 @@ export const ROLE_GRANTS: Record<Role, readonly Permission[]> = {
     PERMISSIONS.grades,
     PERMISSIONS.gradesAllFaculties,
     PERMISSIONS.studentsReinstate,
+    PERMISSIONS.medical,
     PERMISSIONS.usersManageGrades,
   ],
   [ROLES.dataEntry]: [PERMISSIONS.grades],
   [ROLES.cmsAdmin]: [PERMISSIONS.cms, PERMISSIONS.usersManageCms],
   [ROLES.contentManager]: [PERMISSIONS.cms],
   [ROLES.superAdmin]: [
+    PERMISSIONS.medical,
     PERMISSIONS.usersManageAll,
     PERMISSIONS.grades,
     PERMISSIONS.gradesAllFaculties,

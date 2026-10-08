@@ -5,12 +5,13 @@ import { DatabaseModule } from 'src/database/database.module';
 import { JwtModule } from '@nestjs/jwt';
 import { AuthGuard } from './auth.guard';
 import { ApplicantGuard } from './applicant.guard';
+import { MedicalGuard } from './medical.guard';
 
 @Module({
   imports: [DatabaseModule, JwtModule],
   controllers: [AuthController],
-  providers: [AuthService, AuthGuard, ApplicantGuard],
-  exports: [AuthGuard, ApplicantGuard, JwtModule],
+  providers: [AuthService, AuthGuard, ApplicantGuard, MedicalGuard],
+  exports: [AuthGuard, ApplicantGuard, MedicalGuard, JwtModule],
 })
 /** Wires auth endpoints, guard, and JWT support. */
 export class AuthModule {}
