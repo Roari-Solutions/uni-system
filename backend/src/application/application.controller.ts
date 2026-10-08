@@ -23,6 +23,8 @@ import { plainToInstance, type ClassConstructor } from 'class-transformer';
 import { validate } from 'class-validator';
 import { ApplicantGuard } from 'src/auth/applicant.guard';
 import { AuthGuard } from 'src/auth/auth.guard';
+import { PermissionGuard, RequirePermission } from 'src/iam/permission.guard';
+import { PERMISSIONS } from 'src/iam/permissions';
 
 interface BodyWrapper {
   body: string;
@@ -71,7 +73,8 @@ export class ApplicationController {
 
   /** GET /application/medical — every medical fitness form. */
   @Get('medical')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, PermissionGuard)
+  @RequirePermission(PERMISSIONS.medical)
   async listMedical() {
     this.logger.log('Listing medical forms');
     return await this.applicationService.listMedicalForms();
@@ -128,7 +131,8 @@ export class ApplicationController {
 
   /** POST /application/medical/:formNumber — saves the medical form plus signature image. */
   @Post('medical/:formNumber')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, PermissionGuard)
+  @RequirePermission(PERMISSIONS.medical)
   @UseInterceptors(FileInterceptor('doctorSignature'))
   async saveMedical(
     @Param('formNumber') formNumber: string,
@@ -146,7 +150,8 @@ export class ApplicationController {
 
   /** GET /application/medical/:formNumber — the medical fitness form. */
   @Get('medical/:formNumber')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, PermissionGuard)
+  @RequirePermission(PERMISSIONS.medical)
   async getMedical(@Param('formNumber') formNumber: string) {
     this.logger.log(`Getting medical form for ${formNumber}`);
     const result = await this.applicationService.getMedicalForm(formNumber);
