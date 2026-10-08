@@ -92,13 +92,12 @@ export class AuthService {
     });
 
     if (!row) {
-      this.logger.log('applicant with the form number ', formNumber, 'is not found');
+      this.logger.warn(`Applicant login failed: unknown form ${formNumber}`);
       throw new UnauthorizedException();
     }
 
-    this.logger.log('generating tokens for form number :', formNumber);
     const tokens = await this.issueApplicantTokens(row.formNumber);
-    this.logger.log('tokens are generated');
+    this.logger.log(`Applicant login success: form ${formNumber}`);
     return tokens;
   }
 

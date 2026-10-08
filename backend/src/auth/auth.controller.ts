@@ -44,7 +44,7 @@ export class AuthController {
   @Post('applicant/login')
   @HttpCode(HttpStatus.OK)
   async applicantLogin(@Body() body: ApplicantLoginDto, @Res({ passthrough: true }) res: Response) {
-    this.logger.log(`Applicant login attempt for ${body.name}`);
+    this.logger.log(`Applicant login attempt for form ${body.formNumber?.trim()}`);
     const tokens = await this.authService.applicantLogin(body);
     this.authService.setApplicantCookies(res, tokens);
     return { formNumber: body.formNumber?.trim() };
@@ -59,7 +59,7 @@ export class AuthController {
       this.logger.warn('Applicant refresh attempt with no applicant_refresh_token cookie');
       throw new UnauthorizedException();
     }
-    this.logger.log('Refreshing applicant tokens');
+    this.logger.debug('Refreshing applicant tokens');
 
     const { tokens, formNumber } = await this.authService.refreshApplicant(refreshToken);
 
