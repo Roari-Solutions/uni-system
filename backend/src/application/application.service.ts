@@ -175,6 +175,11 @@ export class ApplicationService {
         this.logger.warn(`Saving medical form for ${formNumber}: application not found`);
         throw new NotFoundException({ code: 'NF' });
       }
+
+      if (!application.status) {
+        this.logger.warn('attempt to create a medical form for an incomplete application');
+        throw new BadRequestException();
+      }
       // mandatory upload: storeImage throws PI on non-image content
       const doctorSignature = await this.mediaService.storeImage(
         signature.buffer,
