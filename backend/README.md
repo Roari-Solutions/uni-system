@@ -142,6 +142,8 @@ psql "$DATABASE_URL" -f drizzle/0016_site_pages.sql   # website pages and their 
 psql "$DATABASE_URL" -f drizzle/0017_domain_user_admins.sql   # user management split by domain
 psql "$DATABASE_URL" -f drizzle/0018_site_pages_client_feedback.sql   # saved content moved to the changed leader, student affairs and libraries templates
 psql "$DATABASE_URL" -f drizzle/0019_site_pages_meeting_notes.sql   # former holders, no code chips, secretariat without the secretary's quote, public relations on its own template
+psql "$DATABASE_URL" -f drizzle/0020_former_dean_photos.sql   # a photo per former dean in the deanships' and public relations' tables
+psql "$DATABASE_URL" -f drizzle/0021_cms_gaps.sql   # the partnerships' contact entry, a photo for the centers' quote author
 ```
 
 All are safe to run twice. 0015 gives every existing user exactly the role

@@ -1,5 +1,5 @@
 import { f, type PageSchema } from '../schema/fields';
-import { bullets, departmentItem, formerDeans } from './student-affairs';
+import { bullets, departmentItem, formerHoldersTable } from './student-affairs';
 
 const optionalText = (ar: string, en: string) =>
   f.text([ar, en], { optional: true });
@@ -64,7 +64,12 @@ export const publicRelationsSchema: PageSchema = f.group(
         { max: 10 },
       ),
     }),
-    formerDeans,
+    // stored as formerDeans like the deanships' table, but these are the administration's former managers
+    formerDeans: formerHoldersTable(
+      ['الإدارة السابقة', 'Former administration'],
+      ['المدراء السابقون', 'Former managers'],
+      ['مدير', 'Manager'],
+    ),
     sidebar: f.group(['الفهرس الجانبي', 'Side index'], {
       title: f.text(['العنوان', 'Heading']),
       items: f.list(

@@ -1,5 +1,6 @@
 import { f, type PageSchema } from '../schema/fields';
 import { icon } from './icons';
+import { contactRef } from './site';
 
 /** The three kinds the page filters by; the set is part of the page's design. */
 export const PARTNERSHIP_KINDS = [
@@ -59,6 +60,8 @@ export const partnershipsSchema: PageSchema = f.group(
       title: f.text(['العنوان', 'Heading']),
       description: f.para(['الوصف', 'Description']),
       location: f.text(['المكتب', 'Office location']),
+      // the email and phone shown beside the office come from this entry of the official contacts
+      contact: contactRef(),
     }),
   },
 );

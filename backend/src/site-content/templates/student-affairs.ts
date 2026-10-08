@@ -24,22 +24,36 @@ export const departmentItem = f.group(['قسم', 'Section'], {
   ),
 });
 
+type Labels = [ar: string, en: string];
+
+/**
+ * The table of those who held a post before: the same shape on every page that
+ * has one, labelled for the post (deans on a deanship, managers on an administration).
+ */
+export const formerHoldersTable = (section: Labels, people: Labels, person: Labels) =>
+  f.group(section, {
+    title: f.text(['العنوان', 'Heading']),
+    numberColumn: f.text(['عنوان عمود الرقم', '"No." column heading']),
+    nameColumn: f.text(['عنوان عمود الاسم', '"Name" column heading']),
+    periodColumn: f.text(['عنوان عمود الفترة', '"Period" column heading']),
+    items: f.list(
+      people,
+      person,
+      f.group(person, {
+        name: f.text(['الاسم', 'Name']),
+        period: f.text(['الفترة', 'Period']),
+        image: f.image(['الصورة', 'Photo'], { optional: true }),
+      }),
+      { max: 30 },
+    ),
+  });
+
 /** The former deans' table. */
-export const formerDeans = f.group(['العمداء السابقون', 'Former deans'], {
-  title: f.text(['العنوان', 'Heading']),
-  numberColumn: f.text(['عنوان عمود الرقم', '"No." column heading']),
-  nameColumn: f.text(['عنوان عمود الاسم', '"Name" column heading']),
-  periodColumn: f.text(['عنوان عمود الفترة', '"Period" column heading']),
-  items: f.list(
-    ['العمداء', 'Deans'],
-    ['عميد', 'Dean'],
-    f.group(['عميد', 'Dean'], {
-      name: f.text(['الاسم', 'Name']),
-      period: f.text(['الفترة', 'Period']),
-    }),
-    { max: 30 },
-  ),
-});
+export const formerDeans = formerHoldersTable(
+  ['العمداء السابقون', 'Former deans'],
+  ['العمداء', 'Deans'],
+  ['عميد', 'Dean'],
+);
 
 export const studentAffairsSchema: PageSchema = f.group(
   ['عمادة شؤون الطلاب', 'Student affairs deanship'],

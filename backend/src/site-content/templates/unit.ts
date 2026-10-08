@@ -30,7 +30,8 @@ export const unitSchema: PageSchema = f.group(
       text: f.para(['الاقتباس', 'Quote']),
       authorName: f.text(['اسم القائل', 'Author name']),
       authorPosition: f.text(['منصب القائل', 'Author position']),
-      authorInitial: f.text(['الحرف في الدائرة', 'Letter in the circle']),
+      authorImage: f.image(['صورة القائل', "Author's photo"], { optional: true }),
+      authorInitial: f.text(['الحرف في الدائرة (بدون صورة)', 'Letter in the circle (without a photo)']),
     }),
     highlights: f.list(
       ['المحاور', 'Focus areas'],
