@@ -59,14 +59,17 @@
       "ar": "",
       "en": ""
     },
+    "deanImage": "",
     "viceDean": {
       "ar": "",
       "en": ""
     },
+    "viceDeanImage": "",
     "registrar": {
       "ar": "",
       "en": ""
-    }
+    },
+    "registrarImage": ""
   },
   "vision": {
     "ar": "",

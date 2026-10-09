@@ -52,8 +52,15 @@ export const collegeSchema: PageSchema = f.group(
     }),
     administration: f.group(['إدارة الكلية', 'College administration'], {
       dean: optionalText('عميد الكلية', 'Dean'),
+      deanImage: f.image(['صورة عميد الكلية', "Dean's photo"], { optional: true }),
       viceDean: optionalText('نائب العميد', 'Vice dean'),
+      viceDeanImage: f.image(['صورة نائب العميد', "Vice dean's photo"], {
+        optional: true,
+      }),
       registrar: optionalText('مسجل الكلية', 'Registrar'),
+      registrarImage: f.image(['صورة مسجل الكلية', "Registrar's photo"], {
+        optional: true,
+      }),
     }),
     vision: optionalPara('الرؤية', 'Vision'),
     mission: optionalPara('الرسالة', 'Mission'),
