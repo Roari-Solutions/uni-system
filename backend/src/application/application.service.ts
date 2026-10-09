@@ -5,6 +5,7 @@ import {
   InternalServerErrorException,
   Logger,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { eq, inArray } from 'drizzle-orm';
 import { applications, medicalForms, students } from 'schema';
@@ -132,6 +133,9 @@ export class ApplicationService {
         this.logger.warn(`Completing ${formNumber}: not found`);
         throw new NotFoundException({ code: 'NF' });
       }
+
+      if (formNumber !== exists.formNumber) throw new UnauthorizedException();
+
       const hashes = await this.processFiles(files);
 
       const updated = await this.db
