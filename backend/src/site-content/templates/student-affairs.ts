@@ -24,6 +24,13 @@ export const departmentItem = f.group(['قسم', 'Section'], {
   ),
 });
 
+/** Who signs the dean's message, shown under it; each part is hidden while empty. */
+export const deanSignature = {
+  name: f.text(['اسم العميد', "Dean's name"], { optional: true }),
+  position: f.text(['منصب العميد', "Dean's position"], { optional: true }),
+  image: f.image(['صورة العميد', "Dean's photo"], { optional: true }),
+};
+
 type Labels = [ar: string, en: string];
 
 /**
@@ -79,6 +86,7 @@ export const studentAffairsSchema: PageSchema = f.group(
           max: 10,
         },
       ),
+      ...deanSignature,
     }),
     visionMission: f.group(
       ['الرؤية والرسالة والقيم', 'Vision, mission and values'],

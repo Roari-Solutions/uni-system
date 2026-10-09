@@ -1,4 +1,5 @@
 import { f, type PageSchema } from '../schema/fields';
+import { contactRef } from './site';
 import { bullets, departmentItem, formerHoldersTable } from './student-affairs';
 
 const optionalText = (ar: string, en: string) =>
@@ -84,6 +85,12 @@ export const publicRelationsSchema: PageSchema = f.group(
           ],
         },
       ),
+    }),
+    // the box under the side index; working hours are hidden while empty
+    contact: f.group(['التواصل', 'Contact'], {
+      title: f.text(['العنوان', 'Heading']),
+      contact: contactRef(),
+      hours: optionalText('أوقات العمل', 'Working hours'),
     }),
   },
 );

@@ -1,6 +1,11 @@
 import { f, type PageSchema } from '../schema/fields';
 import { contactRef } from './site';
-import { bullets, departmentItem, formerDeans } from './student-affairs';
+import {
+  bullets,
+  deanSignature,
+  departmentItem,
+  formerDeans,
+} from './student-affairs';
 import { unitSchema } from './unit';
 
 const optionalText = (ar: string, en: string) =>
@@ -46,6 +51,7 @@ export const librarySchema: PageSchema = f.group(
           ],
         },
       ),
+      ...deanSignature,
     }),
     departments: f.group(['أقسام المكتبة', 'Sections of the library'], {
       title: f.text(['العنوان', 'Heading']),

@@ -35,6 +35,10 @@ export const contactsSchema: PageSchema = f.group(
     ),
     mediaCenter: contact('المركز الإعلامي', 'Media center'),
     partnerships: contact('الشراكات والتعاون', 'Partnerships'),
+    publicRelations: contact(
+      'إدارة العلاقات العامة والإعلام',
+      'Public relations and media',
+    ),
   },
 );
 

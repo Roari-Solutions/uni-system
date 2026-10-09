@@ -63,7 +63,16 @@
       "ar": "كلمة العميد",
       "en": ""
     },
-    "paragraphs": []
+    "paragraphs": [],
+    "name": {
+      "ar": "",
+      "en": ""
+    },
+    "position": {
+      "ar": "",
+      "en": ""
+    },
+    "image": ""
   },
   "departments": {
     "title": {

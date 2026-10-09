@@ -243,5 +243,16 @@
         "en": ""
       }
     ]
+  },
+  "contact": {
+    "title": {
+      "ar": "تواصل معنا",
+      "en": ""
+    },
+    "contact": "publicRelations",
+    "hours": {
+      "ar": "",
+      "en": ""
+    }
   }
 }

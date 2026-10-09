@@ -115,5 +115,14 @@
     "phone": "[PHONE NUMBER]",
     "ext": "",
     "email": "partnerships@ut.edu.sd"
+  },
+  "publicRelations": {
+    "label": {
+      "ar": "إدارة العلاقات العامة والإعلام",
+      "en": ""
+    },
+    "phone": "[PHONE NUMBER]",
+    "ext": "",
+    "email": "[EMAIL ADDRESS]"
   }
 }
