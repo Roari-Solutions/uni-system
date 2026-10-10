@@ -102,6 +102,25 @@ export class AuthService {
   }
 
   /**
+   * Reads the application the applicant's token is scoped to. The form number
+   * comes from the verified token, never from the request, so there is no path
+   * to another applicant's row.
+   *
+   * @throws NotFoundException when no application carries that form number.
+   */
+  async applicantMe(formNumber: string) {
+    const row = await this.db.query.applications.findFirst({
+      where: eq(schema.applications.formNumber, formNumber),
+      columns: { id: false, updatedAt: false, createdAt: false },
+    });
+    if (!row) {
+      this.logger.warn(`applicantMe: application ${formNumber} not found`);
+      throw new NotFoundException();
+    }
+    return row;
+  }
+
+  /**
    * Signs an applicant access/refresh pair. Separate secrets from staff tokens,
    * so an applicant token never verifies as a staff session and vice versa.
    */

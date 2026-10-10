@@ -1,4 +1,11 @@
-import { CanActivate, ExecutionContext, Inject, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  Inject,
+  Injectable,
+  Logger,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { type Request } from 'express';
 import { config } from 'config';
@@ -17,14 +24,24 @@ export class ApplicantGuard implements CanActivate {
 
     let payload: JwtPayload;
     try {
-      payload = await this.jwt.verifyAsync<JwtPayload>(req.cookies['applicant_access_token'] as string, {
-        secret: config.jwtApplicantAccessSecret,
-      });
+      payload = await this.jwt.verifyAsync<JwtPayload>(
+        req.cookies['applicant_access_token'] as string,
+        {
+          secret: config.jwtApplicantAccessSecret,
+        },
+      );
     } catch (error) {
       this.logger.warn('Applicant access denied: expired, tampered, or missing token');
       throw new UnauthorizedException('Invalid or expired access token', {
         cause: error,
       }); // expired, tampered, or missing token
+    }
+
+    const p = req.params?.formNumber;
+    const target = (Array.isArray(p) ? p[0] : p)?.trim();
+    if (target && payload.sub !== target) {
+      this.logger.warn(`Applicant ${payload.sub} tried to reach ${target}`);
+      throw new UnauthorizedException();
     }
 
     req.user = payload;
