@@ -2,8 +2,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import axios from "axios";
 import { useTranslation } from "react-i18next";
 import { Navigate, useLocation } from "react-router";
-import { LanguageIcon } from "@heroicons/react/24/outline";
 import { z } from "zod";
+import LanguageToggleIcon from "../../components/Languagetoggleicon";
 import FormField from "../../components/formField";
 import PasswordInput from "../../components/passwordInput";
 import useAuth from "../../auth/useAuth";
@@ -14,10 +14,8 @@ import { blockSubmitButtonClass, inputClass } from "../../styles/form";
 const REQUIRED = "login.errors.required";
 
 // the campus photo shown in the layered panel (put the file in /public)
-const CAMPUS_PHOTO = "/bg2.jpg";
+const CAMPUS_PHOTO = "/login-campus.jpg";
 
-// wave edges of the paper-cut panel, in objectBoundingBox units (0..1).
-// Drawn for RTL (panel on the left); the "-ltr" clip paths mirror them.
 const WAVES = [
 	"M0,0 H0.93 C0.85,0.10 0.99,0.24 0.89,0.36 C0.79,0.50 0.71,0.56 0.81,0.70 C0.91,0.84 0.83,0.92 0.87,1 H0Z",
 	"M0,0 H0.85 C0.77,0.11 0.93,0.25 0.83,0.37 C0.73,0.51 0.64,0.58 0.74,0.71 C0.83,0.84 0.76,0.93 0.80,1 H0Z",
@@ -86,8 +84,6 @@ const Login = () => {
 		try {
 			await login(result.data.email, result.data.password);
 		} catch (error) {
-			// only a 401 means the credentials were rejected. A 502 from the dev
-			// proxy, a dropped connection or a 500 must not accuse the user of
 			// mistyping something they got right.
 			const status = axios.isAxiosError(error) ? error.response?.status : undefined;
 			setFailure(status === 401 ? "credentials" : "unavailable");
@@ -129,14 +125,14 @@ const Login = () => {
 			/>
 			<div
 				aria-hidden="true"
-				className="pointer-events-none absolute -start-44 -top-44 size-[360px] rotate-[20deg] rounded-lg bg-gradient-to-br from-accent-deep/20 to-primary-hover/10"
+				className="pointer-events-none absolute -start-44 -top-44 size-[360px] rotate-[20deg] rounded-lg bg-gradient-to-br from-muted-foreground/20 to-accent/10"
 			/>
 			<div
 				aria-hidden="true"
-				className="pointer-events-none absolute -start-16 -top-16 size-48 rotate-[20deg] rounded-lg border-2 border-accent-deep/25"
+				className="pointer-events-none absolute -start-16 -top-16 size-48 rotate-[20deg] rounded-lg border-2 border-muted-foreground/25"
 			/>
 
-			<div className="relative mx-auto flex h-full w-full max-w-[1440px] flex-col overflow-hidden rounded-lg bg-white shadow-xl md:flex-row">
+			<div className="relative mx-auto flex h-full w-full max-w-[1440px] flex-col overflow-hidden rounded-lg bg-card shadow-xl md:flex-row">
 				{/* small screens: the photo becomes a banner above the form */}
 				<div
 					aria-hidden="true"
@@ -147,40 +143,38 @@ const Login = () => {
 				<section className="relative z-10 flex min-h-0 flex-1 flex-col justify-center gap-8 px-6 py-6 max-md:overflow-y-auto md:flex-none md:basis-[42%] md:px-14">
 					<div className="mx-auto flex w-full max-w-sm items-center justify-between">
 						{/* the mark is a solid white shape, so it needs a dark surface to read
-						    against: §33's accent-deep, shaped as the §16 icon container */}
-						<span className="inline-flex size-14 shrink-0 items-center justify-center rounded-md bg-accent-deep shadow-sm">
-							<img src="/logo.svg" alt="" className="h-9" />
-						</span>
+						    against: the dark footer brown, shaped as the §16 icon container */}
+							<img src="../../../public/uniLogo.png" alt="" className="size-14 shrink-0 rounded-full bg-card object-contain p-1 shadow-sm" />
 						<button
 							type="button"
 							onClick={toggleLanguage}
-							className="inline-flex h-11 items-center gap-2 rounded-sm px-3 text-navigation text-accent-deep transition-colors duration-200 ease-out hover:bg-background-secondary"
+							className="inline-flex h-11 items-center gap-2 rounded-sm px-3 text-navigation text-muted-foreground transition-colors duration-200 ease-out hover:bg-secondary-hover"
 						>
-							<LanguageIcon className="size-5 shrink-0" />
+							<LanguageToggleIcon className="size-5 shrink-0" />
 							{t("gradesNav.switchLanguage")}
 						</button>
 					</div>
 
 					<div className="mx-auto w-full max-w-sm">
-						<h1 className="mb-2 text-heading-3 text-accent-deep">
+						<h1 className="mb-2 text-heading-3 text-muted-foreground">
 							{t(`login.portals.${LOGIN_PORTAL}.title`)}
 						</h1>
-						<p className="mb-6 text-body-md text-primary-hover">
+						<p className="mb-6 text-body-md text-accent-dark">
 							{t(`login.portals.${LOGIN_PORTAL}.subtitle`)}
 						</p>
 
 						<form noValidate onSubmit={handleSubmit} className="flex flex-col gap-5">
 							<FormField id="email" label={t("login.email")} error={errors.email?.[0]}>
-								<input
-									id="email"
-									type="text"
-									inputMode="email"
-									autoComplete="username"
-									value={form.email}
-									onChange={(e) => setField("email", e.target.value)}
-									aria-invalid={!!errors.email}
-									className={inputClass(!!errors.email)}
-								/>
+							<input
+							id="email"
+							type="text"
+							inputMode="email"
+							autoComplete="username"
+							value={form.email}
+							onChange={(e) => setField("email", e.target.value)}
+							aria-invalid={!!errors.email}
+							className={inputClass(!!errors.email)}
+							/>
 							</FormField>
 
 							<FormField id="password" label={t("login.password")} error={errors.password?.[0]}>
@@ -194,7 +188,7 @@ const Login = () => {
 							</FormField>
 
 							{(failure || noDashboard) && (
-								<p role="alert" className="text-body-sm text-error">
+								<p role="alert" className="text-body-sm text-destructive">
 									{t(`login.errors.${failure ?? "noDashboard"}`)}
 								</p>
 							)}
@@ -210,7 +204,7 @@ const Login = () => {
 								{t("login.otherPortal")}{" "}
 								<a
 									href={staffLoginHref()}
-									className="font-semibold text-primary-hover underline-offset-4 hover:text-accent-deep hover:underline"
+									className="font-semibold text-accent-dark underline-offset-4 hover:text-muted-foreground hover:underline"
 								>
 									{t("login.staffPortal")}
 								</a>
@@ -222,10 +216,10 @@ const Login = () => {
 				{/* layered paper-cut photo panel (md and up) */}
 				<div aria-hidden="true" className="relative hidden min-w-0 flex-1 md:block">
 					<div className="absolute inset-0 rtl:[filter:drop-shadow(5px_4px_9px_rgba(23,38,58,.28))] ltr:[filter:drop-shadow(-5px_4px_9px_rgba(23,38,58,.28))]">
-						<div className="absolute inset-0 bg-[#f4f7f7] rtl:[clip-path:url(#login-wave-0)] ltr:[clip-path:url(#login-wave-0-ltr)]" />
+						<div className="absolute inset-0 bg-secondary-hover rtl:[clip-path:url(#login-wave-0)] ltr:[clip-path:url(#login-wave-0-ltr)]" />
 					</div>
 					<div className="absolute inset-0 rtl:[filter:drop-shadow(5px_4px_9px_rgba(23,38,58,.28))] ltr:[filter:drop-shadow(-5px_4px_9px_rgba(23,38,58,.28))]">
-						<div className="absolute inset-0 bg-[#e3eaea] rtl:[clip-path:url(#login-wave-1)] ltr:[clip-path:url(#login-wave-1-ltr)]" />
+						<div className="absolute inset-0 bg-muted rtl:[clip-path:url(#login-wave-1)] ltr:[clip-path:url(#login-wave-1-ltr)]" />
 					</div>
 					<div className="absolute inset-0 rtl:[filter:drop-shadow(5px_4px_9px_rgba(23,38,58,.28))] ltr:[filter:drop-shadow(-5px_4px_9px_rgba(23,38,58,.28))]">
 						<div
@@ -240,6 +234,7 @@ const Login = () => {
 			</div>
 		</main>
 	);
-};
+
+	};
 
 export default Login;
