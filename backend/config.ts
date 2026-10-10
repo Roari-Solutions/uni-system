@@ -26,6 +26,18 @@ export const config = {
   get jwtRefreshTtl() {
     return process.env.JWT_REFRESH_TTL ?? '7d';
   },
+  get jwtApplicantAccessSecret() {
+    return required('JWT_APPLICANT_ACCESS_SECRET');
+  },
+  get jwtApplicantRefreshSecret() {
+    return required('JWT_APPLICANT_REFRESH_SECRET');
+  },
+  get jwtApplicantAccessTtl() {
+    return process.env.JWT_APPLICANT_ACCESS_TTL ?? '2h';
+  },
+  get jwtApplicantRefreshTtl() {
+    return process.env.JWT_APPLICANT_REFRESH_TTL ?? '7d';
+  },
   /**
    * Whether auth cookies carry the Secure flag. Defaults to true in
    * production; override with COOKIE_SECURE=false for plain-http deploys
@@ -50,15 +62,9 @@ export const config = {
         'http://localhost:3000',
         'http://localhost:4000',
         // the portals, by subdomain, in development (browsers resolve *.localhost locally)
-        ...[
-          'staff',
-          'grades',
-          'cms',
-          'management',
-          'teachers',
-          'students',
-          'lms',
-        ].map((p) => `http://${p}.localhost:5173`),
+        ...['staff', 'grades', 'cms', 'management', 'teachers', 'students', 'lms'].map(
+          (p) => `http://${p}.localhost:5173`,
+        ),
       ];
     }
     return raw

@@ -11,6 +11,7 @@ import {
   Post,
   UploadedFile,
   UploadedFiles,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { ApplicationService, type ApplicationCompletionFiles } from './application.service';
@@ -20,6 +21,7 @@ import { FileFieldsInterceptor, FileInterceptor } from '@nestjs/platform-express
 import type { MediaFile } from 'src/media/media.service';
 import { plainToInstance, type ClassConstructor } from 'class-transformer';
 import { validate } from 'class-validator';
+import { ApplicantGuard } from 'src/auth/applicant.guard';
 
 interface BodyWrapper {
   body: string;
@@ -81,6 +83,7 @@ export class ApplicationController {
 
   /** PATCH /application/:formNumber — update one application by its form number. */
   @Patch(':formNumber')
+  @UseGuards(ApplicantGuard)
   @UseInterceptors(
     FileFieldsInterceptor([
       { name: 'nationalIdFile', maxCount: 1 },

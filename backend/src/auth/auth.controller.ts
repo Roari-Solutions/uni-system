@@ -14,10 +14,11 @@ import {
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { Logger } from '@nestjs/common';
-import { LoginDto } from './dto/login.dto';
+import { LoginDto, ApplicantLoginDto } from './dto/login.dto';
 import { UpdateAccountDto } from './dto/update-account.dto';
 import { type Request, type Response } from 'express';
 import { AuthGuard, CurrentUser } from './auth.guard';
+import { ApplicantGuard } from './applicant.guard';
 import type { JwtPayload } from './auth.guard';
 
 /** Login/refresh/profile endpoints. */
@@ -34,23 +35,60 @@ export class AuthController {
    */
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  async login(
-    @Body() body: LoginDto,
-    @Res({ passthrough: true }) res: Response,
-  ) {
+  async login(@Body() body: LoginDto, @Res({ passthrough: true }) res: Response) {
     this.logger.log(`Login attempt for ${body.email} at the ${body.portal} portal`);
     const { tokens, portals } = await this.authService.login(body);
     this.authService.setAuthCookies(res, tokens);
     return { portals };
   }
 
+  @Post('applicant/login')
+  @HttpCode(HttpStatus.OK)
+  async applicantLogin(@Body() body: ApplicantLoginDto, @Res({ passthrough: true }) res: Response) {
+    this.logger.log(`Applicant login attempt for form ${body.formNumber?.trim()}`);
+    const tokens = await this.authService.applicantLogin(body);
+    this.authService.setApplicantCookies(res, tokens);
+    return { formNumber: body.formNumber?.trim() };
+  }
+
+  /** GET /auth/applicant/me — the application the applicant token is scoped to. */
+  @UseGuards(ApplicantGuard)
+  @Get('applicant/me')
+  @HttpCode(HttpStatus.OK)
+  applicantMe(@CurrentUser() user: JwtPayload) {
+    this.logger.log(`Applicant fetching application ${user.sub}`);
+    return this.authService.applicantMe(user.sub);
+  }
+
+  /** GET /auth/applicant/refresh — rotates applicant tokens from the refresh cookie. */
+  @Get('applicant/refresh')
+  @HttpCode(HttpStatus.OK)
+  async applicantRefresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const refreshToken = req.cookies['applicant_refresh_token'] as string;
+    if (!refreshToken) {
+      this.logger.warn('Applicant refresh attempt with no applicant_refresh_token cookie');
+      throw new UnauthorizedException();
+    }
+    this.logger.debug('Refreshing applicant tokens');
+
+    const { tokens, formNumber } = await this.authService.refreshApplicant(refreshToken);
+
+    this.authService.setApplicantCookies(res, tokens);
+    return { formNumber };
+  }
+
+  /** POST /auth/applicant/logout — clears the applicant cookies. */
+  @Post('applicant/logout')
+  @HttpCode(HttpStatus.OK)
+  applicantLogout(@Res({ passthrough: true }) res: Response) {
+    this.authService.clearApplicantCookies(res);
+    return { status: 'Ok' };
+  }
+
   /** GET /auth/refresh — rotates tokens from the refresh cookie. */
   @Get('refresh')
   @HttpCode(HttpStatus.OK)
-  async refresh(
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ) {
+  async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const refreshToken = req.cookies['refresh_token'] as string;
     if (!refreshToken) {
       this.logger.warn('Refresh attempt with no refresh_token cookie');

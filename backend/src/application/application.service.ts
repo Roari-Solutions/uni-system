@@ -180,6 +180,7 @@ export class ApplicationService {
         this.logger.warn('attempt to create a medical form for an incomplete application');
         throw new BadRequestException();
       }
+
       // mandatory upload: storeImage throws PI on non-image content
       const doctorSignature = await this.mediaService.storeImage(
         signature.buffer,
