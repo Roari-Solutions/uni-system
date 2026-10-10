@@ -16,34 +16,65 @@ const PASS = 'secret123';
 const FACULTIES = [
   { nameEn: 'Engineering', nameAr: 'الهندسة', abbreviation: 'EN' },
   { nameEn: 'Architecture', nameAr: 'العمارة', abbreviation: 'AR' },
-  { nameEn: 'Nursing', nameAr: 'التمريض', abbreviation: 'NS' },
+  { nameEn: 'Nursing Sciences', nameAr: 'علوم التمريض', abbreviation: 'NS' },
   { nameEn: 'Law', nameAr: 'القانون', abbreviation: 'LW' },
   { nameEn: 'Information Systems', nameAr: 'نظم المعلومات', abbreviation: 'IS' },
   {
-    nameEn: 'Computer and Information Technology',
-    nameAr: 'الحاسوب وتقانة المعلومات',
+    nameEn: 'Computer Science and Information Technology',
+    nameAr: 'علوم الحاسوب وتقانة المعلومات',
     abbreviation: 'IT',
   },
   { nameEn: 'Business Studies', nameAr: 'الدراسات التجارية', abbreviation: 'CS' },
 ];
 
 /**
+ * Each faculty's departments, keyed by the faculty's abbreviation. Like
+ * FACULTIES this is the source of truth: re-running the seed creates what's
+ * missing and corrects names that drifted. Nothing is ever deleted here.
+ */
+const DEPARTMENTS: Record<string, { nameEn: string; nameAr: string }[]> = {
+  EN: [
+    { nameEn: 'Civil Engineering', nameAr: 'الهندسة المدنية' },
+    { nameEn: 'Electrical Engineering', nameAr: 'هندسة الكهرباء' },
+  ],
+};
+
+/**
  * Each faculty's specializations, keyed by the faculty's abbreviation, in both
  * languages (both are required: the English name prints on the results). Like
  * FACULTIES this is the source of truth: re-running the seed creates what's
  * missing and corrects names that drifted. Nothing is ever deleted here.
- *
- * TODO(specializations): fill in the real list, e.g.
- *   CS: [{ nameEn: 'Economics', nameAr: 'الاقتصاد' }],
- * A faculty without specializations (e.g. Nursing) keeps an empty list.
+ * `departmentAr` names one of DEPARTMENTS above; null sits directly under
+ * the faculty.
  */
-const SPECIALIZATIONS: Record<string, { nameEn: string; nameAr: string }[]> = {
-  EN: [],
+const SPECIALIZATIONS: Record<
+  string,
+  { departmentAr: string | null; nameEn: string; nameAr: string }[]
+> = {
+  EN: [
+    {
+      departmentAr: 'الهندسة المدنية',
+      nameEn: 'B.Tech in Civil Engineering',
+      nameAr: 'البكالريوس التكنولوجى فى الهندسة المدنية',
+    },
+    { departmentAr: 'هندسة الكهرباء', nameEn: 'Control', nameAr: 'تحكم' },
+    { departmentAr: 'هندسة الكهرباء', nameEn: 'Power', nameAr: 'قدرة' },
+    { departmentAr: 'هندسة الكهرباء', nameEn: 'Communications', nameAr: 'اتصالات' },
+    {
+      departmentAr: 'هندسة الكهرباء',
+      nameEn: 'Electronics and Computer',
+      nameAr: 'الكترونيات وحاسوب',
+    },
+  ],
   AR: [],
   NS: [],
   LW: [],
-  IS: [],
-  IT: [],
+  IS: [
+    { departmentAr: null, nameEn: 'Accounting', nameAr: 'المحاسبية' },
+    { departmentAr: null, nameEn: 'Management', nameAr: 'الإدارية' },
+    { departmentAr: null, nameEn: 'Banking', nameAr: 'المصرفية' },
+  ],
+  IT: [{ departmentAr: null, nameEn: 'Information Technology', nameAr: 'تقانة المعلومات' }],
   CS: [],
 };
 
@@ -84,6 +115,43 @@ async function ensureFaculty(
 }
 
 /**
+ * Ensures a faculty's department exists. It is found by either name, so
+ * correcting one of the two names here renames the existing row.
+ */
+async function ensureFacultyDepartment(
+  db: Db,
+  facultyId: string,
+  nameEn: string,
+  nameAr: string,
+): Promise<string> {
+  const found = await db.query.facultyDepartments.findFirst({
+    where: and(
+      eq(schema.facultyDepartments.facultyId, facultyId),
+      or(
+        eq(schema.facultyDepartments.nameEn, nameEn),
+        eq(schema.facultyDepartments.nameAr, nameAr),
+      ),
+    ),
+  });
+  if (found) {
+    if (found.nameEn !== nameEn || found.nameAr !== nameAr) {
+      await db
+        .update(schema.facultyDepartments)
+        .set({ nameEn, nameAr })
+        .where(eq(schema.facultyDepartments.id, found.id));
+      console.log(`department ${nameEn} names updated`);
+    }
+    return found.id;
+  }
+  const [row] = await db
+    .insert(schema.facultyDepartments)
+    .values({ facultyId, nameEn, nameAr })
+    .returning();
+  console.log(`department ${nameEn} created`);
+  return row.id;
+}
+
+/**
  * Ensures a faculty's specialization exists. It is found by either name, so
  * correcting one of the two names here renames the existing row.
  */
@@ -92,6 +160,7 @@ async function ensureSpecialization(
   facultyId: string,
   nameEn: string,
   nameAr: string,
+  departmentId: string | null,
 ): Promise<void> {
   const found = await db.query.specializations.findFirst({
     where: and(
@@ -100,16 +169,20 @@ async function ensureSpecialization(
     ),
   });
   if (found) {
-    if (found.nameEn !== nameEn || found.nameAr !== nameAr) {
+    if (
+      found.nameEn !== nameEn ||
+      found.nameAr !== nameAr ||
+      found.departmentId !== departmentId
+    ) {
       await db
         .update(schema.specializations)
-        .set({ nameEn, nameAr })
+        .set({ nameEn, nameAr, departmentId })
         .where(eq(schema.specializations.id, found.id));
-      console.log(`specialization ${nameEn} names updated`);
+      console.log(`specialization ${nameEn} updated`);
     }
     return;
   }
-  await db.insert(schema.specializations).values({ facultyId, nameEn, nameAr });
+  await db.insert(schema.specializations).values({ facultyId, nameEn, nameAr, departmentId });
   console.log(`specialization ${nameEn} created`);
 }
 
@@ -173,8 +246,16 @@ async function main() {
     for (const f of FACULTIES) {
       const faculty = await ensureFaculty(db, f.nameEn, f.nameAr, f.abbreviation);
       rows.push(faculty);
+      const deptIds = new Map<string, string>();
+      for (const dept of DEPARTMENTS[f.abbreviation] ?? []) {
+        deptIds.set(
+          dept.nameAr,
+          await ensureFacultyDepartment(db, faculty.id, dept.nameEn, dept.nameAr),
+        );
+      }
       for (const spec of SPECIALIZATIONS[f.abbreviation] ?? []) {
-        await ensureSpecialization(db, faculty.id, spec.nameEn, spec.nameAr);
+        const departmentId = spec.departmentAr ? (deptIds.get(spec.departmentAr) ?? null) : null;
+        await ensureSpecialization(db, faculty.id, spec.nameEn, spec.nameAr, departmentId);
       }
     }
     await ensureRole(db, 'admin');

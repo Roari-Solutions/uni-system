@@ -38,6 +38,30 @@ const IMAGE_EXT_BY_MIME: Record<string, string> = {
   'image/gif': 'gif',
 };
 
+/** Sniffs real image content; the multipart mime comes from the client and lies. */
+function isImageBuffer(buffer: Buffer, ext: string): boolean {
+  if (ext === 'png')
+    return (
+      buffer.length >= 8 &&
+      buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
+    );
+  if (ext === 'jpg') return buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8;
+  if (ext === 'gif')
+    return buffer.length >= 6 && buffer.subarray(0, 6).toString('ascii').startsWith('GIF8');
+  if (ext === 'webp')
+    return (
+      buffer.length >= 12 &&
+      buffer.subarray(0, 4).toString('ascii') === 'RIFF' &&
+      buffer.subarray(8, 12).toString('ascii') === 'WEBP'
+    );
+  return false;
+}
+
+/** Sniffs real PDF content (%PDF- magic). */
+function isPdfBuffer(buffer: Buffer): boolean {
+  return buffer.length >= 5 && buffer.subarray(0, 5).toString('ascii') === '%PDF-';
+}
+
 /** Stores CMS images and PDFs on local disk; returns the public URL. */
 @Injectable()
 export class MediaService {
@@ -46,9 +70,18 @@ export class MediaService {
   /** Stores an image and returns its `/images/...` URL. */
   async storeImage(buffer: Buffer, mime: string): Promise<string> {
     const ext = IMAGE_EXT_BY_MIME[mime];
-    if (!ext) throw new BadRequestException({ code: 'PI' });
+    if (!ext) {
+      this.logger.warn(`Rejected image upload: unsupported mime ${mime}`);
+      throw new BadRequestException({ code: 'PI' });
+    }
     if (!Buffer.isBuffer(buffer) || buffer.length === 0 || buffer.length > MAX_MEDIA_BYTES)
       throw new BadRequestException({ code: 'PI' });
+    if (!isImageBuffer(buffer, ext)) {
+      this.logger.warn(
+        `Rejected image upload: claimed ${mime} but content is not a ${ext} image (${buffer.length} bytes)`,
+      );
+      throw new BadRequestException({ code: 'PI' });
+    }
 
     const digest = createHash('sha256').update(buffer).digest('hex');
 
@@ -57,9 +90,16 @@ export class MediaService {
 
   /** Stores a PDF and returns its `/pdfs/...` URL. */
   async storePdf(buffer: Buffer, mime: string): Promise<string> {
-    if (mime !== 'application/pdf') throw new BadRequestException({ code: 'PI' });
+    if (mime !== 'application/pdf') {
+      this.logger.warn(`Rejected PDF upload: unsupported mime ${mime}`);
+      throw new BadRequestException({ code: 'PI' });
+    }
     if (!Buffer.isBuffer(buffer) || buffer.length === 0 || buffer.length > MAX_MEDIA_BYTES)
       throw new BadRequestException({ code: 'PI' });
+    if (!isPdfBuffer(buffer)) {
+      this.logger.warn(`Rejected PDF upload: content is not a PDF (${buffer.length} bytes)`);
+      throw new BadRequestException({ code: 'PI' });
+    }
 
     const digest = createHash('sha256').update(buffer).digest('hex');
 

@@ -24,6 +24,9 @@ export const bloodTypeEnum = pgEnum('blood_type', [
   'O-',
 ]);
 
+/** Gender values stored on medical forms. */
+export const genderEnum = pgEnum('gender', ['male', 'female']);
+
 /** Academic year = study year (1-6), the level a student or curriculum sits in. */
 export const studyLevelEnum = pgEnum('study_level', ['1', '2', '3', '4', '5', '6']);
 
@@ -347,6 +350,59 @@ export const students = pgTable('students', {
   ...timestamps(),
 });
 
+/** Admission applications, staged by bulk import before enrolment. Names are stored as written; the import only checks they exist and belong together. */
+export const applications = pgTable('applications', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  formNumber: text('form_number').notNull().unique(),
+  schoolName: text('school_name').notNull(),
+  code: text('code').notNull(),
+  facultyName: text('faculty_name').notNull(),
+  departmentName: text('department_name'),
+  specializationName: text('specialization_name'),
+  acceptanceType: text('acceptance_type').notNull(),
+  nationalId: text('national_id'),
+  notes: text('notes'),
+  name: text('name').notNull(),
+  nameEn: text('name_en'),
+  residencyType: text('residency_type'),
+  state: text('state'),
+  nationalIdFile: text('national_id_file'),
+  studentPhoto: text('student_photo'),
+  highSchoolCertificate: text('high_school_certificate'),
+  finantialAidDocuments: text('finantial_aid_documents').array(),
+  finantialAidNote: text('finantial_aid_note'),
+  status: boolean('status').notNull().default(false),
+  ...timestamps(),
+});
+
+/** Medical fitness form filled by a doctor for one application (one row each). */
+export const medicalForms = pgTable('medical_forms', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  /** The application this form belongs to; one form per application. */
+  applicationId: uuid('application_id')
+    .notNull()
+    .unique()
+    .references(() => applications.id, { onDelete: 'cascade' }),
+  leftEye: boolean('left_eye').notNull(),
+  rightEye: boolean('right_eye').notNull(),
+  leftEar: boolean('left_ear').notNull(),
+  rightEar: boolean('right_ear').notNull(),
+  upperLimbs: boolean('upper_limbs').notNull(),
+  lowerLimbs: boolean('lower_limbs').notNull(),
+  gender: genderEnum('gender').notNull(),
+  bloodType: bloodTypeEnum('blood_type').notNull(),
+  hiv: boolean('hiv'),
+  virusC: boolean('virus_c'),
+  virusB: boolean('virus_b'),
+  medicallyFit: boolean('medically_fit'),
+  doctorName: text('doctor_name'),
+  /** Doctor signature image URL from MediaService.storeImage, not bytes in DB. */
+  doctorSignature: text('doctor_signature'),
+  notes: text('notes'),
+  status: boolean('status').notNull().default(false),
+  ...timestamps(),
+});
+
 /** Per-student per-course grades (one row each). */
 export const grades = pgTable(
   'grades',
@@ -439,15 +495,16 @@ export const results = pgTable(
     ...timestamps(),
   },
   (t) => [
-    unique('result_batch_unique').on(
-      t.facultyId,
-      t.academicYear,
-      t.acceptanceYear,
-      t.specializationId,
-      t.departmentId,
-      t.semester,
-      t.kind,
-    )
+    unique('result_batch_unique')
+      .on(
+        t.facultyId,
+        t.academicYear,
+        t.acceptanceYear,
+        t.specializationId,
+        t.departmentId,
+        t.semester,
+        t.kind,
+      )
       // an all-acceptance-years, no-specialization or no-department result (null) is still one per batch
       .nullsNotDistinct(),
   ],
@@ -760,6 +817,19 @@ export const gpasRelations = relations(gpas, ({ one }) => ({
   student: one(students, {
     fields: [gpas.studentId],
     references: [students.id],
+  }),
+}));
+
+/** Relations for applications: medical form. */
+export const applicationsRelations = relations(applications, ({ one }) => ({
+  medicalForm: one(medicalForms),
+}));
+
+/** Relations for medical forms: application. */
+export const medicalFormsRelations = relations(medicalForms, ({ one }) => ({
+  application: one(applications, {
+    fields: [medicalForms.applicationId],
+    references: [applications.id],
   }),
 }));
 

@@ -8,11 +8,11 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { LoginDto } from './dto/login.dto';
+import { LoginDto, ApplicantLoginDto } from './dto/login.dto';
 import { UpdateAccountDto } from './dto/update-account.dto';
 import { DATABASE, type Db } from 'src/database/database.module';
 import * as schema from 'schema';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
@@ -68,18 +68,101 @@ export class AuthService {
     this.accessService.forget(user.id);
     const access = await this.accessService.load(user.id);
     if (!access || !canEnter(body.portal, access.permissions)) {
-      this.logger.warn(
-        `Login blocked: user ${user.id} may not use the ${body.portal} portal`,
-      );
+      this.logger.warn(`Login blocked: user ${user.id} may not use the ${body.portal} portal`);
       throw new UnauthorizedException();
     }
 
-    this.logger.log(
-      `Login success: user ${user.id} at the ${body.portal} portal`,
-    );
+    this.logger.log(`Login success: user ${user.id} at the ${body.portal} portal`);
 
     const tokens = await this.issueTokens({ sub: user.id });
     return { tokens, portals: portalsFor(access.permissions) };
+  }
+
+  async applicantLogin(body: ApplicantLoginDto) {
+    const formNumber = body.formNumber?.trim();
+    const facultyName = body.facultyName?.trim();
+    const name = body.name?.trim();
+
+    const row = await this.db.query.applications.findFirst({
+      where: and(
+        eq(schema.applications.formNumber, formNumber),
+        eq(schema.applications.facultyName, facultyName),
+        eq(schema.applications.name, name),
+      ),
+    });
+
+    if (!row) {
+      this.logger.warn(`Applicant login failed: unknown form ${formNumber}`);
+      throw new UnauthorizedException();
+    }
+
+    const tokens = await this.issueApplicantTokens(row.formNumber);
+    this.logger.log(`Applicant login success: form ${formNumber}`);
+    return tokens;
+  }
+
+  /**
+   * Reads the application the applicant's token is scoped to. The form number
+   * comes from the verified token, never from the request, so there is no path
+   * to another applicant's row.
+   *
+   * @throws NotFoundException when no application carries that form number.
+   */
+  async applicantMe(formNumber: string) {
+    const row = await this.db.query.applications.findFirst({
+      where: eq(schema.applications.formNumber, formNumber),
+      columns: { id: false, updatedAt: false, createdAt: false },
+    });
+    if (!row) {
+      this.logger.warn(`applicantMe: application ${formNumber} not found`);
+      throw new NotFoundException();
+    }
+    return row;
+  }
+
+  /**
+   * Signs an applicant access/refresh pair. Separate secrets from staff tokens,
+   * so an applicant token never verifies as a staff session and vice versa.
+   */
+  async issueApplicantTokens(formNumber: string): Promise<AuthTokens> {
+    const payload = { sub: formNumber };
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwt.signAsync(payload, {
+        secret: config.jwtApplicantAccessSecret,
+        expiresIn: config.jwtApplicantAccessTtl as StringValue,
+      }),
+      this.jwt.signAsync(payload, {
+        secret: config.jwtApplicantRefreshSecret,
+        expiresIn: config.jwtApplicantRefreshTtl as StringValue,
+      }),
+    ]);
+    return { accessToken, refreshToken };
+  }
+
+  /** Rotates an applicant token pair; the application row must still exist. */
+  async refreshApplicant(token: string): Promise<{ tokens: AuthTokens; formNumber: string }> {
+    let payload: JwtPayload;
+    try {
+      payload = await this.jwt.verifyAsync<JwtPayload>(token, {
+        secret: config.jwtApplicantRefreshSecret,
+      });
+    } catch (error) {
+      this.logger.warn('Applicant refresh failed: invalid or expired refresh token');
+      throw new UnauthorizedException('Invalid or expired refresh token', {
+        cause: error,
+      });
+    }
+
+    const row = await this.db.query.applications.findFirst({
+      where: eq(schema.applications.formNumber, payload.sub),
+      columns: { formNumber: true },
+    });
+    if (!row) {
+      this.logger.warn(`Applicant refresh blocked: unknown form ${payload.sub}`);
+      throw new UnauthorizedException();
+    }
+
+    return { tokens: await this.issueApplicantTokens(row.formNumber), formNumber: row.formNumber };
   }
 
   /** Signs a fresh access/refresh token pair for the payload. */
@@ -114,9 +197,7 @@ export class AuthService {
 
     const access = await this.accessService.load(payload.sub);
     if (!access || portalsFor(access.permissions).length === 0) {
-      this.logger.warn(
-        `Refresh blocked: user ${payload.sub} is gone, suspended or has no roles`,
-      );
+      this.logger.warn(`Refresh blocked: user ${payload.sub} is gone, suspended or has no roles`);
       throw new UnauthorizedException();
     }
 
@@ -218,8 +299,32 @@ export class AuthService {
       httpOnly: true,
       secure: isSecure,
       sameSite: 'strict',
-      maxAge:
-        ms(config.jwtRefreshTtl as StringValue) ?? 7 * 24 * 60 * 60 * 1000,
+      maxAge: ms(config.jwtRefreshTtl as StringValue) ?? 7 * 24 * 60 * 60 * 1000,
+    });
+  }
+
+  /** Clears the applicant cookies; the client cannot, since they are HttpOnly. */
+  clearApplicantCookies(res: Response) {
+    const isSecure = config.cookieSecure;
+    const options = { httpOnly: true, secure: isSecure, sameSite: 'strict' as const };
+    res.clearCookie('applicant_access_token', options);
+    res.clearCookie('applicant_refresh_token', options);
+  }
+
+  /** Writes applicant access/refresh tokens as HttpOnly cookies. */
+  setApplicantCookies(res: Response, { accessToken, refreshToken }: AuthTokens) {
+    const isSecure = config.cookieSecure;
+    res.cookie('applicant_access_token', accessToken, {
+      httpOnly: true,
+      secure: isSecure,
+      sameSite: 'strict',
+      maxAge: ms(config.jwtApplicantAccessTtl as StringValue) ?? 2 * 60 * 60 * 1000,
+    });
+    res.cookie('applicant_refresh_token', refreshToken, {
+      httpOnly: true,
+      secure: isSecure,
+      sameSite: 'strict',
+      maxAge: ms(config.jwtApplicantRefreshTtl as StringValue) ?? 7 * 24 * 60 * 60 * 1000,
     });
   }
 }
