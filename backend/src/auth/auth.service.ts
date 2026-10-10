@@ -111,6 +111,7 @@ export class AuthService {
   async applicantMe(formNumber: string) {
     const row = await this.db.query.applications.findFirst({
       where: eq(schema.applications.formNumber, formNumber),
+      columns: { id: false, updatedAt: false, createdAt: false },
     });
     if (!row) {
       this.logger.warn(`applicantMe: application ${formNumber} not found`);
