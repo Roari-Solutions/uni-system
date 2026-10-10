@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ConfirmDialog from "../../components/confirmDialog";
-import DataTable, { type Column } from "../../components/dataTable";
 import EditUserDialog, { type UserEdit } from "../../components/editUserDialog";
+import type { Column } from "../../components/dataTable";
+import DataTable from "../../components/paginatedDataTable";
+import FillPage from "../../components/fillPage";
+import PageBackdrop from "../../components/pageBackdrop";
 import EditRolesDialog from "../../components/editRolesDialog";
 import FilterSelect from "../../components/filterSelect";
 import useAuth from "../../auth/useAuth";
@@ -137,7 +140,7 @@ const UserList = () => {
 	};
 
 	const actionClass =
-		"rounded-xs px-3 py-2 text-body-sm text-accent-deep underline-offset-4 transition-colors duration-150 ease-out hover:bg-background hover:underline";
+			"whitespace-nowrap rounded-xs px-3 py-2 text-body-sm text-accent-deep underline-offset-4 transition-colors duration-150 ease-out hover:bg-background hover:underline";
 
 	const columns: Column<ManagedUser>[] = [
 		{ key: "name", header: t("userList.columns.name"), render: (u) => u.name },
@@ -207,13 +210,14 @@ const UserList = () => {
 		},
 	];
 
-	return (
-		<div>
-			<h1 className="mb-8 border-s-3 border-primary ps-4 text-heading-3 text-accent-deep">
+		return (
+		<FillPage>
+			<PageBackdrop />
+			<h1 className="mb-8 shrink-0 border-s-3 border-primary ps-4 text-heading-3 text-accent-deep">
 				{t("userList.title")}
 			</h1>
 
-			<div className="mb-6 flex flex-wrap items-end gap-6">
+			<div className="mb-6 flex shrink-0 flex-wrap items-end gap-6">
 				{inGrades && (
 					<FilterSelect
 						id="facultyFilter"
@@ -235,7 +239,7 @@ const UserList = () => {
 			</div>
 
 			{failed && (
-				<p role="alert" className="mb-6 text-body-sm text-error">
+				<p role="alert" className="mb-6 text-body-sm shrink-0 text-error">
 					{t("common.loadFailed")}
 				</p>
 			)}
@@ -245,6 +249,7 @@ const UserList = () => {
 				rows={users}
 				getRowId={(u) => u.id}
 				emptyText={loading ? t("common.loading") : t("userList.empty")}
+				actionsWidth={280}
 			/>
 
 			<ConfirmDialog
@@ -282,7 +287,7 @@ const UserList = () => {
 				onSave={(r, f) => void saveRoles(r, f)}
 				onCancel={() => setEditingRoles(null)}
 			/>
-		</div>
+		</FillPage>
 	);
 };
 
