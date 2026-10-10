@@ -10,7 +10,9 @@ import {
 } from "@heroicons/react/24/outline";
 import useAuth from "../../../auth/useAuth";
 import ConfirmDialog from "../../../components/confirmDialog";
-import DataTable, { type Column } from "../../../components/dataTable";
+import type { Column } from "../../../components/dataTable";
+import DataTable from "../../../components/paginatedDataTable";
+import PageBackdrop from "../../../components/pageBackdrop";
 import EditGradeDialog, { type GradeEdit } from "../../../components/editGradeDialog";
 import FilterSelect from "../../../components/filterSelect";
 import ResultHeaderForm, { ResultSignaturesForm } from "../../../components/results/resultHeaderForm";
@@ -583,8 +585,9 @@ const ResultList = () => {
 	];
 
 	return (
-		<div>
-			<h1 className="mb-2 border-s-3 border-primary ps-4 text-heading-3 text-accent-deep">
+		<div className="relative isolate">
+			<PageBackdrop />
+			<h1 className="mb-4 shrink-0 border-s-3 border-primary ps-4 text-heading-3 text-accent-deep">
 				{t("results.title")}
 			</h1>
 			<p className="mb-8 ps-4 text-body-md text-foreground">{t("results.intro")}</p>
@@ -614,7 +617,7 @@ const ResultList = () => {
 				{hasDraft && <p className="mb-2 text-body-sm text-primary-hover">{t("results.draftKept")}</p>}
 				<p className="mb-6 text-body-md text-foreground">{t("results.newHint")}</p>
 
-				<div className="mb-6 flex flex-wrap items-end gap-6">
+				<div className="mb-6 flex flex-wrap shrink-0 items-end gap-6">
 					<FilterSelect
 						id="facultyFilter"
 						label={t("gradeEntry.faculty")}
@@ -864,7 +867,7 @@ const ResultList = () => {
 				<p className="mb-6 text-body-md text-foreground">{t("results.generatedHint")}</p>
 
 				{failed && (
-					<p role="alert" className="mb-6 text-body-sm text-error">
+					<p role="alert" className="mb-6  shrink-0 text-body-sm text-error">
 						{t("common.loadFailed")}
 					</p>
 				)}
