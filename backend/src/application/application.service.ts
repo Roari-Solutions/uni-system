@@ -160,7 +160,10 @@ export class ApplicationService {
     }
   }
 
-  /** Saves the medical fitness form for one application; a re-post overwrites it. */
+  /**
+   * Saves the medical fitness form for one application; a re-post overwrites it.
+   * @returns a bare ack; read the row back with getMedicalForm.
+   */
   async saveMedicalForm(formNumber: string, dto: MedicalFormDto, signature?: MediaFile) {
     try {
       if (!signature) {
@@ -187,16 +190,15 @@ export class ApplicationService {
         signature.mimetype,
       );
 
-      const [row] = await this.db
+      await this.db
         .insert(medicalForms)
         .values({ applicationId: application.id, ...dto, doctorSignature })
         .onConflictDoUpdate({
           target: medicalForms.applicationId,
           set: { ...dto, doctorSignature, status: true },
-        })
-        .returning();
+        });
       this.logger.log(`Saved medical form for ${formNumber}: signature stored`);
-      return row;
+      return { status: 'ok' };
     } catch (error) {
       if (error instanceof NotFoundException || error instanceof BadRequestException) throw error;
       this.logger.error(`Failed to save medical form for ${formNumber}`, error);
