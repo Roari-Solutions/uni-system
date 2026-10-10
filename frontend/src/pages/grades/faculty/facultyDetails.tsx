@@ -3,7 +3,9 @@ import { Link, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import { ArrowLeftIcon, PencilSquareIcon, PlusIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import ConfirmDialog from "../../../components/confirmDialog";
-import DataTable, { type Column } from "../../../components/dataTable";
+import PageBackdrop from "../../../components/pageBackdrop";
+import type { Column } from "../../../components/dataTable";
+import DataTable from "../../../components/paginatedDataTable";
 import DeleteButton from "../../../components/deleteButton";
 import FormField from "../../../components/formField";
 import useAuth from "../../../auth/useAuth";
@@ -23,7 +25,6 @@ import {
 import type { DepartmentUsage, FacultyDetail, SpecializationUsage } from "../../../types/faculty";
 import {
 	cardClass,
-	formCardClass,
 	inputClass,
 	secondaryButtonClass,
 	submitButtonClass,
@@ -57,7 +58,7 @@ const Modal = ({
 			ref={ref}
 			onClose={onClose}
 			aria-label={title}
-			className={`m-auto max-h-[90svh] w-full ${wide ? "max-w-2xl" : "max-w-lg"} overflow-y-auto rounded-md border border-border-subtle bg-surface p-0 text-foreground shadow-xl backdrop:bg-foreground/60`}
+			className={`m-auto max-h-[90svh] w-full ${wide ? "max-w-2xl" : "max-w-lg"} overflow-y-auto rounded-lg border border-border-subtle bg-surface p-0 text-foreground shadow-xl backdrop:bg-foreground/60`}
 		>
 			<div className="flex flex-col gap-6 p-6">
 				<div className="flex items-center justify-between gap-3">
@@ -391,14 +392,15 @@ const FacultyDetails = () => {
 			),
 		},
 	];
-
 	return (
-		<div>
+		// fills the page area it is given (the shell supplies the margin): nothing scrolls
+		<div className="relative isolate flex h-full min-h-0 flex-col">
+			<PageBackdrop />
 			{can(PERMISSIONS.gradesAllFaculties) && (
 				<Link
 					to="../view"
 					relative="path"
-					className="mb-6 inline-flex items-center gap-2 text-body-sm font-medium text-primary-hover transition-colors duration-150 ease-out hover:text-accent-deep"
+					className="mb-4 inline-flex shrink-0 items-center gap-2 self-start text-body-sm font-medium text-primary-hover transition-colors duration-150 ease-out hover:text-accent-deep"
 				>
 					{/* §20 — the arrow points back in either reading direction */}
 					<ArrowLeftIcon className="size-4 rtl:rotate-180" aria-hidden />
@@ -406,17 +408,20 @@ const FacultyDetails = () => {
 				</Link>
 			)}
 
-			<h1 className="mb-2 border-s-3 border-primary ps-4 text-heading-3 text-accent-deep">{faculty.name[lang]}</h1>
-			<p className="mb-8 ps-4 text-body-sm text-foreground">
-				<span dir="ltr">{faculty.abbreviation}</span>
-				{" · "}
-				{t("faculty.departmentCount", { count: faculty.departments.length })}
-				{" · "}
-				{t("faculty.specializationCount", { count: faculty.specializations.length })}
-			</p>
+			<div className="mb-4 shrink-0">
+				<div className="text-body-sm text-foreground/70">{t("faculty.title")}</div>
+				<h1 className="text-heading-3 text-foreground">{faculty.name[lang]}</h1>
+				<p className="mt-1 text-body-sm text-foreground/70">
+					<span dir="ltr">{faculty.abbreviation}</span>
+					{" · "}
+					{t("faculty.departmentCount", { count: faculty.departments.length })}
+					{" · "}
+					{t("faculty.specializationCount", { count: faculty.specializations.length })}
+				</p>
+			</div>
 
 			{/* §39 — the selected tab is marked by its state and weight, not colour alone */}
-			<div role="tablist" aria-label={t("faculty.title")} className="mb-6 flex flex-wrap gap-2 border-b border-border">
+			<div role="tablist" aria-label={t("faculty.title")} className="mb-4 flex shrink-0 flex-wrap gap-2 border-b border-border">
 				{TABS.map((id) => (
 					<button
 						key={id}
@@ -437,63 +442,83 @@ const FacultyDetails = () => {
 				))}
 			</div>
 
-			<div role="tabpanel" id={`faculty-panel-${tab}`} aria-labelledby={`faculty-tab-${tab}`}>
+			<div
+				role="tabpanel"
+				id={`faculty-panel-${tab}`}
+				aria-labelledby={`faculty-tab-${tab}`}
+				className="flex min-h-0 flex-1 flex-col"
+			>
 				{tab === "details" && (
-					<form noValidate onSubmit={(e) => void saveDetails(e)} className={`max-w-xl ${formCardClass}`}>
-						<FormField id="facultyNameAr" label={t("faculty.fields.nameAr")}>
-							<input
-								id="facultyNameAr"
-								type="text"
-								value={details.ar}
-								onChange={(e) => setDetails({ ...details, ar: e.target.value })}
-								className={inputClass(false)}
-							/>
-						</FormField>
-						<FormField id="facultyNameEn" label={t("faculty.fields.nameEn")}>
-							<input
-								id="facultyNameEn"
-								type="text"
-								dir="ltr"
-								value={details.en}
-								onChange={(e) => setDetails({ ...details, en: e.target.value })}
-								className={inputClass(false)}
-							/>
-						</FormField>
-						<FormField id="facultyAbbreviation" label={t("faculty.fields.abbreviation")}>
-							<input
-								id="facultyAbbreviation"
-								type="text"
-								dir="ltr"
-								maxLength={2}
-								value={details.abbreviation}
-								onChange={(e) =>
-									setDetails({ ...details, abbreviation: e.target.value.toUpperCase().replace(/[^A-Z]/g, "") })
-								}
-								className={inputClass(false)}
-							/>
-							<p className="text-body-sm text-primary-hover">{t("faculty.abbreviationHint")}</p>
-						</FormField>
-						{detailsSaved && (
-							<p role="status" className="text-body-sm text-primary-hover">
-								{t("common.saved")}
-							</p>
-						)}
-						{detailsError && (
-							<p role="alert" className="text-body-sm text-error">
-								{t(detailsError)}
-							</p>
-						)}
-						<button type="submit" disabled={saving} className={submitButtonClass}>
-							{saving ? t("common.saving") : t("faculty.save")}
-						</button>
+					<form
+						noValidate
+						onSubmit={(e) => void saveDetails(e)}
+						className="flex min-h-0 flex-1 flex-col rounded-lg border border-border-subtle bg-surface p-6 shadow-sm"
+					>
+						{/* the fields share the card's height, so it never leaves a gap */}
+						<div className="grid min-h-0 flex-1 auto-rows-fr gap-x-6 gap-y-4 md:grid-cols-2">
+							<div className="flex flex-col justify-center">
+								<FormField id="facultyNameAr" label={t("faculty.fields.nameAr")}>
+									<input
+										id="facultyNameAr"
+										type="text"
+										value={details.ar}
+										onChange={(e) => setDetails({ ...details, ar: e.target.value })}
+										className={inputClass(false)}
+									/>
+								</FormField>
+							</div>
+							<div className="flex flex-col justify-center">
+								<FormField id="facultyNameEn" label={t("faculty.fields.nameEn")}>
+									<input
+										id="facultyNameEn"
+										type="text"
+										dir="ltr"
+										value={details.en}
+										onChange={(e) => setDetails({ ...details, en: e.target.value })}
+										className={inputClass(false)}
+									/>
+								</FormField>
+							</div>
+							<div className="flex flex-col justify-center md:col-span-2">
+								<FormField id="facultyAbbreviation" label={t("faculty.fields.abbreviation")}>
+									<input
+										id="facultyAbbreviation"
+										type="text"
+										dir="ltr"
+										maxLength={2}
+										value={details.abbreviation}
+										onChange={(e) =>
+											setDetails({ ...details, abbreviation: e.target.value.toUpperCase().replace(/[^A-Z]/g, "") })
+										}
+										className={inputClass(false)}
+									/>
+									<p className="text-body-sm text-primary-hover">{t("faculty.abbreviationHint")}</p>
+								</FormField>
+							</div>
+						</div>
+						<div className="mt-4 flex shrink-0 flex-wrap items-center gap-4 border-t border-border-subtle pt-4">
+							<button type="submit" disabled={saving} className={submitButtonClass}>
+								{saving ? t("common.saving") : t("faculty.save")}
+							</button>
+							{detailsSaved && (
+								<p role="status" className="text-body-sm text-primary-hover">
+									{t("common.saved")}
+								</p>
+							)}
+							{detailsError && (
+								<p role="alert" className="text-body-sm text-error">
+									{t(detailsError)}
+								</p>
+							)}
+						</div>
 					</form>
 				)}
 
 				{tab === "departments" && (
-					<div className="flex flex-col gap-6">
+					<div className="flex min-h-0 flex-1 flex-col gap-4">
 						{/* what still sits outside a department in this faculty */}
 						{hasDepartments && (faculty.studentsWithoutDepartment > 0 || directSpecializations > 0) && (
-							<div className={`flex flex-col gap-2 ${cardClass}`}>
+							<div className={`flex shrink-0 flex-col gap-2 ${cardClass}`}>
 								<h2 className="text-heading-5 text-accent-deep">{t("faculty.missingDepartmentTitle")}</h2>
 								{faculty.studentsWithoutDepartment > 0 && (
 									<p className="text-body-md">
@@ -521,7 +546,7 @@ const FacultyDetails = () => {
 							</div>
 						)}
 
-						<div className="flex flex-wrap items-center gap-3">
+						<div className="flex shrink-0 flex-wrap items-center gap-3">
 							<button
 								type="button"
 								onClick={() => setDeptEdit({ id: null, ar: "", en: "", error: null })}
@@ -534,7 +559,7 @@ const FacultyDetails = () => {
 						</div>
 
 						{deptError && (
-							<p role="alert" className="text-body-sm text-error">
+							<p role="alert" className="shrink-0 text-body-sm text-error">
 								{t(deptError)}
 							</p>
 						)}
@@ -549,10 +574,10 @@ const FacultyDetails = () => {
 				)}
 
 				{tab === "specializations" && (
-					<div className="flex flex-col gap-6">
+					<div className="flex min-h-0 flex-1 flex-col gap-4">
 						{/* what still needs a specialization in this faculty */}
 						{faculty.specializations.length > 0 && (faculty.studentsWithout > 0 || faculty.majorsWithout > 0) && (
-							<div className={`flex flex-col gap-2 ${cardClass}`}>
+							<div className={`flex shrink-0 flex-col gap-2 ${cardClass}`}>
 								<h2 className="text-heading-5 text-accent-deep">{t("faculty.missingTitle")}</h2>
 								{faculty.studentsWithout > 0 && (
 									<p className="text-body-md">
@@ -580,7 +605,7 @@ const FacultyDetails = () => {
 							</div>
 						)}
 
-						<div className="flex flex-wrap items-center gap-3">
+						<div className="flex shrink-0 flex-wrap items-center gap-3">
 							<button
 								type="button"
 								onClick={() =>
@@ -595,7 +620,7 @@ const FacultyDetails = () => {
 						</div>
 
 						{specError && (
-							<p role="alert" className="text-body-sm text-error">
+							<p role="alert" className="shrink-0 text-body-sm text-error">
 								{t(specError)}
 							</p>
 						)}
@@ -610,12 +635,14 @@ const FacultyDetails = () => {
 				)}
 
 				{tab === "curriculums" && (
-					<CurriculumList
-						facultyId={facultyId}
-						reloadKey={curriculumsReload}
-						onAdd={() => setCurriculumEdit({})}
-						onEdit={(c) => setCurriculumEdit({ id: c.id })}
-					/>
+					<div className="flex min-h-0 flex-1 flex-col">
+						<CurriculumList
+							facultyId={facultyId}
+							reloadKey={curriculumsReload}
+							onAdd={() => setCurriculumEdit({})}
+							onEdit={(c) => setCurriculumEdit({ id: c.id })}
+						/>
+					</div>
 				)}
 			</div>
 
@@ -777,7 +804,6 @@ const FacultyDetails = () => {
 				onConfirm={() => void confirmDeptDelete()}
 				onCancel={() => setPendingDeptDelete(null)}
 			/>
-
 		</div>
 	);
 };

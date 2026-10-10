@@ -7,6 +7,7 @@ import DataTable from "../../../components/paginatedDataTable";
 import useFaculties from "../../../hooks/useFaculties";
 import type { Faculty } from "../../../types/faculty";
 import { smallSecondaryButtonClass } from "../../../styles/form";
+import FillPage from "../../../components/fillPage";
 
 /**
  * The faculty tab's way in: an admin picks a faculty; a data-entry employee
@@ -22,10 +23,19 @@ const FacultyIndex = () => {
 
 	const columns: Column<Faculty>[] = [
 		{ key: "name", header: t("faculty.columns.name"), render: (f) => f.name[lang] },
-		{
+				{
 			key: "abbreviation",
 			header: t("faculty.columns.abbreviation"),
-			render: (f) => <span dir="ltr">{f.abbreviation ?? "—"}</span>,
+			render: (f) =>
+				f.abbreviation ? (
+					<span
+						dir="ltr"
+						className="inline-block rounded-md bg-quote/40 px-2.5 py-0.5 text-body-sm font-semibold text-muted-foreground">
+						{f.abbreviation}
+					</span>
+				) : (
+					<span dir="ltr">—</span>
+				),
 		},
 		{
 			key: "departments",
@@ -61,9 +71,9 @@ const FacultyIndex = () => {
 	];
 
 		return (
-		<div className="relative isolate flex h-full min-h-0 flex-col">
+		<FillPage>
 			<PageBackdrop />
-			<h1 className="mb-4 shrink-0 border-s-3 border-primary ps-4 text-heading-3 text-accent-deep">
+			<h1 className="mb-4 shrink-0 border-s-3 border-accent ps-4 text-heading-4 text-muted-foreground md:text-heading-3">
 				{t("faculty.title")}
 			</h1>
 			<DataTable
@@ -74,10 +84,8 @@ const FacultyIndex = () => {
 				onRowClick={(f) => void navigate(`../${f.id}`, { relative: "path" })}
 				emptyText={loading ? t("common.loading") : t("faculty.empty")}
 			/>
-		</div>
+		</FillPage>
 	);
-
-
 	
 };
 
