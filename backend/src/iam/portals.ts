@@ -37,6 +37,23 @@ export function canEnter(
   permissions: ReadonlySet<string>,
 ): boolean {
   if (portal === 'staff')
-    return portalsFor(permissions).some((p) => p !== 'students');
+    return portalsFor(permissions).some((p) => isStaffPortal(p, permissions));
   return permissions.has(PORTALS[portal]);
+}
+
+/**
+ * Whether this portal makes its holder staff. Students open the LMS too, so the
+ * LMS counts only for those who teach in it or run it.
+ */
+function isStaffPortal(
+  portal: Exclude<Portal, 'staff'>,
+  permissions: ReadonlySet<string>,
+): boolean {
+  if (portal === 'students') return false;
+  if (portal === 'lms')
+    return (
+      permissions.has(PERMISSIONS.lmsTeach) ||
+      permissions.has(PERMISSIONS.lmsAdmin)
+    );
+  return true;
 }

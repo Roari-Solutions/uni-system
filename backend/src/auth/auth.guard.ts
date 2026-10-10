@@ -37,9 +37,7 @@ export class AuthGuard implements CanActivate {
 
     let payload: JwtPayload;
     try {
-      payload = await this.jwt.verifyAsync<JwtPayload>(req.cookies['access_token'] as string, {
-        secret: config.jwtAccessSecret,
-      });
+      payload = await verifyAccessToken(this.jwt, req.cookies['access_token'] as string);
     } catch (error) {
       this.logger.warn('Access denied: expired, tampered, or missing token');
       throw new UnauthorizedException('Invalid or expired access token', {
@@ -51,6 +49,19 @@ export class AuthGuard implements CanActivate {
     this.logger.debug(`Authenticated user ${payload.sub}`);
     return true;
   }
+}
+
+/**
+ * Verifies an access token against the public key its `kid` names. The
+ * algorithm is pinned, so a token cannot pick a weaker one for itself.
+ */
+export async function verifyAccessToken(jwt: JwtService, token: string): Promise<JwtPayload> {
+  if (!token) throw new Error('no access token');
+  const decoded: unknown = jwt.decode(token, { complete: true });
+  const kid = (decoded as { header?: { kid?: unknown } } | null)?.header?.kid;
+  const publicKey = typeof kid === 'string' ? config.jwtAccessPublicKeys.get(kid) : undefined;
+  if (!publicKey) throw new Error('unknown signing key');
+  return jwt.verifyAsync<JwtPayload>(token, { publicKey, algorithms: ['ES256'] });
 }
 
 /** Extracts the verified JWT payload inside guarded handlers. */

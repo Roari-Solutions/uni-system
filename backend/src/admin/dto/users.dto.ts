@@ -92,6 +92,17 @@ export class ResetPasswordDto {
   password!: string;
 }
 
+/** Body for giving an existing user one more role, found by their exact login. */
+export class GrantRoleDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
+  login!: string;
+
+  @IsIn(ROLE_NAMES)
+  role!: Role;
+}
+
 /** Query filters for GET /admin/users. */
 export class ListUsersQueryDto {
   @IsOptional()

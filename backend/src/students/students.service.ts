@@ -32,6 +32,7 @@ import { academicYearToNumber, SEMESTERS, type AcademicYear } from 'src/common/a
 import { MISSING_NAME } from 'src/common/dto/localized-name.dto';
 import { GradesService } from 'src/grades/grades.service';
 import { assertNotFrozen, type StudentStanding } from 'src/common/student-standing';
+import { makeStudentAccounts } from './student-accounts';
 import {
   CreateStudentDto,
   ListStudentsQueryDto,
@@ -244,6 +245,22 @@ export class StudentsService {
     }
   }
 
+  /**
+   * Gives new students their sign-in accounts. A failure leaves the student in
+   * place without one; `bun run student-accounts` makes the missing ones.
+   */
+  private async giveAccounts(studentIds: string[]): Promise<void> {
+    try {
+      const { created, clashes } = await makeStudentAccounts(this.db, studentIds);
+      this.logger.log(`Made ${created} student accounts`);
+      if (clashes.length) {
+        this.logger.warn(`No account for students whose uni number is taken: ${clashes.join(', ')}`);
+      }
+    } catch (error) {
+      this.logger.error('Failed to make student accounts', error);
+    }
+  }
+
   /** Creates a student in the given faculty. */
   async createStudent(dto: CreateStudentDto, caller: GrCaller): Promise<StudentView> {
     try {
@@ -287,6 +304,7 @@ export class StudentsService {
         .returning();
 
       this.logger.log(`Created student: ${uniNumber}`);
+      await this.giveAccounts([created.id]);
       return this.toView(created);
     } catch (error) {
       if (
@@ -742,7 +760,7 @@ export class StudentsService {
       const specDepartment = await this.specializationDepartments(ready);
 
       if (ready.length) {
-        await this.db.insert(students).values(
+        const inserted = await this.db.insert(students).values(
           ready.map((row) => ({
             // an omitted English name is recorded as a dash, filled in later elsewhere
             nameEn: row.name.en?.trim() || MISSING_NAME,
@@ -761,7 +779,9 @@ export class StudentsService {
               ? (specDepartment.get(row.specializationId)?.departmentId ?? null)
               : (row.departmentId ?? null),
           })),
-        );
+        ).returning({ id: students.id });
+        // hashing a password per student takes a while, so the import doesn't wait for it
+        void this.giveAccounts(inserted.map((row) => row.id));
       }
 
       this.logger.log(`Bulk imported ${ready.length} students, skipped ${blocked.size}`);

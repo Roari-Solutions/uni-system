@@ -6,6 +6,11 @@ function required(name: string): string {
   return value;
 }
 
+/** A PEM key from the env; env files hold one line, so `\n` stands for a line break. */
+function pem(name: string): string {
+  return required(name).replace(/\\n/g, '\n');
+}
+
 /** Central validated environment access; throws on missing secrets. */
 export const config = {
   get nodeEnv() {
@@ -14,11 +19,32 @@ export const config = {
   get databaseUrl() {
     return required('DATABASE_URL');
   },
-  get jwtAccessSecret() {
-    return required('JWT_ACCESS_SECRET');
+  /** Signs access tokens (ES256). Only this service holds it. */
+  get jwtAccessPrivateKey() {
+    return pem('JWT_ACCESS_PRIVATE_KEY');
+  },
+  /** Names the signing key in each token's `kid`, so a key can be rotated. */
+  get jwtAccessKid() {
+    return required('JWT_ACCESS_KID');
+  },
+  /**
+   * The public keys access tokens verify against, by `kid`: the current key,
+   * plus the previous one while its tokens are still alive after a rotation.
+   * Every service that verifies tokens (the LMS too) holds the same set.
+   */
+  get jwtAccessPublicKeys(): ReadonlyMap<string, string> {
+    const keys = new Map([[this.jwtAccessKid, pem('JWT_ACCESS_PUBLIC_KEY')]]);
+    const previousKid = process.env.JWT_ACCESS_PREVIOUS_KID;
+    if (previousKid)
+      keys.set(previousKid, pem('JWT_ACCESS_PREVIOUS_PUBLIC_KEY'));
+    return keys;
   },
   get jwtRefreshSecret() {
     return required('JWT_REFRESH_SECRET');
+  },
+  /** Turns on the LMS's publication and replicator role; unset, neither is made. */
+  get lmsReplicationPassword(): string | undefined {
+    return process.env.LMS_REPLICATION_PASSWORD || undefined;
   },
   get jwtAccessTtl() {
     return process.env.JWT_ACCESS_TTL ?? '15m';
@@ -49,6 +75,8 @@ export const config = {
         'http://localhost:5174',
         'http://localhost:3000',
         'http://localhost:4000',
+        // the LMS front end
+        'http://localhost:5180',
         // the portals, by subdomain, in development (browsers resolve *.localhost locally)
         ...[
           'staff',

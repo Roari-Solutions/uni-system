@@ -4,7 +4,8 @@
  *
  *   bun run grant-role <login> super-admin
  *
- * Roles: admin, data-entry, cms-admin, site-content-employee, super-admin.
+ * Roles: admin, data-entry, cms-admin, site-content-employee, super-admin,
+ * teacher, lms-admin.
  */
 import 'dotenv/config';
 import { and, eq } from 'drizzle-orm';

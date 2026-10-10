@@ -22,7 +22,16 @@ export const PERMISSIONS = {
   management: 'domain.management',
   teachers: 'domain.teachers',
   students: 'domain.students',
+  /** Enter the learning management system. */
   lms: 'domain.lms',
+  /** Teach in the LMS: the courses an LMS admin assigns. */
+  lmsTeach: 'lms.teach',
+  /** Learn in the LMS: the courses of one's own year. */
+  lmsLearn: 'lms.learn',
+  /** Run the LMS: teachers, terms, access, online sessions. */
+  lmsAdmin: 'lms.admin',
+  /** Manage the LMS's teachers: create them, or make an existing user one. */
+  usersManageLms: 'users.manage.lms',
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -37,11 +46,23 @@ export const ROLES = {
   contentManager: 'site-content-employee',
   /** Manages every domain's users and roles. */
   superAdmin: 'super-admin',
+  /** Teaches the LMS courses they are assigned. */
+  teacher: 'teacher',
+  /** A student's account; made from the student record, never by hand. */
+  student: 'student',
+  /** Runs the LMS and manages its teachers. */
+  lmsAdmin: 'lms-admin',
 } as const;
 
 export type Role = (typeof ROLES)[keyof typeof ROLES];
 
 export const ALL_ROLES = Object.values(ROLES);
+
+/**
+ * Every role but the student's. Student accounts follow the student records,
+ * so they stay out of the users screens: thousands of them would bury the staff.
+ */
+export const STAFF_ROLES = ALL_ROLES.filter((r) => r !== ROLES.student);
 
 /** The grants the migrations seed; kept here as the reference for what each role means. */
 export const ROLE_GRANTS: Record<Role, readonly Permission[]> = {
@@ -60,6 +81,19 @@ export const ROLE_GRANTS: Record<Role, readonly Permission[]> = {
     PERMISSIONS.gradesAllFaculties,
     PERMISSIONS.studentsReinstate,
     PERMISSIONS.cms,
+    PERMISSIONS.lms,
+    PERMISSIONS.lmsAdmin,
+  ],
+  [ROLES.teacher]: [PERMISSIONS.lms, PERMISSIONS.lmsTeach],
+  [ROLES.student]: [
+    PERMISSIONS.students,
+    PERMISSIONS.lms,
+    PERMISSIONS.lmsLearn,
+  ],
+  [ROLES.lmsAdmin]: [
+    PERMISSIONS.lms,
+    PERMISSIONS.lmsAdmin,
+    PERMISSIONS.usersManageLms,
   ],
 };
 
@@ -84,9 +118,14 @@ export const USER_SCOPES: {
     assigns: [ROLES.contentManager],
   },
   {
+    permission: PERMISSIONS.usersManageLms,
+    sees: [ROLES.lmsAdmin, ROLES.teacher],
+    assigns: [ROLES.teacher],
+  },
+  {
     permission: PERMISSIONS.usersManageAll,
-    sees: ALL_ROLES,
-    assigns: ALL_ROLES,
+    sees: STAFF_ROLES,
+    assigns: STAFF_ROLES,
   },
 ];
 

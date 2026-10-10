@@ -14,6 +14,7 @@ import { MediaModule } from './media/media.module';
 import { IamModule } from './iam/iam.module';
 import { SiteContentModule } from './site-content/site-content.module';
 import { ResultsModule } from './results/results.module';
+import { ReplicationModule } from './replication/replication.module';
 
 @Module({
   imports: [
@@ -31,9 +32,10 @@ import { ResultsModule } from './results/results.module';
     DatabaseModule,
     MediaModule,
     SiteContentModule,
+    ReplicationModule,
   ],
   controllers: [AppController],
   providers: [AppService, GrGurdGuard],
 })
-/** Root module: global config, auth and roles, the grades system and website content. */
+/** Root module: global config, auth and roles, the grades system, website content and the LMS's publication. */
 export class AppModule {}

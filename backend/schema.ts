@@ -98,6 +98,11 @@ export const users = pgTable('users', {
   phone: text('phone'),
   bloodType: bloodTypeEnum('blood_type'),
   password: text('password').notNull(),
+  /**
+   * The login and password are still the ones the account was created with (a
+   * student's uni number); the views remind the user to change them.
+   */
+  defaultCredentials: boolean('default_credentials').notNull().default(false),
   nationalId: text('national_id').unique(),
   /** Many users may belong to one faculty; null for staff who span all of them. */
   facultyId: uuid('faculty_id').references(() => faculties.id),
@@ -344,6 +349,10 @@ export const students = pgTable('students', {
    * the specialization sits under a department, this is always that department.
    */
   departmentId: uuid('department_id').references(() => facultyDepartments.id),
+  /** The student's sign-in account; null until one is made for them. */
+  userId: uuid('user_id')
+    .references(() => users.id)
+    .unique(),
   ...timestamps(),
 });
 
@@ -739,6 +748,7 @@ export const studentsRelations = relations(students, ({ one, many }) => ({
     fields: [students.departmentId],
     references: [facultyDepartments.id],
   }),
+  user: one(users, { fields: [students.userId], references: [users.id] }),
   grades: many(grades),
   gpas: many(gpas),
 }));

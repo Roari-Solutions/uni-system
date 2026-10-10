@@ -27,6 +27,7 @@ const managerOf = (req: AccessRequest): Manager => ({
 });
 import {
   CreateUserDto,
+  GrantRoleDto,
   ListUsersQueryDto,
   ResetPasswordDto,
   UpdateUserDto,
@@ -60,6 +61,20 @@ export class UsersController {
   @Post('users')
   async CreateUser(@Body() dto: CreateUserDto, @Req() req: AccessRequest) {
     return await this.usersService.createUser(dto, managerOf(req));
+  }
+
+  /**
+   * POST /admin/users/grant-role — gives a user outside the caller's domain one
+   * of the caller's roles, found by exact login (e.g. an LMS admin making an
+   * existing staff member a teacher). Exact login only, so it browses no one.
+   */
+  @Post('users/grant-role')
+  async GrantRole(@Body() dto: GrantRoleDto, @Req() req: AccessRequest) {
+    return await this.usersService.grantRole(
+      dto.login,
+      dto.role,
+      managerOf(req),
+    );
   }
 
   @Patch('users/:id')

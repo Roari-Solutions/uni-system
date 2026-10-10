@@ -380,6 +380,41 @@ export class UsersService {
     }
   }
 
+  /**
+   * Adds one role the manager may grant to the user who signs in with this
+   * login, keeping every role they hold. The user need not be in the manager's
+   * domain yet; afterwards they are. Granting a role they hold already is a no-op.
+   */
+  async grantRole(
+    login: string,
+    role: string,
+    manager: Manager,
+  ): Promise<UserView> {
+    this.assertAssignable([role], manager);
+    const row = await this.db.query.users.findFirst({
+      where: eq(users.email, login.trim()),
+      with: {
+        userRoles: { columns: {}, with: { role: { columns: { name: true } } } },
+      },
+    });
+    if (!row) throw new NotFoundException();
+    const { userRoles: held, ...user } = row;
+    const roleNames = held.map((ur) => ur.role.name);
+    if (user.id === manager.userId)
+      throw new BadRequestException({ code: 'SELF_ROLE_CHANGE' });
+
+    if (!roleNames.includes(role)) {
+      const [roleRow] = await this.roleRows([role]);
+      await this.db
+        .insert(userRoles)
+        .values({ userId: user.id, roleId: roleRow.id });
+      roleNames.push(role);
+      this.accessService.forget(user.id);
+      this.logger.log(`Granted ${role} to ${user.email}`);
+    }
+    return this.view({ ...user, roleNames }, manager);
+  }
+
   /** Sets a new password. The admin communicates it to the user themselves. */
   async resetPassword(
     id: string,

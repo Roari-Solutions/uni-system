@@ -86,12 +86,17 @@ export class AuthService {
   async issueTokens(user: JwtPayload): Promise<AuthTokens> {
     const payload = { sub: user.sub };
     const [accessToken, refreshToken] = await Promise.all([
+      // signed with the private key: other services verify it with the public one
       this.jwt.signAsync(payload, {
-        secret: config.jwtAccessSecret,
+        privateKey: config.jwtAccessPrivateKey,
+        algorithm: 'ES256',
+        keyid: config.jwtAccessKid,
         expiresIn: config.jwtAccessTtl as StringValue,
       }),
+      // only this service reads refresh tokens, so they keep a shared secret
       this.jwt.signAsync(payload, {
         secret: config.jwtRefreshSecret,
+        algorithm: 'HS256',
         expiresIn: config.jwtRefreshTtl as StringValue,
       }),
     ]);
@@ -104,6 +109,7 @@ export class AuthService {
     try {
       payload = await this.jwt.verifyAsync<JwtPayload>(token, {
         secret: config.jwtRefreshSecret,
+        algorithms: ['HS256'],
       });
     } catch (error) {
       this.logger.warn('Refresh failed: invalid or expired refresh token');
@@ -188,7 +194,11 @@ export class AuthService {
         ...(changes.name !== undefined ? { name: changes.name.trim() } : {}),
         ...(email !== undefined ? { email } : {}),
         ...(changes.newPassword !== undefined
-          ? { password: await bcrypt.hash(changes.newPassword, BCRYPT_ROUNDS) }
+          ? {
+              password: await bcrypt.hash(changes.newPassword, BCRYPT_ROUNDS),
+              // a password of their own ends the reminder to change it
+              defaultCredentials: false,
+            }
           : {}),
       })
       .where(eq(schema.users.id, user.id));

@@ -1,6 +1,8 @@
 services:
   database:
     image: postgres:18
+    # the LMS keeps its copy of the shared tables through logical replication
+    command: ["postgres", "-c", "wal_level=logical"]
     env_file:
       - ./backend/.env
     container_name: postgress_db

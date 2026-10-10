@@ -97,19 +97,22 @@ export async function verifySeed(db: Db, id: string) {
 }
 
 // ---------- jwt decode ----------
-/** Verifies a token with the access secret. */
+/** Verifies an access token with the public key its `kid` names. */
 export function decodeAccessToken(token: string) {
-  return jwt.verify(token, config.jwtAccessSecret) as jwt.JwtPayload &
+  const kid = jwt.decode(token, { complete: true })?.header.kid;
+  const publicKey = kid ? config.jwtAccessPublicKeys.get(kid) : undefined;
+  if (!publicKey) throw new Error('unknown signing key');
+  return jwt.verify(token, publicKey, { algorithms: ['ES256'] }) as jwt.JwtPayload &
     JwtPayload;
 }
 
 /** Verifies a token with the refresh secret. */
 export function decodeRefreshToken(token: string) {
-  return jwt.verify(token, config.jwtRefreshSecret) as jwt.JwtPayload &
+  return jwt.verify(token, config.jwtRefreshSecret, { algorithms: ['HS256'] }) as jwt.JwtPayload &
     JwtPayload;
 }
 
-/** Verifies an access or refresh token with the matching secret. */
+/** Verifies an access or refresh token with the matching key. */
 export function decodeToken(
   token: string,
   type: 'access' | 'refresh' = 'access',
