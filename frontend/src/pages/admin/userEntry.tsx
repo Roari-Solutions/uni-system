@@ -5,6 +5,8 @@ import axios from "axios";
 import FacultyField from "../../components/facultyField";
 import FormField from "../../components/formField";
 import PasswordInput from "../../components/passwordInput";
+import FillPage from "../../components/fillPage";
+import SquaresBackdrop from "../../components/Squaresbackdrop";
 import RoleChecklist from "../../components/roleChecklist";
 import { createUser, fetchRoles } from "../../api/users";
 import { needsFaculty } from "../../utils/roles";
@@ -112,12 +114,13 @@ const UserEntry = () => {
 	};
 
 	return (
-		<div className="mx-auto max-w-xl">
-			<h1 className="mb-8 border-s-3 border-primary ps-4 text-heading-3 text-accent-deep">
+			<FillPage>
+			<SquaresBackdrop />
+			<h1 className="mb-6 shrink-0 border-s-3 border-primary ps-4 text-heading-3 text-accent-deep">
 				{t("userEntry.title")}
 			</h1>
 
-			<form noValidate onSubmit={(e) => void handleSubmit(e)} className={formCardClass}>
+			<form noValidate onSubmit={(e) => void handleSubmit(e)} className={`${formCardClass} mx-auto w-full max-w-xl min-h-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`}>
 				<FormField id="name" label={t("userEntry.name")} error={errors.name?.[0]}>
 					<input
 						id="name"
@@ -209,7 +212,7 @@ const UserEntry = () => {
 					{submitting ? t("common.saving") : t("userEntry.submit")}
 				</button>
 			</form>
-		</div>
+				</FillPage>
 	);
 };
 
