@@ -16,6 +16,7 @@ import {
 } from '@nestjs/common';
 import { ApplicationService, type ApplicationCompletionFiles } from './application.service';
 import { ApplicationUpdateDto, BulkApplicationsDto } from './dto/create-application.dto';
+import { InterviewDto } from './dto/interview.dto';
 import { MedicalFormDto } from './dto/medical-form.dto';
 import { FileFieldsInterceptor, FileInterceptor } from '@nestjs/platform-express';
 import type { MediaFile } from 'src/media/media.service';
@@ -148,5 +149,11 @@ export class ApplicationController {
     const result = await this.applicationService.getMedicalForm(formNumber);
     this.logger.log(`Got medical form for ${formNumber}`);
     return result;
+  }
+
+  /** PATCH /application/:formNumber/interview — the fees and the interview outcome. */
+  @Patch(':formNumber/interview')
+  async recordInterview(@Param('formNumber') formNumber: string, @Body() dto: InterviewDto) {
+    return await this.applicationService.recordInterview(formNumber, dto);
   }
 }

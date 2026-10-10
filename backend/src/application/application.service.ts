@@ -7,9 +7,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { eq, inArray } from 'drizzle-orm';
-import { applications, medicalForms, students } from 'schema';
+import { applicationInterviews, applications, medicalForms, students } from 'schema';
 import { DATABASE, type Db } from 'src/database/database.module';
 import type { ApplicationUpdateDto, BulkApplicationsDto } from './dto/create-application.dto';
+import type { InterviewDto } from './dto/interview.dto';
 import type { MedicalFormDto } from './dto/medical-form.dto';
 import { MediaFile, MediaService } from 'src/media/media.service';
 
@@ -192,7 +193,7 @@ export class ApplicationService {
 
       await this.db
         .insert(medicalForms)
-        .values({ applicationId: application.id, ...dto, doctorSignature })
+        .values({ applicationId: application.id, ...dto, doctorSignature, status: true })
         .onConflictDoUpdate({
           target: medicalForms.applicationId,
           set: { ...dto, doctorSignature, status: true },
@@ -202,6 +203,62 @@ export class ApplicationService {
     } catch (error) {
       if (error instanceof NotFoundException || error instanceof BadRequestException) throw error;
       this.logger.error(`Failed to save medical form for ${formNumber}`, error);
+      throw new InternalServerErrorException('Applications operation failed', { cause: error });
+    }
+  }
+
+  /**
+   * Records the fees and the interview outcome for one application. Only the
+   * notes may be absent; the ValidationPipe rejects a body missing the rest.
+   * Refused until a submitted medical form backs the application.
+   */
+  async recordInterview(formNumber: string, dto: InterviewDto) {
+    try {
+      const key = formNumber.trim();
+      const application = await this.db.query.applications.findFirst({
+        where: eq(applications.formNumber, key),
+      });
+      if (!application) {
+        this.logger.warn(`Recording interview for ${formNumber}: not found`);
+        throw new NotFoundException({ code: 'NF' });
+      }
+
+      const medical = await this.db.query.medicalForms.findFirst({
+        where: eq(medicalForms.applicationId, application.id),
+      });
+      if (!medical?.status) {
+        this.logger.warn(
+          `Recording interview for ${formNumber}: ${medical ? 'medical form not submitted' : 'no medical form'}`,
+        );
+        throw new BadRequestException();
+      }
+
+      const record = {
+        registerationFees: dto.registerationFees,
+        studyFees: dto.studyFees,
+        passedInterview: dto.passedInterview,
+        // omitted notes must clear nothing, so the column is left alone
+        ...(dto.intervewNotes !== undefined ? { intervewNotes: dto.intervewNotes } : {}),
+        status: true,
+      };
+
+      await this.db
+        .insert(applicationInterviews)
+        .values({ applicationId: application.id, ...record })
+        .onConflictDoUpdate({
+          target: applicationInterviews.applicationId,
+          set: record,
+        });
+
+      this.logger.log(
+        `Recorded interview for ${formNumber}: ${dto.passedInterview ? 'passed' : 'failed'}, ` +
+          `fees ${dto.registerationFees} registration + ${dto.studyFees} study` +
+          (dto.intervewNotes === undefined ? '' : ', notes given'),
+      );
+      return { status: 'ok' };
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof BadRequestException) throw error;
+      this.logger.error(`Failed to record interview for ${formNumber}`, error);
       throw new InternalServerErrorException('Applications operation failed', { cause: error });
     }
   }

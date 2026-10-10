@@ -375,6 +375,22 @@ export const applications = pgTable('applications', {
   ...timestamps(),
 });
 
+/** The interview outcome and fees recorded for one application (one row each). */
+export const applicationInterviews = pgTable('application_interviews', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  /** The application this interview belongs to; one interview per application. */
+  applicationId: uuid('application_id')
+    .notNull()
+    .unique()
+    .references(() => applications.id, { onDelete: 'cascade' }),
+  registerationFees: integer('registeration_fees'),
+  studyFees: integer('study_fees'),
+  passedInterview: boolean('passed_interview'),
+  intervewNotes: text('intervew_notes'),
+  status: boolean('status').notNull().default(false),
+  ...timestamps(),
+});
+
 /** Medical fitness form filled by a doctor for one application (one row each). */
 export const medicalForms = pgTable('medical_forms', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -820,9 +836,18 @@ export const gpasRelations = relations(gpas, ({ one }) => ({
   }),
 }));
 
-/** Relations for applications: medical form. */
+/** Relations for applications: medical form, interview. */
 export const applicationsRelations = relations(applications, ({ one }) => ({
   medicalForm: one(medicalForms),
+  interview: one(applicationInterviews),
+}));
+
+/** Relations for application interviews: application. */
+export const applicationInterviewsRelations = relations(applicationInterviews, ({ one }) => ({
+  application: one(applications, {
+    fields: [applicationInterviews.applicationId],
+    references: [applications.id],
+  }),
 }));
 
 /** Relations for medical forms: application. */
