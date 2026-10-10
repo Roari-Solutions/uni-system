@@ -1,42 +1,41 @@
 /**
- * Shared control styles. Values come from the design system tokens in
- * index.css — §17 buttons, §28 cards, §31 form inputs, §37 focus.
+ * Shared control styles. Colours come from the design system tokens in
+ * index.css (card, accent, accent-dark, footer, destructive, secondary, ring).
  */
 
-// §31 — 44-48px tall, 8-12px radius, neutral border, primary focus ring
+// 48px tall, 8px radius, neutral border, gold focus ring
 export const inputClass = (invalid: boolean) =>
-	`h-12 w-full rounded-sm border bg-surface px-4 text-body-md text-foreground outline-none focus:border-primary focus:ring-3 focus:ring-primary/25 ${
-		invalid ? "border-error" : "border-border"
+	`h-12 w-full rounded-sm border bg-card px-4 text-body-md text-foreground outline-none focus:border-accent focus:ring-3 focus:ring-ring/25 ${
+		invalid ? "border-destructive" : "border-secondary"
 	}`;
 
-// §28 — standard card: surface, 12-16px radius, subtle border, soft shadow, 24px padding
-export const cardClass =
-	"rounded-md border border-border-subtle bg-surface p-6 shadow-md";
+// standard card: card surface, 12px radius, soft border and shadow, 24px padding
+export const cardClass = "rounded-md border border-border bg-card p-6 shadow-md";
 
 export const formCardClass = `flex flex-col gap-6 ${cardClass}`;
 
-// §17.1 PRIMARY — the emphasis action. 44-48px tall, 20-24px padding, weight 600-700.
+// PRIMARY — the emphasis action. 48px tall, 24px padding, weight 600.
 const buttonBase =
 	"inline-flex h-12 items-center justify-center rounded-sm px-6 text-button transition-colors duration-200 ease-out disabled:cursor-not-allowed disabled:opacity-60";
 
-export const submitButtonClass = `self-start bg-primary text-foreground hover:bg-primary-hover hover:text-surface ${buttonBase}`;
+export const submitButtonClass = `self-start bg-accent text-accent-foreground hover:bg-accent-dark hover:text-primary-foreground ${buttonBase}`;
 
 // same button stretched, for a single centred card
-export const blockSubmitButtonClass = `w-full bg-primary text-foreground hover:bg-primary-hover hover:text-surface ${buttonBase}`;
+export const blockSubmitButtonClass = `w-full bg-accent text-accent-foreground hover:bg-accent-dark hover:text-primary-foreground ${buttonBase}`;
 
-// §17.2 SECONDARY — transparent with an accent outline
-export const secondaryButtonClass = `border border-border-accent bg-transparent text-primary-hover hover:bg-accent-soft/30 ${buttonBase}`;
+// SECONDARY — transparent with an accent outline
+export const secondaryButtonClass = `border border-accent-dark bg-transparent text-accent-dark hover:bg-quote/30 ${buttonBase}`;
 
-// §17.3 DARK — deep institutional accent
-export const darkButtonClass = `bg-accent-deep text-surface hover:bg-primary-hover ${buttonBase}`;
+// DARK — deep institutional brown
+export const darkButtonClass = `bg-footer text-footer-foreground hover:bg-accent-dark ${buttonBase}`;
 
-// §17.4 SMALL — 36px, for actions inside table rows
+// SMALL — 36px, for actions inside table rows
 const smallButtonBase =
 	"inline-flex h-9 items-center justify-center gap-2 rounded-sm px-4 text-body-sm font-semibold transition-colors duration-200 ease-out disabled:cursor-not-allowed disabled:opacity-60";
 
-export const smallPrimaryButtonClass = `bg-primary text-foreground hover:bg-primary-hover hover:text-surface ${smallButtonBase}`;
+export const smallPrimaryButtonClass = `bg-accent text-accent-foreground hover:bg-accent-dark hover:text-primary-foreground ${smallButtonBase}`;
 
-export const smallSecondaryButtonClass = `border border-border-accent bg-transparent text-primary-hover hover:bg-accent-soft/30 ${smallButtonBase}`;
+export const smallSecondaryButtonClass = `border border-accent-dark bg-transparent text-accent-dark hover:bg-quote/30 ${smallButtonBase}`;
 
-// a destructive confirm; §4.2 permits a state colour as an explicit token
-export const destructiveButtonClass = `bg-error text-surface hover:bg-error-hover ${buttonBase}`;
+// a destructive confirm; a state colour is permitted as an explicit token
+export const destructiveButtonClass = `bg-destructive text-destructive-foreground hover:bg-destructive/90 ${buttonBase}`;
