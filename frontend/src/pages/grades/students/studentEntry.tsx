@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router";
 import { z } from "zod";
 import axios from "axios";
 import ConfirmDialog from "../../../components/confirmDialog";
+import PageBackdrop from "../../../components/pageBackdrop";
 import FacultyField from "../../../components/facultyField";
 import FormField from "../../../components/formField";
 import DepartmentField from "../../../components/departmentField";
@@ -249,13 +250,14 @@ const StudentEntry = () => {
 		);
 	}
 
-	return (
-		<div className="w-full">
-			<h1 className="mb-8 border-s-3 border-primary ps-4 text-heading-3 text-accent-deep">
+		return (
+		<div className="relative isolate w-full">
+			<PageBackdrop />
+			<h1 className="mb-6 border-s-3 border-accent ps-4 text-heading-4 text-muted-foreground md:text-heading-3">
 				{t(editing ? "studentEntry.editTitle" : "studentEntry.title")}
 			</h1>
 
-			<form noValidate onSubmit={(e) => void handleSubmit(e)} className={formCardClass}>
+			<form noValidate onSubmit={(e) => void handleSubmit(e)} className={`${formCardClass} max-md:p-4 max-md:[&>button]:self-stretch`}>
 				{/* two halves side by side from md up: who the student is, then their admission and study */}
 				<div className="grid grid-cols-1 gap-x-10 gap-y-6 md:grid-cols-2">
 					<div className="flex flex-col gap-6">
@@ -426,12 +428,12 @@ const StudentEntry = () => {
 				</div>
 
 				{saved && (
-					<p role="status" className="text-body-sm text-primary-hover">
+					<p role="status" className="text-body-sm text-accent-dark">
 						{t("common.saved")}
 					</p>
 				)}
 				{failure && (
-					<p role="alert" className="text-body-sm text-error">
+					<p role="alert" className="text-body-sm text-destructive">
 						{t(
 							failure === "taken"
 								? "studentEntry.errors.taken"

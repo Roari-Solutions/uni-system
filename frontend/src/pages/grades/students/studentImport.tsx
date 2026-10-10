@@ -1,7 +1,10 @@
 import { useMemo, useState, type ChangeEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowUpTrayIcon } from "@heroicons/react/24/outline";
-import DataTable, { type Column } from "../../../components/dataTable";
+import type { Column } from "../../../components/dataTable";
+import DataTable from "../../../components/paginatedDataTable";
+import FillPage from "../../../components/fillPage";
+import PageBackdrop from "../../../components/pageBackdrop";
 import FormField from "../../../components/formField";
 import FacultyField from "../../../components/facultyField";
 import ConfirmDialog from "../../../components/confirmDialog";
@@ -136,7 +139,7 @@ const StudentImport = () => {
 					value={r.uniNumber}
 					onChange={(e) => editRow(r.rowNumber, { uniNumber: e.target.value })}
 					aria-label={t("bulkImport.columns.uniNumber")}
-					className="h-9 w-40 rounded-sm border border-border bg-surface px-3 text-body-sm outline-none focus:border-primary focus:ring-3 focus:ring-primary/25"
+					className="h-9 w-full min-w-0 rounded-sm border border-secondary bg-card px-3 text-body-sm outline-none focus:border-accent focus:ring-3 focus:ring-ring/25"
 				/>
 			),
 		},
@@ -149,7 +152,7 @@ const StudentImport = () => {
 					value={r.nameAr}
 					onChange={(e) => editRow(r.rowNumber, { nameAr: e.target.value })}
 					aria-label={t("bulkImport.columns.nameAr")}
-					className="h-9 w-56 rounded-sm border border-border bg-surface px-3 text-body-sm outline-none focus:border-primary focus:ring-3 focus:ring-primary/25"
+					className="h-9 w-full min-w-0 rounded-sm border border-secondary bg-card px-3 text-body-sm outline-none focus:border-accent focus:ring-3 focus:ring-ring/25"
 				/>
 			),
 		},
@@ -167,7 +170,7 @@ const StudentImport = () => {
 								value={r.nameEn}
 								onChange={(e) => editRow(r.rowNumber, { nameEn: e.target.value })}
 								aria-label={t("bulkImport.columns.nameEn")}
-								className="h-9 w-56 rounded-sm border border-border bg-surface px-3 text-body-sm outline-none focus:border-primary focus:ring-3 focus:ring-primary/25"
+								className="h-9 w-full min-w-0 rounded-sm border border-secondary bg-card px-3 text-body-sm outline-none focus:border-accent focus:ring-3 focus:ring-ring/25"
 							/>
 						),
 					},
@@ -184,7 +187,7 @@ const StudentImport = () => {
 						editRow(r.rowNumber, { nationalId: e.target.value })
 					}
 					aria-label={t("bulkImport.columns.nationalId")}
-					className="h-9 w-40 rounded-sm border border-border bg-surface px-3 text-body-sm outline-none focus:border-primary focus:ring-3 focus:ring-primary/25"
+					className="h-9 w-full min-w-0 rounded-sm border border-secondary bg-card px-3 text-body-sm outline-none focus:border-accent focus:ring-3 focus:ring-ring/25"
 				/>
 			),
 		},
@@ -193,7 +196,7 @@ const StudentImport = () => {
 			header: t("bulkImport.columns.faculty"),
 			render: (r) =>
 				faculties.find((f) => f.id === r.facultyId)?.name[lang] ?? (
-					<span className="text-error">{r.facultyName || "—"}</span>
+					<span className="text-destructive">{r.facultyName || "—"}</span>
 				),
 		},
 		{
@@ -208,25 +211,32 @@ const StudentImport = () => {
 			render: (r) => {
 				const problems = problemsOf(r);
 				return problems.length ? (
-					<ul className="flex flex-col gap-1 text-body-sm text-error">
+					<ul className="flex flex-col gap-1 text-body-sm text-destructive">
 						{problems.map((problem) => (
 							<li key={problem}>{t(problem)}</li>
 						))}
 					</ul>
 				) : (
-					<span className="text-success">{t("bulkImport.rowReady")}</span>
+					<span className="text-status-success">{t("bulkImport.rowReady")}</span>
 				);
 			},
 		},
 	];
 
 	return (
-		<div>
-			<h1 className="mb-8 border-s-3 border-primary ps-4 text-heading-3 text-accent-deep">
+		<FillPage>
+			<PageBackdrop />
+			<h1 className="mb-4 shrink-0 border-s-3 border-accent ps-4 text-heading-4 text-muted-foreground md:text-heading-3">
 				{t("bulkImport.title")}
 			</h1>
 
-			<section className={`mb-8 flex flex-col gap-6 ${cardClass}`}>
+			<section
+				className={`mb-4 flex shrink-0 flex-col gap-6 max-md:gap-4 ${cardClass} max-md:p-4 ${
+					checking || rows.length > 0
+						? "max-h-[45%] overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+						: ""
+				}`}
+			>
 				<FormField id="template" label={t("bulkImport.template")}>
 					<select
 						id="template"
@@ -310,27 +320,27 @@ const StudentImport = () => {
 						type="file"
 						accept=".xlsx,.xls,.csv"
 						onChange={(e) => void handleFile(e)}
-						className="text-body-md file:me-4 file:rounded-sm file:border-0 file:bg-primary file:px-4 file:py-2 file:text-button file:text-foreground hover:file:bg-primary-hover hover:file:text-surface"
+						className="text-body-md file:me-4 file:rounded-sm file:border-0 file:bg-accent file:px-4 file:py-2 file:text-button file:text-accent-foreground hover:file:bg-accent-dark hover:file:text-primary-foreground"
 					/>
-					<p className="text-body-sm text-primary-hover">{t("bulkImport.fileHint")}</p>
+					<p className="text-body-sm text-accent-dark">{t("bulkImport.fileHint")}</p>
 				</FormField>
 			</section>
 
 			{failed && (
-				<p role="alert" className="mb-6 text-body-sm text-error">
+				<p role="alert" className="mb-4 shrink-0 text-body-sm text-destructive">
 					{t("bulkImport.readFailed")}
 				</p>
 			)}
 			{imported !== null && (
-				<p role="status" className="mb-6 text-body-md text-primary-hover">
+				<p role="status" className="mb-4 shrink-0 text-body-md text-accent-dark">
 					{t("bulkImport.imported", { count: imported })}
 				</p>
 			)}
 
 			{(checking || rows.length > 0) && (
-				<section aria-labelledby="preview">
-					<div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
-						<h2 id="preview" className="text-heading-5 text-accent-deep">
+				<section aria-labelledby="preview" className="flex min-h-0 flex-1 flex-col">
+					<div className="mb-4 flex shrink-0 flex-wrap items-baseline justify-between gap-3">
+						<h2 id="preview" className="text-heading-5 text-muted-foreground">
 							{t("bulkImport.preview", { file: fileName })}
 						</h2>
 						<p className="text-body-sm text-foreground">
@@ -338,15 +348,19 @@ const StudentImport = () => {
 						</p>
 					</div>
 
-					<DataTable
-						columns={columns}
-						rows={rows}
-						getRowId={(r) => String(r.rowNumber)}
-						emptyText={checking ? t("common.loading") : t("bulkImport.empty")}
-						rowClassName={(r) => (problemsOf(r).length ? "bg-error/8" : "")}
-					/>
+					<div className="flex min-h-0 flex-1 flex-col">
+						<DataTable
+							paginated={false}
+							mobileColumns={["nameAr", "nameEn", "uniNumber", "nationalId", "faculty", "problems"]}
+							columns={columns}
+							rows={rows}
+							getRowId={(r) => String(r.rowNumber)}
+							emptyText={checking ? t("common.loading") : t("bulkImport.empty")}
+							rowClassName={(r) => (problemsOf(r).length ? "bg-destructive/8" : "")}
+						/>
+					</div>
 
-					<div className="mt-6 flex flex-wrap items-center gap-4">
+					<div className="mt-4 flex shrink-0 flex-wrap items-center gap-3 max-md:[&>button]:w-full">
 						<button
 							type="button"
 							disabled={!ready || importing}
@@ -379,7 +393,7 @@ const StudentImport = () => {
 				onConfirm={() => void confirmImport()}
 				onCancel={() => setConfirming(false)}
 			/>
-		</div>
+		</FillPage>
 	);
 };
 

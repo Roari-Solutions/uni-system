@@ -3,8 +3,11 @@ import { Link, useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import ColumnToggle from "../../../components/columnToggle";
 import ConfirmDialog from "../../../components/confirmDialog";
-import DataTable, { type Column } from "../../../components/dataTable";
 import DeleteButton from "../../../components/deleteButton";
+import type { Column } from "../../../components/dataTable";
+import DataTable from "../../../components/paginatedDataTable";
+import FillPage from "../../../components/fillPage";
+import PageBackdrop from "../../../components/pageBackdrop";
 import FilterSelect from "../../../components/filterSelect";
 import SearchField from "../../../components/searchField";
 import DepartmentFilter from "../../../components/departmentFilter";
@@ -172,7 +175,7 @@ const StudentList = () => {
 									setSelected(allSelected ? [] : selectableRows.map((s) => s.id))
 								}
 								aria-label={t("specialization.selectAll")}
-								className="size-5 accent-primary"
+								className="size-5 accent-accent"
 							/>
 						),
 						render: (s: Student) =>
@@ -182,7 +185,7 @@ const StudentList = () => {
 									checked={selected.includes(s.id)}
 									onChange={() => toggleSelected(s.id)}
 									aria-label={t("specialization.selectFor", { name: s.name[lang] })}
-									className="size-5 accent-primary"
+									className="size-5 accent-accent"
 								/>
 							),
 					},
@@ -195,7 +198,7 @@ const StudentList = () => {
 			render: (s) => (
 				<Link
 					to={`../${s.id}`}
-					className="font-medium text-accent-deep underline-offset-4 transition-colors duration-150 ease-out hover:text-primary-hover hover:underline"
+					className="font-medium text-muted-foreground underline-offset-4 transition-colors duration-150 ease-out hover:text-accent-dark hover:underline"
 				>
 					{s.name[lang]}
 				</Link>
@@ -275,12 +278,13 @@ const StudentList = () => {
 	];
 
 	return (
-		<div>
-			<h1 className="mb-8 border-s-3 border-primary ps-4 text-heading-3 text-accent-deep">
+		<FillPage>
+			<PageBackdrop />
+			<h1 className="mb-4 shrink-0 border-s-3 border-accent ps-4 text-heading-4 text-muted-foreground md:text-heading-3">
 				{t("studentList.title")}
 			</h1>
 
-			<div className="mb-6 flex flex-wrap items-end gap-6">
+			<div className="mb-4 flex shrink-0 flex-wrap items-end gap-3 max-md:max-h-[40%] max-md:overflow-y-auto md:gap-6">
 				<SearchField
 					id="studentSearch"
 					label={t("studentList.filters.search")}
@@ -338,19 +342,19 @@ const StudentList = () => {
 			</div>
 
 			{failed && (
-				<p role="alert" className="mb-6 text-body-sm text-error">
+				<p role="alert" className="mb-4 shrink-0 text-body-sm text-destructive">
 					{t("common.loadFailed")}
 				</p>
 			)}
 			{notice && (
-				<p role="status" className="mb-6 text-body-sm text-primary-hover">
+				<p role="status" className="mb-4 shrink-0 text-body-sm text-accent-dark">
 					{notice}
 				</p>
 			)}
 
 			{/* what still needs a specialization, one click from the list of it */}
 			{missing > 0 && specializationId !== WITHOUT_SPECIALIZATION && (
-				<div className="mb-6 flex flex-wrap items-center gap-3 rounded-sm border-s-3 border-primary bg-accent-soft/30 p-4">
+				<div className="mb-4 flex shrink-0 flex-wrap items-center gap-3 rounded-sm border-s-3 border-accent bg-quote/30 p-4">
 					<p className="text-body-md text-foreground">{t("specialization.missingStudents", { count: missing })}</p>
 					{effectiveFacultyId && (
 						<button
@@ -383,7 +387,7 @@ const StudentList = () => {
 			)}
 
 			{selectable && selected.length > 0 && (
-				<div className="mb-4 flex flex-wrap items-center gap-3">
+				<div className="mb-4 flex shrink-0 flex-wrap items-center gap-3">
 					<p className="text-body-md text-foreground">{t("specialization.selected", { count: selected.length })}</p>
 					{hasDepartments(effectiveFacultyId) && (
 						<button
@@ -425,6 +429,7 @@ const StudentList = () => {
 				columns={columns.filter((col) => !hiddenColumns.includes(col.key))}
 				rows={ordered}
 				getRowId={(s) => s.id}
+				mobileColumns={["name", "nameEn", "uniNumber", "level", "faculty", "status"]}
 				onRowClick={(s) => void navigate(`../${s.id}`)}
 				emptyText={loading ? t("common.loading") : t("studentList.empty")}
 			/>
@@ -456,7 +461,7 @@ const StudentList = () => {
 					onClose={() => setSetting(null)}
 				/>
 			)}
-		</div>
+		</FillPage>
 	);
 };
 
