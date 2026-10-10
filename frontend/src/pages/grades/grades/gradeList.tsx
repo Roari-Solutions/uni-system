@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import DataTable, { type Column } from "../../../components/dataTable";
 import FilterSelect from "../../../components/filterSelect";
+import type { Column } from "../../../components/dataTable";
+import DataTable from "../../../components/paginatedDataTable";
+import FillPage from "../../../components/fillPage";
+import PageBackdrop from "../../../components/pageBackdrop";
 import DepartmentFilter from "../../../components/departmentFilter";
 import SpecializationFilter from "../../../components/specializationFilter";
 import { WITHOUT_DEPARTMENT, WITHOUT_SPECIALIZATION } from "../../../types/faculty";
@@ -203,12 +206,14 @@ const GradeList = () => {
 	];
 
 	return (
-		<div>
-			<h1 className="mb-8 border-s-3 border-primary ps-4 text-heading-3 text-accent-deep">
+
+		<FillPage>
+			<PageBackdrop />
+			<h1 className="mb-4 shrink-0 border-s-3 border-primary ps-4 text-heading-3 text-accent-deep">
 				{t("gradeList.title")}
 			</h1>
 
-			<div className="mb-6 flex flex-wrap gap-6">
+			<div className="mb-6 flex shrink-0 flex-wrap gap-6">
 				<FilterSelect
 					id="facultyFilter"
 					label={t("gradeList.filters.faculty")}
@@ -261,12 +266,12 @@ const GradeList = () => {
 			</div>
 
 			{failed && (
-				<p role="alert" className="mb-6 text-body-sm text-error">
+				<p role="alert" className="mb-6 text-body-sm shrink-0 text-error">
 					{t("common.loadFailed")}
 				</p>
 			)}
 			{resultsLocked && (
-				<p role="alert" className="mb-6 text-body-sm text-error">
+				<p role="alert" className="mb-6 shrink-0 text-body-sm text-error">
 					{t("results.lockedError")}
 				</p>
 			)}
@@ -288,7 +293,7 @@ const GradeList = () => {
 				onResolve={(resolution) => void handleResolve(resolution)}
 				onCancel={() => setResolving(null)}
 			/>
-		</div>
+		</FillPage>
 	);
 };
 

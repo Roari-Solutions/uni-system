@@ -2,7 +2,10 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import { PencilSquareIcon } from "@heroicons/react/24/outline";
-import DataTable, { type Column } from "../../../components/dataTable";
+import type { Column } from "../../../components/dataTable";
+import DataTable from "../../../components/paginatedDataTable";
+import FillPage from "../../../components/fillPage";
+import PageBackdrop from "../../../components/pageBackdrop";
 import FilterSelect from "../../../components/filterSelect";
 import DepartmentFilter from "../../../components/departmentFilter";
 import SpecializationFilter from "../../../components/specializationFilter";
@@ -93,12 +96,13 @@ const GradeEntry = () => {
 	];
 
 	return (
-		<div>
-			<h1 className="mb-8 border-s-3 border-primary ps-4 text-heading-3 text-accent-deep">
+		<FillPage>
+			<PageBackdrop />
+			<h1 className="mb-4 shrink-0 border-s-3 border-primary ps-4 text-heading-3 text-accent-deep">
 				{t("gradeEntry.title")}
 			</h1>
 
-			<div className="mb-6 flex flex-wrap gap-6">
+			<div className="mb-6 flex shrink-0 flex-wrap gap-6">
 				<FilterSelect
 					id="facultyFilter"
 					label={t("gradeEntry.faculty")}
@@ -144,7 +148,7 @@ const GradeEntry = () => {
 			</div>
 
 			{failed && (
-				<p role="alert" className="mb-6 text-body-sm text-error">
+				<p role="alert" className="mb-6 text-body-sm shrink-0 text-error">
 					{t("common.loadFailed")}
 				</p>
 			)}
@@ -156,7 +160,7 @@ const GradeEntry = () => {
 				getRowId={(c) => `${c.id}:${c.facultyId}`}
 				emptyText={loading ? t("common.loading") : t("gradeEntry.empty")}
 			/>
-		</div>
+		</FillPage>
 	);
 };
 

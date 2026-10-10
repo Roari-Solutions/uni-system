@@ -2,8 +2,11 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import { EyeIcon, NoSymbolIcon, PauseCircleIcon, PencilSquareIcon } from "@heroicons/react/24/outline";
-import DataTable, { type Column } from "../../../components/dataTable";
 import FilterSelect from "../../../components/filterSelect";
+import type { Column } from "../../../components/dataTable";
+import DataTable from "../../../components/paginatedDataTable";
+import FillPage from "../../../components/fillPage";
+import PageBackdrop from "../../../components/pageBackdrop";
 import SearchField from "../../../components/searchField";
 import DepartmentFilter from "../../../components/departmentFilter";
 import SpecializationFilter from "../../../components/specializationFilter";
@@ -124,12 +127,13 @@ const SingleEntry = () => {
 	];
 
 	return (
-		<div>
-			<h1 className="mb-8 border-s-3 border-primary ps-4 text-heading-3 text-accent-deep">
+		<FillPage>
+			<PageBackdrop />
+			<h1 className="mb-4 shrink-0 border-s-3 border-primary ps-4 text-heading-3 text-accent-deep">
 				{t("singleEntry.title")}
 			</h1>
 
-			<div className="mb-6 flex flex-wrap items-end gap-6">
+			<div className="mb-6 flex flex-wrap shrink-0 items-end gap-6">
 				<SearchField
 					id="singleEntrySearch"
 					label={t("singleEntry.search")}
@@ -191,7 +195,7 @@ const SingleEntry = () => {
 			</div>
 
 			{failed && (
-				<p role="alert" className="mb-6 text-body-sm text-error">
+				<p role="alert" className="mb-6 text-body-sm shrink-0 text-error">
 					{t("common.loadFailed")}
 				</p>
 			)}
@@ -203,7 +207,7 @@ const SingleEntry = () => {
 				onRowClick={(s) => void navigate(sheetPath(s))}
 				emptyText={loading ? t("common.loading") : t("singleEntry.empty")}
 			/>
-		</div>
+		</FillPage>
 	);
 };
 
