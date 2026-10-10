@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Inject,
   Injectable,
   InternalServerErrorException,
@@ -8,7 +9,8 @@ import {
 import { eq, inArray } from 'drizzle-orm';
 import { applications, students } from 'schema';
 import { DATABASE, type Db } from 'src/database/database.module';
-import type { BulkApplicationsDto } from './dto/create-application.dto';
+import type { ApplicationUpdateDto, BulkApplicationsDto } from './dto/create-application.dto';
+import { MediaFile, MediaService } from 'src/media/media.service';
 
 /** What one row of a bulk import comes back as, so the preview can mark it. */
 export interface ApplicationRowReport {
@@ -16,6 +18,14 @@ export interface ApplicationRowReport {
   formNumber: string;
   /** i18n keys, so the views translate them; empty when the row is ready. */
   problems: string[];
+}
+
+/** Multer keys files by the FileFieldsInterceptor field names; every value is an array. */
+export interface ApplicationCompletionFiles {
+  nationalIdFile: MediaFile[];
+  studentPhoto: MediaFile[];
+  highSchoolCertificate: MediaFile[];
+  finantialAidDocuments?: MediaFile[];
 }
 
 /** The dry run's verdict on a whole file. */
@@ -47,7 +57,10 @@ function normalise(value: string): string {
 export class ApplicationService {
   private readonly logger = new Logger(ApplicationService.name);
 
-  constructor(@Inject(DATABASE) private readonly db: Db) {}
+  constructor(
+    @Inject() private readonly mediaService: MediaService,
+    @Inject(DATABASE) private readonly db: Db,
+  ) {}
 
   /** Every staged application. */
   async listApplications() {
@@ -57,6 +70,90 @@ export class ApplicationService {
       return rows;
     } catch (error) {
       this.logger.error('Failed to list applications', error);
+      throw new InternalServerErrorException('Applications operation failed', { cause: error });
+    }
+  }
+
+  async processFiles(files: ApplicationCompletionFiles) {
+    try {
+      const finantialAidDocsHahses: string[] = [];
+      this.logger.debug(
+        `Storing files: photo ${files.studentPhoto?.length ?? 0}, nationalId ${files.nationalIdFile?.length ?? 0}, certificate ${files.highSchoolCertificate?.length ?? 0}, aidDocs ${files.finantialAidDocuments?.length ?? 0}`,
+      );
+
+      const [photo, nationalId, certificate] = [
+        files.studentPhoto?.[0],
+        files.nationalIdFile?.[0],
+        files.highSchoolCertificate?.[0],
+      ];
+      if (!photo || !nationalId || !certificate) throw new BadRequestException({ code: 'MA' });
+
+      const storingPhoto = await this.mediaService.storeImage(photo.buffer, photo.mimetype);
+
+      const sotringNationalId = await this.mediaService.storePdf(
+        nationalId.buffer,
+        nationalId.mimetype,
+      );
+
+      const highSchoolCertificate = await this.mediaService.storePdf(
+        certificate.buffer,
+        certificate.mimetype,
+      );
+      for (const doc of files.finantialAidDocuments ?? []) {
+        const docHash = await this.mediaService.storePdf(doc.buffer, doc.mimetype);
+        finantialAidDocsHahses.push(docHash);
+      }
+
+      this.logger.log(
+        `Stored files: photo ${storingPhoto}, nationalId ${sotringNationalId}, certificate ${highSchoolCertificate}, aidDocs ${finantialAidDocsHahses.length}`,
+      );
+
+      return { storingPhoto, sotringNationalId, highSchoolCertificate, finantialAidDocsHahses };
+    } catch (error) {
+      if (error instanceof BadRequestException) throw error;
+      this.logger.error('Failed to store application files', error);
+      throw new InternalServerErrorException('Applications operation failed', { cause: error });
+    }
+  }
+
+  async completeApplication(
+    formNumber: string,
+    files: ApplicationCompletionFiles,
+    dto: ApplicationUpdateDto,
+  ) {
+    try {
+      this.logger.log(`Completing application ${formNumber}`);
+      const exists = await this.db.query.applications.findFirst({
+        where: eq(applications.formNumber, formNumber),
+      });
+      if (!exists) {
+        this.logger.warn(`Completing ${formNumber}: not found`);
+        throw new NotFoundException({ code: 'NF' });
+      }
+      const hashes = await this.processFiles(files);
+
+      const updated = await this.db
+        .update(applications)
+        .set({
+          nameEn: dto.nameEn,
+          state: dto.state,
+          residencyType: dto.residencyType,
+          finantialAidNote: dto.finantialAidNote,
+          finantialAidDocuments: hashes.finantialAidDocsHahses,
+          studentPhoto: hashes.storingPhoto,
+          highSchoolCertificate: hashes.highSchoolCertificate,
+          nationalIdFile: hashes.sotringNationalId,
+          status: true,
+        })
+        .where(eq(applications.formNumber, formNumber))
+        .returning();
+
+      this.logger.log(`Completed application ${formNumber}: ${updated.length} row(s) updated`);
+
+      return { stats: 'ok' };
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof BadRequestException) throw error;
+      this.logger.error(`Failed to complete application ${formNumber}`, error);
       throw new InternalServerErrorException('Applications operation failed', { cause: error });
     }
   }
@@ -170,7 +267,8 @@ export class ApplicationService {
     // what each named faculty, department and specialization resolves to
     const faculties = await this.db.query.faculties.findMany({
       columns: { id: true, nameAr: true },
-    });    const facultyOf = new Map(faculties.map((f) => [normalise(f.nameAr), f]));
+    });
+    const facultyOf = new Map(faculties.map((f) => [normalise(f.nameAr), f]));
     const departments = await this.db.query.facultyDepartments.findMany({
       columns: { id: true, facultyId: true, nameAr: true },
     });
@@ -186,81 +284,93 @@ export class ApplicationService {
     const seenForm = new Set<string>();
     const seenNationalId = new Set<string>();
 
-    return rows.map((row) => {
-      const formNumber = text(row.formNumber);
-      const nationalId = text(row.nationalId);
-      const problems: string[] = [];
+    return rows
+      .map((row) => {
+        const formNumber = text(row.formNumber);
+        const nationalId = text(row.nationalId);
+        const problems: string[] = [];
 
-      const faculty = facultyOf.get(normalise(text(row.faculty)));
-      this.logger.debug(
-        `Bulk row ${row.rowNumber}: faculty '${text(row.faculty)}' -> ${faculty ? `${faculty.nameAr} (${faculty.id})` : 'MISS'}`,
-      );
-      if (!faculty) {
-        problems.push('applicationImport.problems.facultyUnknown');
-      } else {
-        const deptName = text(row.department);
-        const dept = deptName ? deptByName.get(normalise(deptName)) : undefined;
-        if (deptName) {
-          this.logger.debug(
-            `Bulk row ${row.rowNumber}: department '${deptName}' -> ${dept ? `${dept.nameAr} (${dept.id})` : 'MISS'}`,
-          );
-        }
-        if (deptName && !dept) {
-          problems.push('applicationImport.problems.departmentUnknown');
-        } else if (dept && dept.facultyId !== faculty.id) {
-          problems.push('applicationImport.problems.departmentMismatch');
-        }
-        const specName = text(row.specialization);
-        const spec = specName ? specByName.get(normalise(specName)) : undefined;
-        if (specName) {
-          this.logger.debug(
-            `Bulk row ${row.rowNumber}: specialization '${specName}' -> ${spec ? `${spec.nameAr} (${spec.id})` : 'MISS'}`,
-          );
-        }
-        if (specName && !spec) {
-          problems.push('applicationImport.problems.specializationUnknown');
-          this.logger.debug(`Bulk row ${row.rowNumber}: specialization '${specName}' matches nothing`);
-        } else if (spec && spec.facultyId !== faculty.id) {
-          problems.push('applicationImport.problems.specializationMismatch');
-          this.logger.debug(
-            `Bulk row ${row.rowNumber}: specialization '${specName}' belongs to another faculty`,
-          );
-        } else if (spec && dept && spec.departmentId !== dept.id) {
-          problems.push('applicationImport.problems.specializationMismatch');
-          this.logger.debug(
-            `Bulk row ${row.rowNumber}: specialization '${specName}' is not under department '${deptName}'`,
-          );
-        }
-      }
-
-      if (takenForm.has(formNumber)) {
-        problems.push('applicationImport.problems.formNumberTaken');
-        this.logger.debug(`Bulk row ${row.rowNumber}: formNumber '${formNumber}' already imported`);
-      } else if (seenForm.has(formNumber)) {
-        problems.push('applicationImport.problems.formNumberRepeated');
-        this.logger.debug(`Bulk row ${row.rowNumber}: formNumber '${formNumber}' repeated in file`);
-      }
-      seenForm.add(formNumber);
-
-      if (nationalId) {
-        if (takenNationalId.has(nationalId)) {
-          problems.push('applicationImport.problems.nationalIdTaken');
-          this.logger.debug(`Bulk row ${row.rowNumber}: nationalId '${nationalId}' already taken`);
-        } else if (seenNationalId.has(nationalId)) {
-          problems.push('applicationImport.problems.nationalIdRepeated');
-          this.logger.debug(`Bulk row ${row.rowNumber}: nationalId '${nationalId}' repeated in file`);
-        }
-        seenNationalId.add(nationalId);
-      }
-
-      return { rowNumber: row.rowNumber, formNumber, problems };
-    }).map((report) => {
-      if (report.problems.length) {
+        const faculty = facultyOf.get(normalise(text(row.faculty)));
         this.logger.debug(
-          `Bulk row ${report.rowNumber} (${report.formNumber}): ${report.problems.join(', ')}`,
+          `Bulk row ${row.rowNumber}: faculty '${text(row.faculty)}' -> ${faculty ? `${faculty.nameAr} (${faculty.id})` : 'MISS'}`,
         );
-      }
-      return report;
-    });
+        if (!faculty) {
+          problems.push('applicationImport.problems.facultyUnknown');
+        } else {
+          const deptName = text(row.department);
+          const dept = deptName ? deptByName.get(normalise(deptName)) : undefined;
+          if (deptName) {
+            this.logger.debug(
+              `Bulk row ${row.rowNumber}: department '${deptName}' -> ${dept ? `${dept.nameAr} (${dept.id})` : 'MISS'}`,
+            );
+          }
+          if (deptName && !dept) {
+            problems.push('applicationImport.problems.departmentUnknown');
+          } else if (dept && dept.facultyId !== faculty.id) {
+            problems.push('applicationImport.problems.departmentMismatch');
+          }
+          const specName = text(row.specialization);
+          const spec = specName ? specByName.get(normalise(specName)) : undefined;
+          if (specName) {
+            this.logger.debug(
+              `Bulk row ${row.rowNumber}: specialization '${specName}' -> ${spec ? `${spec.nameAr} (${spec.id})` : 'MISS'}`,
+            );
+          }
+          if (specName && !spec) {
+            problems.push('applicationImport.problems.specializationUnknown');
+            this.logger.debug(
+              `Bulk row ${row.rowNumber}: specialization '${specName}' matches nothing`,
+            );
+          } else if (spec && spec.facultyId !== faculty.id) {
+            problems.push('applicationImport.problems.specializationMismatch');
+            this.logger.debug(
+              `Bulk row ${row.rowNumber}: specialization '${specName}' belongs to another faculty`,
+            );
+          } else if (spec && dept && spec.departmentId !== dept.id) {
+            problems.push('applicationImport.problems.specializationMismatch');
+            this.logger.debug(
+              `Bulk row ${row.rowNumber}: specialization '${specName}' is not under department '${deptName}'`,
+            );
+          }
+        }
+
+        if (takenForm.has(formNumber)) {
+          problems.push('applicationImport.problems.formNumberTaken');
+          this.logger.debug(
+            `Bulk row ${row.rowNumber}: formNumber '${formNumber}' already imported`,
+          );
+        } else if (seenForm.has(formNumber)) {
+          problems.push('applicationImport.problems.formNumberRepeated');
+          this.logger.debug(
+            `Bulk row ${row.rowNumber}: formNumber '${formNumber}' repeated in file`,
+          );
+        }
+        seenForm.add(formNumber);
+
+        if (nationalId) {
+          if (takenNationalId.has(nationalId)) {
+            problems.push('applicationImport.problems.nationalIdTaken');
+            this.logger.debug(
+              `Bulk row ${row.rowNumber}: nationalId '${nationalId}' already taken`,
+            );
+          } else if (seenNationalId.has(nationalId)) {
+            problems.push('applicationImport.problems.nationalIdRepeated');
+            this.logger.debug(
+              `Bulk row ${row.rowNumber}: nationalId '${nationalId}' repeated in file`,
+            );
+          }
+          seenNationalId.add(nationalId);
+        }
+
+        return { rowNumber: row.rowNumber, formNumber, problems };
+      })
+      .map((report) => {
+        if (report.problems.length) {
+          this.logger.debug(
+            `Bulk row ${report.rowNumber} (${report.formNumber}): ${report.problems.join(', ')}`,
+          );
+        }
+        return report;
+      });
   }
 }

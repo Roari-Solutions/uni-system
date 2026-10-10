@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ApplicationController } from './application.controller';
 import { ApplicationService } from './application.service';
-import { DATABASE } from 'src/database/database.module';
+import { DATABASE } from '../database/database.module.ts';
 
 describe('ApplicationController', () => {
   let controller: ApplicationController;

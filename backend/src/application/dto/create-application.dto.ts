@@ -55,7 +55,20 @@ export class ApplicationRowDto {
   notes?: string;
 }
 
-export class ApplicationDto {}
+export class ApplicationUpdateDto {
+  @IsString()
+  nameEn!: string;
+
+  @IsString()
+  residencyType!: string;
+
+  @IsString()
+  state!: string;
+
+  @IsOptional()
+  @IsString()
+  finantialAidNote?: string;
+}
 
 /** Body for both bulk endpoints: the rows the preview is showing. */
 export class BulkApplicationsDto {
