@@ -18,6 +18,7 @@ import { LoginDto, ApplicantLoginDto } from './dto/login.dto';
 import { UpdateAccountDto } from './dto/update-account.dto';
 import { type Request, type Response } from 'express';
 import { AuthGuard, CurrentUser } from './auth.guard';
+import { ApplicantGuard } from './applicant.guard';
 import type { JwtPayload } from './auth.guard';
 
 /** Login/refresh/profile endpoints. */
@@ -48,6 +49,15 @@ export class AuthController {
     const tokens = await this.authService.applicantLogin(body);
     this.authService.setApplicantCookies(res, tokens);
     return { formNumber: body.formNumber?.trim() };
+  }
+
+  /** GET /auth/applicant/me — the application the applicant token is scoped to. */
+  @UseGuards(ApplicantGuard)
+  @Get('applicant/me')
+  @HttpCode(HttpStatus.OK)
+  applicantMe(@CurrentUser() user: JwtPayload) {
+    this.logger.log(`Applicant fetching application ${user.sub}`);
+    return this.authService.applicantMe(user.sub);
   }
 
   /** GET /auth/applicant/refresh — rotates applicant tokens from the refresh cookie. */
