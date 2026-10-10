@@ -7,9 +7,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { eq, inArray } from 'drizzle-orm';
-import { applications, students } from 'schema';
+import { applications, medicalForms, students } from 'schema';
 import { DATABASE, type Db } from 'src/database/database.module';
 import type { ApplicationUpdateDto, BulkApplicationsDto } from './dto/create-application.dto';
+import type { MedicalFormDto } from './dto/medical-form.dto';
 import { MediaFile, MediaService } from 'src/media/media.service';
 
 /** What one row of a bulk import comes back as, so the preview can mark it. */
@@ -123,8 +124,9 @@ export class ApplicationService {
   ) {
     try {
       this.logger.log(`Completing application ${formNumber}`);
+      const key = formNumber.trim();
       const exists = await this.db.query.applications.findFirst({
-        where: eq(applications.formNumber, formNumber),
+        where: eq(applications.formNumber, key),
       });
       if (!exists) {
         this.logger.warn(`Completing ${formNumber}: not found`);
@@ -145,7 +147,7 @@ export class ApplicationService {
           nationalIdFile: hashes.sotringNationalId,
           status: true,
         })
-        .where(eq(applications.formNumber, formNumber))
+        .where(eq(applications.formNumber, key))
         .returning();
 
       this.logger.log(`Completed application ${formNumber}: ${updated.length} row(s) updated`);
@@ -154,6 +156,84 @@ export class ApplicationService {
     } catch (error) {
       if (error instanceof NotFoundException || error instanceof BadRequestException) throw error;
       this.logger.error(`Failed to complete application ${formNumber}`, error);
+      throw new InternalServerErrorException('Applications operation failed', { cause: error });
+    }
+  }
+
+  /** Saves the medical fitness form for one application; a re-post overwrites it. */
+  async saveMedicalForm(formNumber: string, dto: MedicalFormDto, signature?: MediaFile) {
+    try {
+      if (!signature) {
+        this.logger.warn(`Saving medical form for ${formNumber}: signature missing`);
+        throw new BadRequestException({ code: 'MA' });
+      }
+
+      const application = await this.db.query.applications.findFirst({
+        where: eq(applications.formNumber, formNumber.trim()),
+      });
+      if (!application) {
+        this.logger.warn(`Saving medical form for ${formNumber}: application not found`);
+        throw new NotFoundException({ code: 'NF' });
+      }
+
+      if (!application.status) {
+        this.logger.warn('attempt to create a medical form for an incomplete application');
+        throw new BadRequestException();
+      }
+      // mandatory upload: storeImage throws PI on non-image content
+      const doctorSignature = await this.mediaService.storeImage(
+        signature.buffer,
+        signature.mimetype,
+      );
+
+      const [row] = await this.db
+        .insert(medicalForms)
+        .values({ applicationId: application.id, ...dto, doctorSignature })
+        .onConflictDoUpdate({
+          target: medicalForms.applicationId,
+          set: { ...dto, doctorSignature, status: true },
+        })
+        .returning();
+      this.logger.log(`Saved medical form for ${formNumber}: signature stored`);
+      return row;
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof BadRequestException) throw error;
+      this.logger.error(`Failed to save medical form for ${formNumber}`, error);
+      throw new InternalServerErrorException('Applications operation failed', { cause: error });
+    }
+  }
+
+  /** Every medical fitness form. */
+  async listMedicalForms() {
+    try {
+      const rows = await this.db.query.medicalForms.findMany();
+      this.logger.log(`Listed ${rows.length} medical forms`);
+      return rows;
+    } catch (error) {
+      this.logger.error('Failed to list medical forms', error);
+      throw new InternalServerErrorException('Applications operation failed', { cause: error });
+    }
+  }
+
+  /** Medical fitness form for one application. */
+  async getMedicalForm(formNumber: string) {
+    try {
+      const application = await this.db.query.applications.findFirst({
+        where: eq(applications.formNumber, formNumber.trim()),
+      });
+      if (!application) throw new NotFoundException({ code: 'NF' });
+      const row = await this.db.query.medicalForms.findFirst({
+        where: eq(medicalForms.applicationId, application.id),
+      });
+      if (!row) {
+        this.logger.warn(`Getting medical form for ${formNumber}: not submitted yet`);
+        throw new NotFoundException({ code: 'NF' });
+      }
+      this.logger.log(`Got medical form for ${formNumber}`);
+      return row;
+    } catch (error) {
+      if (error instanceof NotFoundException) throw error;
+      this.logger.error(`Failed to get medical form for ${formNumber}`, error);
       throw new InternalServerErrorException('Applications operation failed', { cause: error });
     }
   }
