@@ -9,10 +9,10 @@ import {
 	BuildingLibraryIcon,
 	ChevronDownIcon,
 	ClipboardDocumentListIcon,
-	LanguageIcon,
 	UsersIcon,
 	UserCircleIcon,
 } from "@heroicons/react/24/outline";
+import LanguageToggleIcon from "../../components/Languagetoggleicon";
 import useAuth from "../../auth/useAuth";
 import { PERMISSIONS } from "../../types/auth";
 import useFaculties from "../../hooks/useFaculties";
@@ -160,7 +160,7 @@ const SideNav = () => {
 					</div>
 				</NavLink>
 
-				<nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-2">
+				<nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
 					{sections.map(({ id, icon: Icon }) => {
 						const isOpen = openSections.includes(id);
 						const showOptions = expanded && isOpen;
@@ -222,7 +222,7 @@ const SideNav = () => {
 				</nav>
 
 				<button type="button" onClick={toggleLanguage} className={`mx-2 ${navItemClass}`}>
-					<LanguageIcon className="size-6 shrink-0" />
+					<LanguageToggleIcon className="size-6 shrink-0" />
 					{expanded && (
 						<span className="truncate text-start text-navigation">
 							{t("gradesNav.switchLanguage")}
