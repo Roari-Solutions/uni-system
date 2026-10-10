@@ -4,6 +4,9 @@ import { useParams } from "react-router";
 import { z } from "zod";
 import ConfirmDialog from "../../../components/confirmDialog";
 import FacultyField from "../../../components/facultyField";
+import PageBackdrop from "../../../components/pageBackdrop";
+import FillPage from "../../../components/fillPage";
+import { inputClass, submitButtonClass } from "../../../styles/form";
 import FormField from "../../../components/formField";
 import DepartmentField from "../../../components/departmentField";
 import SpecializationField from "../../../components/specializationField";
@@ -17,7 +20,6 @@ import {
 	type CurriculumPayload,
 } from "../../../api/curriculums";
 import { orphanedGradeCount } from "../../../utils/orphanedGrades";
-import { formCardClass, inputClass, submitButtonClass } from "../../../styles/form";
 import { SEMESTERS, STUDY_LEVELS } from "../../../utils/academicYears";
 import { REQUIREMENT_TYPES, type RequirementType } from "../../../types/requirementType";
 import { ABBREVIATION_PATTERN } from "../../../types/curriculum";
@@ -250,7 +252,7 @@ const CurriculumEntry = ({
 			// the specializations offered follow the department, so one from elsewhere is dropped
 			specializationId:
 				prev.specializationId &&
-				(specializationDepartmentId(faculties, prev.specializationId) ?? "") === departmentId
+					(specializationDepartmentId(faculties, prev.specializationId) ?? "") === departmentId
 					? prev.specializationId
 					: "",
 		}));
@@ -355,7 +357,7 @@ const CurriculumEntry = ({
 		return (
 			<p
 				role={loadState === "failed" ? "alert" : "status"}
-				className={`text-body-sm ${loadState === "failed" ? "text-error" : "text-primary-hover"}`}
+				className={`text-body-sm ${loadState === "failed" ? "text-destructive" : "text-accent-dark"}`}
 			>
 				{t(loadState === "failed" ? "common.loadFailed" : "common.loading")}
 			</p>
@@ -363,222 +365,265 @@ const CurriculumEntry = ({
 	}
 
 	return (
-		<div className={embedded ? "" : "mx-auto max-w-xl"}>
+		// as a page: exactly the height left on screen, nothing scrolls; embedded (faculty modal): natural height
+		<FillPage enabled={!embedded}>
+			{!embedded && <PageBackdrop />}
 			{!embedded && (
-				<h1 className="mb-8 border-s-3 border-primary ps-4 text-heading-3 text-accent-deep">
-					{t(editing ? "curriculumEntry.editTitle" : "curriculumEntry.title")}
-				</h1>
+				<div className="mb-4 shrink-0">
+					<div className="text-body-sm text-foreground/70">{t("faculty.tabs.curriculums")}</div>
+					<h1 className="text-heading-4 text-foreground md:text-heading-3">
+						{t(editing ? "curriculumEntry.editTitle" : "curriculumEntry.title")}
+					</h1>
+				</div>
 			)}
 
-			<form noValidate onSubmit={(e) => void handleSubmit(e)} className={formCardClass}>
-				<FormField id="nameAr" label={t("curriculumEntry.nameAr")} error={errors.nameAr?.[0]}>
-					<input
-						id="nameAr"
-						type="text"
-						value={form.nameAr}
-						onChange={(e) => setField("nameAr", e.target.value)}
-						aria-invalid={!!errors.nameAr}
-						className={inputClass(!!errors.nameAr)}
-					/>
-				</FormField>
-
-				<FormField id="nameEn" label={t("curriculumEntry.nameEn")} error={errors.nameEn?.[0]}>
-					<input
-						id="nameEn"
-						type="text"
-						dir="ltr"
-						value={form.nameEn}
-						onChange={(e) => setField("nameEn", e.target.value)}
-						className={inputClass(false)}
-					/>
-				</FormField>
-
-				<FormField
-					id="requirementType"
-					label={t("curriculumEntry.requirementType")}
-					error={errors.requirementType?.[0]}
-				>
-					<select
-						id="requirementType"
-						value={form.requirementType}
-						onChange={(e) =>
-							setForm((prev) => ({
-								...prev,
-								requirementType: e.target.value,
-								// a university requirement carries no faculty of its own
-								facultyId: e.target.value === "university" ? "" : prev.facultyId,
-								// only a major belongs to a specialization or department
-								specializationId: e.target.value === "major" ? prev.specializationId : "",
-								departmentId: e.target.value === "major" ? prev.departmentId : "",
-							}))
-						}
-						aria-invalid={!!errors.requirementType}
-						className={inputClass(!!errors.requirementType)}
-					>
-						<option value="" disabled>
-							{t("curriculumEntry.selectRequirementType")}
-						</option>
-						{types.map((type) => (
-							<option key={type} value={type}>
-								{t(`requirementTypes.${type}`)}
-							</option>
-						))}
-					</select>
-				</FormField>
-
-				<FormField
-					id="courseHours"
-					label={t("curriculumEntry.courseHours")}
-					error={errors.courseHours?.[0]}
-				>
-					<input
-						id="courseHours"
-						type="number"
-						min={1}
-						max={12}
-						dir="ltr"
-						value={form.courseHours}
-						onChange={(e) => setField("courseHours", e.target.value)}
-						aria-invalid={!!errors.courseHours}
-						className={inputClass(!!errors.courseHours)}
-					/>
-				</FormField>
-
-				<FacultyField
-					label={t("curriculumEntry.faculty")}
-					placeholder={t("curriculumEntry.facultyPlaceholder")}
-					noResultsText={t("curriculumEntry.noResults")}
-					value={form.facultyId}
-					onChange={setFacultyId}
-					error={errors.facultyId?.[0]}
-					fixed={
-						university
-							? {
-									text: t("curriculumEntry.allFaculties"),
-									note: t("curriculumEntry.universityFaculties"),
-								}
-							: // on a faculty's tab the faculty is that one
-								givenFacultyId
-								? {
-										text: faculties.find((f) => f.id === givenFacultyId)?.name[lang] ?? "",
-										note: t("curriculumEntry.facultyFromTab"),
-									}
-								: undefined
+			<form
+				noValidate
+				onSubmit={(e) => void handleSubmit(e)}
+				className={
+					embedded
+						? "flex flex-col gap-4"
+						: "flex min-h-0 flex-1 flex-col rounded-lg border border-border bg-card p-4 shadow-sm md:p-6"
+				}
+			>
+				{/* two columns; on the page the rows share the card's height so it never leaves a gap */}
+				<div
+					className={
+						embedded
+							? "grid gap-x-6 gap-y-5 md:grid-cols-2"
+							: "grid min-h-0 flex-1 gap-x-6 gap-y-4 overflow-y-auto max-md:content-start md:auto-rows-fr md:grid-cols-2 md:gap-y-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
 					}
-				/>
-
-				{isMajor && (
-					<DepartmentField
-						faculties={faculties}
-						facultyId={form.facultyId}
-						value={departmentValue}
-						onChange={setDepartmentId}
-					/>
-				)}
-
-				{isMajor && (
-					<SpecializationField
-						faculties={faculties}
-						facultyId={form.facultyId}
-						departmentId={departmentValue}
-						value={form.specializationId}
-						onChange={(value) => setField("specializationId", value)}
-						// with departments, a department alone may take the major
-						allowNone={hasDepartments}
-						error={errors.specializationId?.[0]}
-						hint={
-							!specializationRequired
-								? t("specialization.legacyMajorHint")
-								: hasDepartments
-									? t("department.majorHint")
-									: t("specialization.majorHint")
-						}
-					/>
-				)}
-
-				<FormField
-					id="academicYear"
-					label={t("curriculumEntry.academicYear")}
-					error={errors.academicYear?.[0]}
 				>
-					<select
-						id="academicYear"
-						value={form.academicYear}
-						onChange={(e) => setField("academicYear", e.target.value)}
-						aria-invalid={!!errors.academicYear}
-						className={inputClass(!!errors.academicYear)}
-					>
-						<option value="" disabled>
-							{t("curriculumEntry.selectYear")}
-						</option>
-						{STUDY_LEVELS.map((level) => (
-							<option key={level} value={level}>
-								{t(`student.levels.${level}`)}
-							</option>
-						))}
-					</select>
-				</FormField>
+					<div className="flex min-w-0 flex-col justify-center">
+						<FormField id="nameAr" label={t("curriculumEntry.nameAr")} error={errors.nameAr?.[0]}>
+							<input
+								id="nameAr"
+								type="text"
+								value={form.nameAr}
+								onChange={(e) => setField("nameAr", e.target.value)}
+								aria-invalid={!!errors.nameAr}
+								className={inputClass(!!errors.nameAr)}
+							/>
+						</FormField>
+					</div>
 
-				<FormField
-					id="semester"
-					label={t("curriculumEntry.semester")}
-					error={errors.semester?.[0]}
-				>
-					<select
-						id="semester"
-						value={form.semester}
-						onChange={(e) => setField("semester", e.target.value)}
-						aria-invalid={!!errors.semester}
-						className={inputClass(!!errors.semester)}
-					>
-						<option value="" disabled>
-							{t("curriculumEntry.selectSemester")}
-						</option>
-						{SEMESTERS.map((semester) => (
-							<option key={semester} value={semester}>
-								{t(`semesters.${semester}`)}
-							</option>
-						))}
-					</select>
-				</FormField>
+					<div className="flex min-w-0 flex-col justify-center">
+						<FormField id="nameEn" label={t("curriculumEntry.nameEn")} error={errors.nameEn?.[0]}>
+							<input
+								id="nameEn"
+								type="text"
+								dir="ltr"
+								value={form.nameEn}
+								onChange={(e) => setField("nameEn", e.target.value)}
+								className={inputClass(false)}
+							/>
+						</FormField>
+					</div>
 
-				<FormField
-					id="abbreviation"
-					label={t("curriculumEntry.abbreviation")}
-					error={errors.abbreviation?.[0]}
-				>
-					<input
-						id="abbreviation"
-						type="text"
-						dir="ltr"
-						placeholder="XXXX0000"
-						value={abbreviation}
-						onChange={(e) => {
-							// codes are letters and digits only, so spaces, dashes and the like never get in
-							const value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
-							// clearing the field hands it back to the suggestion
-							setAbbreviationEdited(value !== "");
-							setField("abbreviation", value);
-						}}
-						aria-invalid={!!errors.abbreviation}
-						className={inputClass(!!errors.abbreviation)}
-					/>
-				</FormField>
+					<div className="flex min-w-0 flex-col justify-center">
+						<FormField
+							id="requirementType"
+							label={t("curriculumEntry.requirementType")}
+							error={errors.requirementType?.[0]}
+						>
+							<select
+								id="requirementType"
+								value={form.requirementType}
+								onChange={(e) =>
+									setForm((prev) => ({
+										...prev,
+										requirementType: e.target.value,
+										// a university requirement carries no faculty of its own
+										facultyId: e.target.value === "university" ? "" : prev.facultyId,
+										// only a major belongs to a specialization or department
+										specializationId: e.target.value === "major" ? prev.specializationId : "",
+										departmentId: e.target.value === "major" ? prev.departmentId : "",
+									}))
+								}
+								aria-invalid={!!errors.requirementType}
+								className={inputClass(!!errors.requirementType)}
+							>
+								<option value="" disabled>
+									{t("curriculumEntry.selectRequirementType")}
+								</option>
+								{types.map((type) => (
+									<option key={type} value={type}>
+										{t(`requirementTypes.${type}`)}
+									</option>
+								))}
+							</select>
+						</FormField>
+					</div>
 
-				{saved && (
-					<p role="status" className="text-body-sm text-primary-hover">
-						{t("common.saved")}
-					</p>
-				)}
-				{failed && (
-					<p role="alert" className="text-body-sm text-error">
-						{t("common.saveFailed")}
-					</p>
-				)}
+					<div className="flex min-w-0 flex-col justify-center">
+						<FormField
+							id="courseHours"
+							label={t("curriculumEntry.courseHours")}
+							error={errors.courseHours?.[0]}
+						>
+							<input
+								id="courseHours"
+								type="number"
+								min={1}
+								max={12}
+								dir="ltr"
+								value={form.courseHours}
+								onChange={(e) => setField("courseHours", e.target.value)}
+								aria-invalid={!!errors.courseHours}
+								className={inputClass(!!errors.courseHours)}
+							/>
+						</FormField>
+					</div>
 
-				<button type="submit" disabled={submitting} className={submitButtonClass}>
-					{submitting ? t("common.saving") : t("curriculumEntry.submit")}
-				</button>
+					<div className="flex min-w-0 flex-col justify-center">
+						<FacultyField
+							label={t("curriculumEntry.faculty")}
+							placeholder={t("curriculumEntry.facultyPlaceholder")}
+							noResultsText={t("curriculumEntry.noResults")}
+							value={form.facultyId}
+							onChange={setFacultyId}
+							error={errors.facultyId?.[0]}
+							fixed={
+								university
+									? {
+											text: t("curriculumEntry.allFaculties"),
+											note: t("curriculumEntry.universityFaculties"),
+										}
+									: // on a faculty's tab the faculty is that one
+										givenFacultyId
+										? {
+												text: faculties.find((f) => f.id === givenFacultyId)?.name[lang] ?? "",
+												note: t("curriculumEntry.facultyFromTab"),
+											}
+										: undefined
+							}
+						/>
+					</div>
+
+					{isMajor && (
+						<div className="flex min-w-0 flex-col justify-center">
+							<DepartmentField
+								faculties={faculties}
+								facultyId={form.facultyId}
+								value={departmentValue}
+								onChange={setDepartmentId}
+							/>
+						</div>
+					)}
+
+					{isMajor && (
+						<div className="flex min-w-0 flex-col justify-center">
+							<SpecializationField
+								faculties={faculties}
+								facultyId={form.facultyId}
+								departmentId={departmentValue}
+								value={form.specializationId}
+								onChange={(value) => setField("specializationId", value)}
+								// with departments, a department alone may take the major
+								allowNone={hasDepartments}
+								error={errors.specializationId?.[0]}
+								hint={
+									!specializationRequired
+										? t("specialization.legacyMajorHint")
+										: hasDepartments
+											? t("department.majorHint")
+											: t("specialization.majorHint")
+								}
+							/>
+						</div>
+					)}
+
+					<div className="flex min-w-0 flex-col justify-center">
+						<FormField
+							id="academicYear"
+							label={t("curriculumEntry.academicYear")}
+							error={errors.academicYear?.[0]}
+						>
+							<select
+								id="academicYear"
+								value={form.academicYear}
+								onChange={(e) => setField("academicYear", e.target.value)}
+								aria-invalid={!!errors.academicYear}
+								className={inputClass(!!errors.academicYear)}
+							>
+								<option value="" disabled>
+									{t("curriculumEntry.selectYear")}
+								</option>
+								{STUDY_LEVELS.map((level) => (
+									<option key={level} value={level}>
+										{t(`student.levels.${level}`)}
+									</option>
+								))}
+							</select>
+						</FormField>
+					</div>
+
+					<div className="flex min-w-0 flex-col justify-center">
+						<FormField
+							id="semester"
+							label={t("curriculumEntry.semester")}
+							error={errors.semester?.[0]}
+						>
+							<select
+								id="semester"
+								value={form.semester}
+								onChange={(e) => setField("semester", e.target.value)}
+								aria-invalid={!!errors.semester}
+								className={inputClass(!!errors.semester)}
+							>
+								<option value="" disabled>
+									{t("curriculumEntry.selectSemester")}
+								</option>
+								{SEMESTERS.map((semester) => (
+									<option key={semester} value={semester}>
+										{t(`semesters.${semester}`)}
+									</option>
+								))}
+							</select>
+						</FormField>
+					</div>
+
+					<div className="flex min-w-0 flex-col justify-center">
+						<FormField
+							id="abbreviation"
+							label={t("curriculumEntry.abbreviation")}
+							error={errors.abbreviation?.[0]}
+						>
+							<input
+								id="abbreviation"
+								type="text"
+								dir="ltr"
+								placeholder="XXXX0000"
+								value={abbreviation}
+								onChange={(e) => {
+									// codes are letters and digits only, so spaces, dashes and the like never get in
+									const value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+									// clearing the field hands it back to the suggestion
+									setAbbreviationEdited(value !== "");
+									setField("abbreviation", value);
+								}}
+								aria-invalid={!!errors.abbreviation}
+								className={inputClass(!!errors.abbreviation)}
+							/>
+						</FormField>
+					</div>
+				</div>
+
+				<div className="mt-4 flex shrink-0 flex-wrap items-center gap-4 border-t border-border pt-4 max-md:[&>button]:w-full">
+					<button type="submit" disabled={submitting} className={submitButtonClass}>
+						{submitting ? t("common.saving") : t("curriculumEntry.submit")}
+					</button>
+					{saved && (
+						<p role="status" className="text-body-sm text-accent-dark">
+							{t("common.saved")}
+						</p>
+					)}
+					{failed && (
+						<p role="alert" className="text-body-sm text-destructive">
+							{t("common.saveFailed")}
+						</p>
+					)}
+				</div>
 			</form>
 
 			<ConfirmDialog
@@ -616,8 +661,9 @@ const CurriculumEntry = ({
 				}}
 				onCancel={() => setPendingReview(null)}
 			/>
-		</div>
+		</FillPage>
 	);
-};
+
+	};
 
 export default CurriculumEntry;

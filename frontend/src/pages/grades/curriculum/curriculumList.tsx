@@ -3,8 +3,11 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import { PencilSquareIcon, PlusIcon } from "@heroicons/react/24/outline";
 import ConfirmDialog from "../../../components/confirmDialog";
-import DataTable, { type Column } from "../../../components/dataTable";
 import DeleteButton from "../../../components/deleteButton";
+import type { Column } from "../../../components/dataTable";
+import DataTable from "../../../components/paginatedDataTable";
+import FillPage from "../../../components/fillPage";
+import PageBackdrop from "../../../components/pageBackdrop";
 import FilterSelect from "../../../components/filterSelect";
 import SearchField from "../../../components/searchField";
 import DepartmentFilter from "../../../components/departmentFilter";
@@ -214,8 +217,7 @@ const CurriculumList = ({ facultyId: fixedFacultyId, onAdd, onEdit, reloadKey = 
 								onClick={() => onEdit(c)}
 								aria-label={t("curriculumList.editItem", { name: c.name[lang] })}
 								title={t("curriculumList.editItem", { name: c.name[lang] })}
-								className="rounded-xs p-2 text-foreground transition-colors duration-150 ease-out hover:bg-background hover:text-primary-hover"
-							>
+								className="rounded-xs p-2.5 text-foreground transition-colors duration-150 ease-out hover:bg-background hover:text-accent-dark">
 								<PencilSquareIcon className="size-5" aria-hidden />
 							</button>
 						) : (
@@ -223,7 +225,7 @@ const CurriculumList = ({ facultyId: fixedFacultyId, onAdd, onEdit, reloadKey = 
 								to={`../${c.id}/edit`}
 								aria-label={t("curriculumList.editItem", { name: c.name[lang] })}
 								title={t("curriculumList.editItem", { name: c.name[lang] })}
-								className="rounded-xs p-2 text-foreground transition-colors duration-150 ease-out hover:bg-background hover:text-primary-hover"
+								className="rounded-xs p-2.5 text-foreground transition-colors duration-150 ease-out hover:bg-background hover:text-accent-dark"
 							>
 								<PencilSquareIcon className="size-5" aria-hidden />
 							</Link>
@@ -239,22 +241,24 @@ const CurriculumList = ({ facultyId: fixedFacultyId, onAdd, onEdit, reloadKey = 
 
 	// the faculty column says nothing on a faculty's own tab
 	const shownColumns = embedded ? columns.filter((col) => col.key !== "faculty") : columns;
-
 	return (
-		<div>
+		// as a page: exactly the height left on screen; on a faculty's tab: fills the tab
+		<FillPage enabled={!embedded}>
+			{!embedded && <PageBackdrop />}
 			{!embedded && (
-				<h1 className="mb-8 border-s-3 border-primary ps-4 text-heading-3 text-accent-deep">
-					{t("curriculumList.title")}
-				</h1>
+				<div className="mb-4 shrink-0">
+					<div className="text-body-sm text-foreground/70">{t("faculty.tabs.curriculums")}</div>
+					<h1 className="text-heading-4 text-foreground md:text-heading-3">{t("curriculumList.title")}</h1>
+				</div>
 			)}
 			{onAdd && (
-				<button type="button" onClick={onAdd} className={`mb-6 ${submitButtonClass}`}>
+				<button type="button" onClick={onAdd} className={`mb-4 shrink-0 self-start max-md:w-full ${submitButtonClass}`}>
 					<PlusIcon className="me-2 size-5" aria-hidden />
 					{t("curriculumEntry.title")}
 				</button>
 			)}
 
-			<div className="mb-6 flex flex-wrap items-end gap-6">
+			<div className="mb-4 flex shrink-0 flex-wrap items-end gap-3 rounded-lg border border-border bg-card p-4 shadow-sm max-md:max-h-[40%] max-md:overflow-y-auto md:gap-4">
 				<SearchField
 					id="curriculumSearch"
 					label={t("curriculumList.search")}
@@ -319,14 +323,14 @@ const CurriculumList = ({ facultyId: fixedFacultyId, onAdd, onEdit, reloadKey = 
 			</div>
 
 			{failed && (
-				<p role="alert" className="mb-6 text-body-sm text-error">
+				<p role="alert" className="mb-4 shrink-0 text-body-sm text-destructive">
 					{t("common.loadFailed")}
 				</p>
 			)}
 
 			{/* what still needs a specialization, one click from the list of it */}
 			{missing > 0 && specializationId !== WITHOUT_SPECIALIZATION && (
-				<div className="mb-6 flex flex-wrap items-center gap-3 rounded-sm border-s-3 border-primary bg-accent-soft/30 p-4">
+				<div className="mb-4 flex shrink-0 flex-wrap items-center gap-3 rounded-sm border-s-3 border-accent bg-quote/30 p-4">
 					<p className="text-body-md text-foreground">{t("specialization.missingMajors", { count: missing })}</p>
 					{effectiveFacultyId && (
 						<button
@@ -388,8 +392,9 @@ const CurriculumList = ({ facultyId: fixedFacultyId, onAdd, onEdit, reloadKey = 
 					onClose={() => setSettingFor(null)}
 				/>
 			)}
-		</div>
+		</FillPage>
 	);
+
 };
 
 export default CurriculumList;
