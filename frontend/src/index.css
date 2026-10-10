@@ -2,31 +2,170 @@
 /* §6 TYPOGRAPHY — Tajawal (Arabic) and Inter (English) are loaded from
    index.html so they can preconnect and avoid an @import request waterfall. */
 
-/* Token model per §43. Nothing outside this block should hard-code a visual value. */
+/* ==========================================================================
+   1. Palette from the new design system: plain CSS variables.
+   They live in :root, not @theme, so names like --text-white can't collide
+   with Tailwind's font-size namespace (--text-*).
+   ========================================================================== */
+:root {
+	--background: #e2eaec;
+	--foreground: #000000;
+
+	--card: #ffffff;
+	--card-foreground: #000000;
+
+	--popover: #ffffff;
+	--popover-foreground: #000000;
+
+	/* Primary (dark brown) */
+	--primary: #ad7006;
+	--primary-hover: #c98308;
+	--primary-foreground: #ffffff;
+
+	/* Accent (gold / amber) */
+	--accent: #ebad3e;
+	--accent-dark: #a86a15;
+	--accent-foreground: #000000;
+	--quote: #e5c38d;
+
+	/* Secondary (light grayish blue) */
+	--secondary: #c6d8d8;
+	--secondary-hover: #e3ebee;
+	--secondary-foreground: #000000;
+
+	/* Muted / neutral */
+	--muted: #dae5e9;
+	--muted-dark: #c8d7d9;
+	--muted-foreground: #5c3a08;
+	--icon-bg: #e3ebee;
+
+	/* Feedback */
+	--destructive: #dc2626;
+	--destructive-foreground: #ffffff;
+
+	/* Status */
+	--status-warning: #e9af43;
+	--status-warning-surface: #fffbeb;
+	--status-warning-border: #e5c38d;
+
+	--status-success: oklch(0.56 0.16 155);
+	--status-success-surface: oklch(0.97 0.04 155);
+	--status-success-border: oklch(0.88 0.08 155);
+
+	--status-info: #c8d7d9;
+	--status-info-surface: #e3ebee;
+	--status-info-border: #c8d7d9;
+
+	/* Structural */
+	--border: #e3ebee;
+	--border-dark: #c8d7d9;
+	--input: #ffffff;
+	--ring: #e9af43;
+	--radius: 0.625rem;
+
+	/* Charts */
+	--chart-1: #5c3a08;
+	--chart-2: #e9af43;
+	--chart-3: #a86a15;
+	--chart-4: #c8d7d9;
+	--chart-5: #e5c38d;
+
+	/* Sidebar */
+	--sidebar: #ffffff;
+	--sidebar-foreground: #000000;
+	--sidebar-primary: #5c3a08;
+	--sidebar-primary-foreground: #ffffff;
+	--sidebar-accent: #e9af43;
+	--sidebar-accent-foreground: #000000;
+	--sidebar-border: #e3ebee;
+	--sidebar-ring: #e9af43;
+
+	/* Text colours */
+	--text-black: #000000;
+	--text-white: #ffffff;
+	--text-orange: #e9af43;
+
+	/* Footer */
+	--footer: #5c3a08;
+	--footer-foreground: #ffffff;
+	--footer-muted: #e5c38d;
+	--footer-border: #a86a15;
+	--footer-surface: #3e2405;
+	--footer-surface-hover: #a86a15;
+	--footer-input: #3e2405;
+}
+
+/* ==========================================================================
+   2. Tailwind tokens. Token model per §43.
+   ========================================================================== */
 @theme {
+	/* ---- New design system colours as utilities (bg-card, bg-accent, text-muted-foreground …) ---- */
+	--color-card: var(--card);
+	--color-card-foreground: var(--card-foreground);
+	--color-popover: var(--popover);
+	--color-popover-foreground: var(--popover-foreground);
+
+	--color-primary-foreground: var(--primary-foreground);
+
+	--color-accent: var(--accent);
+	--color-accent-dark: var(--accent-dark);
+	--color-accent-foreground: var(--accent-foreground);
+	--color-quote: var(--quote);
+
+	--color-secondary: var(--secondary);
+	--color-secondary-hover: var(--secondary-hover);
+	--color-secondary-foreground: var(--secondary-foreground);
+
+	--color-muted: var(--muted);
+	--color-muted-dark: var(--muted-dark);
+	--color-muted-foreground: var(--muted-foreground);
+
+	--color-destructive: var(--destructive);
+	--color-destructive-foreground: var(--destructive-foreground);
+
+	--color-status-warning: var(--status-warning);
+	--color-status-warning-surface: var(--status-warning-surface);
+	--color-status-warning-border: var(--status-warning-border);
+	--color-status-success: var(--status-success);
+	--color-status-success-surface: var(--status-success-surface);
+	--color-status-success-border: var(--status-success-border);
+	--color-status-info: var(--status-info);
+	--color-status-info-surface: var(--status-info-surface);
+	--color-status-info-border: var(--status-info-border);
+
+	--color-border-dark: var(--border-dark);
+	--color-input: var(--input);
+	--color-ring: var(--ring);
+
+	--color-footer: var(--footer);
+	--color-footer-foreground: var(--footer-foreground);
+	--color-footer-muted: var(--footer-muted);
+	--color-footer-border: var(--footer-border);
+	--color-footer-surface: var(--footer-surface);
+	--color-footer-surface-hover: var(--footer-surface-hover);
+
+	/* ---- The app's original tokens (its components use these names).
+	        Where a name also exists in the new design system, the original
+	        value is kept and the design-system value is shown in a comment. ---- */
+
 	/* §3.1 CORE PALETTE */
-	--color-primary: #ebad3e;
-	--color-primary-hover: #ad7006;
+	--color-primary: #ebad3e; /* design system: #ad7006 */
+	--color-primary-hover: #ad7006; /* design system: #c98308 */
 	--color-accent-soft: #ecc580;
 	--color-accent-deep: #764a01;
 	--color-background: #e2eaec;
 	--color-background-secondary: #c6d8d8;
 	--color-surface: #ffffff;
-	--color-foreground: #1b2a38;
+	--color-foreground: #1b2a38; /* design system: #000000 */
 
 	/* §14 BORDER SYSTEM */
-	--color-border: #c6d8d8;
+	--color-border: #c6d8d8; /* design system: #e3ebee */
 	--color-border-accent: #ad7006;
 	--color-border-subtle: rgba(27, 42, 56, 0.08);
 
-	/* §4.2 — a functional state colour, allowed only as an explicit semantic
-	   token. This is the red the app already used; it is named here rather
-	   than introduced, and is never used decoratively. */
+	/* §4.2 — functional state colours, never decorative */
 	--color-error: #dc2626;
 	--color-error-hover: #b91c1c;
-
-	/* §4.2 — success, the second explicit state token. Used only to mark a
-	   student as having sat an exam; never decoratively. */
 	--color-success: #16a34a;
 	--color-success-hover: #15803d;
 
@@ -116,5 +255,13 @@
 	/* §15 ICONOGRAPHY — one family, consistent 1.75px stroke */
 	svg[data-slot="icon"] {
 		stroke-width: 1.75;
+	}
+
+	/* hide scrollbars everywhere; scrolling itself still works */
+	* {
+		scrollbar-width: none; /* Firefox */
+	}
+	*::-webkit-scrollbar {
+		display: none; /* Chrome, Edge, Safari */
 	}
 }
